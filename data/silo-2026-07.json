@@ -1,0 +1,115 @@
+﻿{
+    "block":  {
+                  "id":  "silo-ropp",
+                  "pulledAt":  "2026-08-03T15:22:33.4564727Z",
+                  "month":  "2026-07",
+                  "title":  "SILO / ROPP - 2026-07",
+                  "tables":  [
+                                 {
+                                     "footer":  "SILO TOTAL   Calls 853   TGLs 481   Conversion 56.4%",
+                                     "subtitle":  "",
+                                     "rows":  [
+                                                  [
+                                                      "Noah Weng",
+                                                      54,
+                                                      45,
+                                                      "83.3%"
+                                                  ],
+                                                  [
+                                                      "Joe Mendoza",
+                                                      78,
+                                                      40,
+                                                      "51.3%"
+                                                  ],
+                                                  [
+                                                      "Benjamin Wyllie",
+                                                      79,
+                                                      47,
+                                                      "59.5%"
+                                                  ],
+                                                  [
+                                                      "Nikko April",
+                                                      68,
+                                                      24,
+                                                      "35.3%"
+                                                  ],
+                                                  [
+                                                      "Andrew Trujillo",
+                                                      56,
+                                                      30,
+                                                      "53.6%"
+                                                  ],
+                                                  [
+                                                      "Dustin Romine",
+                                                      20,
+                                                      11,
+                                                      "55.0%"
+                                                  ],
+                                                  [
+                                                      "Juan Tlatenchi",
+                                                      76,
+                                                      43,
+                                                      "56.6%"
+                                                  ],
+                                                  [
+                                                      "Brandon Moreno",
+                                                      70,
+                                                      44,
+                                                      "62.9%"
+                                                  ],
+                                                  [
+                                                      "Francisco Valencia",
+                                                      79,
+                                                      50,
+                                                      "63.3%"
+                                                  ],
+                                                  [
+                                                      "Mario Castro",
+                                                      62,
+                                                      33,
+                                                      "53.2%"
+                                                  ],
+                                                  [
+                                                      "Cole Pantol",
+                                                      88,
+                                                      54,
+                                                      "61.4%"
+                                                  ],
+                                                  [
+                                                      "Nathan Colquitt",
+                                                      60,
+                                                      30,
+                                                      "50.0%"
+                                                  ],
+                                                  [
+                                                      "Robert Silinzy",
+                                                      63,
+                                                      30,
+                                                      "47.6%"
+                                                  ],
+                                                  [
+                                                      "Alex Yakovchuk",
+                                                      0,
+                                                      0,
+                                                      "-"
+                                                  ]
+                                              ],
+                                     "columns":  [
+                                                     "Technician",
+                                                     "Calls",
+                                                     "TGLs",
+                                                     "Conversion"
+                                                 ]
+                                 }
+                             ],
+                  "status":  "ok",
+                  "error":  null,
+                  "notes":  [
+                                "Calibrated to be correct against LIVE ServiceTitan - NOT calibrated to match the example dashboard\u0027s numbers.",
+                                "Call = ROPP-tagged, HVAC Service/Maintenance, completed that month, new-opportunity, run by a roster tech. TGL = an Estimate-TGL job created that month, credited to the roster tech who generated the lead. Conversion = TGLs / calls."
+                            ]
+              },
+    "generatedAt":  "2026-08-03T15:24:45.1120589Z",
+    "final":  true,
+    "month":  "2026-07"
+}

@@ -1,0 +1,43 @@
+# ---------------------------------------------------------------------------
+# wrangler.toml  --  Cloudflare Workers Static Assets config for the dashboard
+#
+# WHAT THIS DOES, IN PLAIN TERMS:
+#   This tells Cloudflare's `wrangler deploy` to publish an "assets-only" Worker:
+#   there is NO custom Worker JavaScript here, we just hand Cloudflare a folder of
+#   pre-built static files (HTML + JSON snapshots) and Cloudflare serves them at
+#   https://<worker-name>.<your-account-subdomain>.workers.dev/
+#
+#   The folder we serve is ./site, which the CI pipeline builds fresh on every run
+#   with `build-static.ps1 -OutDir site -NoGate`. Because there is no `main = ...`
+#   entry point, Cloudflare treats this purely as a static-asset deployment.
+#
+#   Login/auth is NOT handled here. Cloudflare Access sits in front of the
+#   workers.dev URL (enabled in the dashboard, see SETUP.md) and gates EVERYTHING,
+#   including the data/*.json files -- which is why the old client-side password
+#   gate is skipped at build time (-NoGate).
+#
+# ACCOUNT ID:
+#   Intentionally NOT set here. It is provided in CI via the CLOUDFLARE_ACCOUNT_ID
+#   GitHub Actions secret (passed to cloudflare/wrangler-action as `accountId`).
+#   Keeping it out of this file avoids committing an account identifier to the repo.
+#
+# SOURCE / ASSUMPTION:
+#   Follows the current Cloudflare Workers Static Assets convention -- a top-level
+#   [assets] table with `directory` pointing at the build output, and no `main`
+#   (assets-only Worker). Verified against Cloudflare's "Static Assets" docs
+#   conventions as of the 2025 wrangler v3 releases. `binding` under [assets] is
+#   only needed when custom Worker code reads assets via env.ASSETS; we have none,
+#   so it is omitted.
+# ---------------------------------------------------------------------------
+
+name = "sierra-dashboard"
+
+# A recent, stable compatibility date. Bump when you intentionally adopt newer
+# Workers runtime behavior. (Assets-only Workers are insensitive to this, but
+# wrangler requires the field.)
+compatibility_date = "2025-01-01"
+
+[assets]
+# The directory of pre-built static files to upload and serve. Built in CI by
+# build-static.ps1 into ./site (gitignored -- never committed; regenerated each run).
+directory = "./site"

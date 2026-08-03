@@ -1,0 +1,16 @@
+{
+  "model": "claude-fable-5",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -WindowStyle Hidden -Command '(New-Object Media.SoundPlayer C:\\Windows\\Media\\ding.wav).PlaySync()'",
+            "async": true
+          }
+        ]
+      }
+    ]
+  }
+}

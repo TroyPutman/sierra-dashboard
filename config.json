@@ -1,0 +1,6 @@
+{
+  "_README": "Dashboard config (NOT secrets). This is where targets/goals live, read at runtime by lib/metrics.ps1 - never hard-code a business target in code.",
+  "payrollCompletenessThreshold": 0.80,
+  "payrollCompletenessLookbackWeeks": 4,
+  "_payrollCompleteness_README": "M4 overtime: a day's payroll is flagged incomplete when its total gross-pay-item count is below this fraction of the median same-weekday count over the prior N weeks (N = payrollCompletenessLookbackWeeks)."
+}

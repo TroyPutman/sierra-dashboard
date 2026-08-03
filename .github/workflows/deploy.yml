@@ -1,0 +1,185 @@
+name: Deploy dashboard to Cloudflare Workers
+
+# ---------------------------------------------------------------------------
+# What this does, each run:
+#   1. Checks out the repo.
+#   2. Rebuilds secrets.json from GitHub Actions secrets (gitignored; never committed).
+#   3. Refreshes TODAY's snapshot (data/<today>.json) via refresh.ps1.
+#   4. If YESTERDAY's snapshot is missing or not yet marked "final", refreshes it once
+#      so the day gets frozen. Past frozen days are already committed and are NOT re-pulled.
+#   5. Writes a heartbeat file (data/last-refresh.txt) with the UTC + Pacific run time.
+#   6. Builds the static site (build-static.ps1 -> site/) with -NoGate: NO client-side
+#      password gate, because Cloudflare Access now provides real login/auth at the edge.
+#   7. Commits the heartbeat + regenerated data/ snapshots back to the repo on EVERY run.
+#      This guarantees repo activity so GitHub does NOT auto-disable the scheduled workflow
+#      after 60 days of inactivity. The message carries [skip ci] so the push does not
+#      re-trigger this workflow. secrets.json and site/ are NEVER committed.
+#   8. Deploys site/ to Cloudflare Workers (Static Assets) via wrangler.
+#
+# FAIL LOUD: if refresh, build, or deploy throws, the job fails and nothing ships.
+# There is no DASH_PASSWORD_HASH anymore -- Cloudflare Access replaces the client gate.
+# ---------------------------------------------------------------------------
+
+on:
+  # Redeploy on every push to the default branch (any code change ships automatically).
+  push:
+    branches: ["main"]   # <-- if your default branch is "master", change this to "master".
+
+  # Manual "Run workflow" button in the Actions tab.
+  workflow_dispatch:
+
+  # -------------------------------------------------------------------------
+  # SCHEDULED CADENCE + ACTIONS-MINUTES QUOTA MATH  (read before changing!)
+  #
+  # This is a PRIVATE repo, so Actions minutes count against the free 2,000 min/month.
+  # GitHub cron is ALWAYS in UTC and does NOT observe daylight saving.
+  #
+  # Default below = "0,30 13-23 * * 1-6":
+  #   * minute 0 and 30  -> every 30 minutes
+  #   * hours 13-23 UTC  -> ~06:00-16:30 Pacific in summer (PDT, UTC-7),
+  #                          ~05:00-15:30 Pacific in winter (PST, UTC-8)  [1-hr seasonal drift]
+  #   * days 1-6         -> Monday through Saturday (no Sundays)
+  #
+  #   Runs/day  = 2 x 11 hours            = ~22
+  #   Runs/month= 22 x 6 days x ~4.345 wk = ~573
+  #   Cost/run  ~= 2-3 min (checkout + auth + ~100-200 API calls for today, occasional
+  #               +1 day for yesterday, + build + Cloudflare deploy)
+  #   => roughly 1,150-1,700 min/month from the schedule alone (a large share of the
+  #      2,000-min quota). Push- and manual-triggered runs add on top of this.
+  #
+  # HOW TO CHANGE THE FREQUENCY (pick one, edit the cron line below):
+  #   * Halve the cost  -> hourly: change "0,30" to "0"        (~285 runs, ~600-850 min/mo)
+  #   * Narrow the day  -> e.g. "0,30 14-22 * * 1-5"           (Mon-Fri, fewer hours)
+  #   * Cheapest useful -> "0 14 * * 1-5" (once each weekday morning, ~22 runs/mo)
+  #   * More frequent   -> add minute marks e.g. "0,15,30,45"  (doubles the cost)
+  # -------------------------------------------------------------------------
+  schedule:
+    - cron: "0,30 13-23 * * 1-6"
+
+# Least privilege: contents:write is needed to commit the heartbeat + snapshots back
+# on every run. No Pages/id-token permissions -- we deploy to Cloudflare, not Pages.
+permissions:
+  contents: write
+
+# Never run two deploys/commits at once; don't cancel an in-flight run (let it finish
+# so the commit-back and push stay serialized -- avoids push races).
+concurrency:
+  group: "deploy"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest   # pwsh is preinstalled on ubuntu runners
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Reconstruct secrets.json from GitHub secrets
+        shell: pwsh
+        env:
+          ST_CLIENT_ID: ${{ secrets.ST_CLIENT_ID }}
+          ST_CLIENT_SECRET: ${{ secrets.ST_CLIENT_SECRET }}
+          ST_APP_KEY: ${{ secrets.ST_APP_KEY }}
+          ST_TENANT_ID: ${{ secrets.ST_TENANT_ID }}
+        run: |
+          # Build the EXACT flat shape New-StContext expects:
+          #   { clientId, clientSecret, appKey, tenantId }
+          # Using ConvertTo-Json so values are properly JSON-escaped.
+          $s = [ordered]@{
+            clientId     = $env:ST_CLIENT_ID
+            clientSecret = $env:ST_CLIENT_SECRET
+            appKey       = $env:ST_APP_KEY
+            tenantId     = $env:ST_TENANT_ID
+          }
+          foreach ($k in $s.Keys) {
+            if ([string]::IsNullOrWhiteSpace($s[$k])) {
+              throw "Missing GitHub Actions secret for '$k'. Set ST_CLIENT_ID / ST_CLIENT_SECRET / ST_APP_KEY / ST_TENANT_ID."
+            }
+          }
+          $s | ConvertTo-Json | Set-Content -Path secrets.json -Encoding utf8
+          Write-Host "secrets.json reconstructed (gitignored; will not be committed)."
+
+      - name: Refresh today's snapshot
+        shell: pwsh
+        run: ./refresh.ps1   # $ErrorActionPreference=Stop under pwsh -> hard failures fail the job
+
+      - name: Finalize yesterday's snapshot if needed
+        shell: pwsh
+        run: |
+          # Use the project's OWN Pacific helpers so "yesterday" is the Pacific day,
+          # never the runner's UTC date.
+          . ./lib/st-common.ps1
+          $pac   = Get-Pac
+          $today = Get-TodayPac $pac
+          $yest  = $today.AddDays(-1)
+          $ys    = $yest.ToString('yyyy-MM-dd')
+          $file  = "data/$ys.json"
+
+          $needs = $true
+          if (Test-Path $file) {
+            $j = Get-Content $file -Raw | ConvertFrom-Json
+            if ($j.final -eq $true) { $needs = $false }
+          }
+
+          if ($needs) {
+            Write-Host "Yesterday ($ys) missing/not final - refreshing once to freeze it."
+            ./refresh.ps1 -Date $ys
+          } else {
+            Write-Host "Yesterday ($ys) already final - skipping (past days are frozen)."
+          }
+
+      - name: Write heartbeat file
+        shell: pwsh
+        run: |
+          # A heartbeat that changes every run guarantees there is always something to
+          # commit, so the scheduled workflow never goes 60 days without repo activity
+          # (which is when GitHub auto-disables schedules on a repo). Stamp it in both
+          # UTC and Pacific using the project's own Pacific helper.
+          . ./lib/st-common.ps1
+          $pac    = Get-Pac
+          $nowUtc = [DateTime]::UtcNow
+          $nowPac = [TimeZoneInfo]::ConvertTimeFromUtc([DateTime]::SpecifyKind($nowUtc, 'Utc'), $pac)
+          $lines  = @(
+            "last-refresh (UTC):     " + $nowUtc.ToString('yyyy-MM-dd HH:mm:ss') + " UTC"
+            "last-refresh (Pacific): " + $nowPac.ToString('yyyy-MM-dd HH:mm:ss') + " America/Los_Angeles"
+          )
+          $lines | Set-Content -Path data/last-refresh.txt -Encoding utf8
+          Write-Host "Wrote data/last-refresh.txt"
+
+      - name: Build static site (no client gate; Cloudflare Access provides auth)
+        shell: pwsh
+        run: |
+          # -NoGate: skip the old SHA-256 password gate. Cloudflare Access gates the
+          # workers.dev URL at the edge, so the client-side gate would be redundant.
+          pwsh ./build-static.ps1 -OutDir site -NoGate
+
+      - name: Commit heartbeat + snapshots (every run, keeps schedule alive)
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Stage ONLY data/ : today's snapshot, any newly-frozen yesterday, silo files,
+          # and the heartbeat. secrets.json lives at repo root (not data/) AND is gitignored,
+          # so it can never be staged here. site/ is gitignored and never committed.
+          git add data/
+
+          if git diff --cached --quiet; then
+            # The heartbeat changes every run, so this branch should effectively never hit;
+            # kept as a safety net so an unchanged tree does not fail the job.
+            echo "Nothing to commit (unexpected -- heartbeat should always change)."
+          else
+            # [skip ci] + GITHUB_TOKEN pushes don't re-trigger this workflow (no loop).
+            git commit -m "Refresh snapshots + heartbeat [skip ci]"
+            git push
+          fi
+
+      - name: Deploy to Cloudflare Workers (Static Assets)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Reads wrangler.toml; uploads ./site as an assets-only Worker.
+          command: deploy
