@@ -229,6 +229,31 @@
      letter-spacing:-.01em; font-variant-numeric:tabular-nums; color:var(--text);}
   .revhero.today{border-color:var(--gold); box-shadow:0 1px 8px rgba(244,165,34,.18);}
   .revcav{font-size:.95rem; color:var(--warn); font-weight:600; margin:2px 0 14px; line-height:1.35;}
+  /* SILO revenue flip-rate cards (Revenue tab, below Plumbing) */
+  .fliprow{display:flex; gap:22px; margin:6px 0 12px; flex-wrap:wrap;}
+  .flipcard{background:var(--panel); border:1px solid var(--hair); box-shadow:0 1px 4px rgba(8,66,122,.05);
+     border-radius:16px; padding:14px 26px 16px; flex:1; min-width:230px;}
+  .flipcard.today{border-color:var(--gold); box-shadow:0 1px 8px rgba(244,165,34,.18);}
+  .flipcard .rl{font-size:.95rem; font-weight:700; letter-spacing:.05em; color:var(--brand); text-transform:uppercase;}
+  .flipcard .fv{font-size:clamp(2rem,3.4vw,2.8rem); font-weight:650; line-height:1; margin-top:8px;
+     font-variant-numeric:tabular-nums; color:var(--text);}
+  .flipcard .fs{font-size:.85rem; color:var(--dim); margin-top:8px; font-weight:600;}
+  /* Revenue tab compaction - Plumbing + SILO must fit one 1080p screen, no horizontal overflow */
+  .revtab{padding:12px 30px 16px;}
+  .revtab .head{margin-bottom:4px;}
+  .revtab h3{margin:8px 0 3px;}
+  .revtab .cav{margin-top:4px; font-size:.78rem; line-height:1.3;}
+  .revtab .revcav{margin:2px 0 6px; font-size:.85rem;}
+  .revtab .revgrid{margin:4px 0 6px; gap:16px;}
+  .revtab .revhero{padding:9px 26px 11px; border-radius:14px;}
+  .revtab .revhero .rl{font-size:.88rem;}
+  .revtab .revhero .rv{font-size:clamp(1.7rem,2.7vw,2.3rem); margin-top:3px;}
+  .revtab .big td{font-size:1.3rem; padding:5px 14px;}
+  .revtab .fliprow{margin:4px 0 4px; gap:16px;}
+  .revtab .flipcard{padding:9px 24px 11px; border-radius:14px;}
+  .revtab .flipcard .rl{font-size:.88rem;}
+  .revtab .flipcard .fv{font-size:clamp(1.5rem,2.3vw,1.95rem); margin-top:3px;}
+  .revtab .flipcard .fs{margin-top:4px; font-size:.82rem;}
 </style>
 </head>
 <body>
@@ -733,21 +758,52 @@ function currencyTable(t){
   return h;
 }
 function renderRevenue(){
-  const b = block('revenue');
-  let h = '<div class="wrap"><div class="head"><h2>Revenue &mdash; Plumbing</h2>'
+  let h = '<div class="wrap revtab"><div class="head"><h2>Revenue &mdash; Plumbing</h2>'
         + '<div class="kpi">billed, pre-tax</div></div>';
-  if(!b||b.status==='error'){ return h + errBlock(b,'Revenue') + '</div>'; }
-  const sum = asArray(b.tables)[0];   // Period | Revenue  (Today / MTD / YTD)
-  const bu  = asArray(b.tables)[1];   // Business Unit | Today | MTD | YTD
-  const sr = asArray(sum.rows).map(r=>asArray(r));
-  const heroCls = ['today','',''];
-  const hero = sr.map((r,i)=>`<div class="revhero ${heroCls[i]||''}"><div class="rl">${esc(r[0])}</div><div class="rv">${esc(r[1])}</div></div>`).join('');
-  h += `<div class="revcav">NOT FINAL &mdash; Today, this month (MTD) and YTD are partial; invoices keep posting so these will keep rising.</div>`;
-  h += `<div class="revgrid">${hero}</div>`;
-  h += `<h3>By business unit</h3><div class="big">${currencyTable(bu)}</div>`;
-  h += notesHtml(b);
+  const b = block('revenue');
+  if(!b||b.status==='error'){ h += errBlock(b,'Revenue'); }
+  else {
+    const sum = asArray(b.tables)[0];   // Period | Revenue  (Today / MTD / YTD)
+    const bu  = asArray(b.tables)[1];   // Business Unit | Today | MTD | YTD
+    const sr = asArray(sum.rows).map(r=>asArray(r));
+    const heroCls = ['today','',''];
+    const hero = sr.map((r,i)=>`<div class="revhero ${heroCls[i]||''}"><div class="rl">${esc(r[0])}</div><div class="rv">${esc(r[1])}</div></div>`).join('');
+    h += `<div class="revcav">NOT FINAL &mdash; Today, this month (MTD) and YTD are partial; invoices keep posting so these will keep rising.</div>`;
+    h += `<div class="revgrid">${hero}</div>`;
+    h += `<h3>By business unit</h3><div class="big">${currencyTable(bu)}</div>`;
+    h += notesHtml(b);
+  }
+  h += renderSiloRevenueSection();
   h += '</div>';
   return h;
+}
+/* SILO revenue + flip rate - same Revenue tab, below the Plumbing section. SOLD/signed pre-tax,
+   credited to the turnover-call day; distinct from the Plumbing "billed" figure above. */
+function renderSiloRevenueSection(){
+  // Presentation isolation: if anything in this section throws (malformed block, unexpected
+  // shape, etc.), fall back to an errBlock for SILO ONLY - never let an exception here blank
+  // the already-rendered Plumbing section above it in renderRevenue().
+  try {
+    let h = '<div class="head" style="margin-top:12px; border-top:1px solid var(--hair); padding-top:10px"><h2>Revenue &mdash; SILO</h2>'
+          + '<div class="kpi">sold/signed, pre-tax &middot; turnovers</div></div>';
+    const b = block('silo-revenue');
+    if(!b||b.status==='error'){ return h + errBlock(b,'SILO revenue'); }
+    const rev  = asArray(b.tables)[0];   // Period | Revenue
+    const flip = asArray(b.tables)[1];   // Period | Flip Rate | Turnovers sold
+    const rr = asArray(rev.rows).map(r=>asArray(r));
+    const heroCls = ['today','',''];
+    const hero = rr.map((r,i)=>`<div class="revhero ${heroCls[i]||''}"><div class="rl">${esc(r[0])}</div><div class="rv">${esc(r[1])}</div></div>`).join('');
+    h += `<div class="revcav">NOT FINAL &mdash; sold estimates keep landing on their turnover day, so Today, MTD and YTD will keep rising (retroactive by design).</div>`;
+    h += `<div class="revgrid">${hero}</div>`;
+    h += `<h3>Flip rate &mdash; turnovers sold</h3>`;
+    const fr = asArray(flip.rows).map(r=>asArray(r));
+    h += '<div class="fliprow">' + fr.map((r,i)=>`<div class="flipcard ${i===0?'today':''}"><div class="rl">${esc(r[0])}</div><div class="fv">${esc(r[1])}</div><div class="fs">${esc(r[2])} turnovers sold</div></div>`).join('') + '</div>';
+    h += notesHtml(b);
+    return h;
+  } catch (e) {
+    return '<div class="head" style="margin-top:12px; border-top:1px solid var(--hair); padding-top:10px"><h2>Revenue &mdash; SILO</h2></div>'
+         + errBlock({status:'error', error:(e && e.message) || String(e)}, 'SILO revenue');
+  }
 }
 
 const RENDER = {overview:renderOverview, calls:renderCalls, cancellations:renderCancellations, staffing:renderStaffing, pipeline:renderPipeline, callboard:renderCallBoard, sources:renderSources, revenue:renderRevenue, silo:renderSilo};

@@ -1000,6 +1000,118 @@ function Get-Metric-Revenue($Ctx, [datetime]$Date) {
        ) }
 }
 
+# ============================================================================
+#  M-SiloRevenue: SILO revenue + flip rate (on the same Revenue tab as Plumbing)
+#  DEFINITION (verified via live investigation of saved report 648754648, category 'technician'):
+#    * SILO revenue = the SOLD/SIGNED pre-tax estimate subtotal on TURNOVER (TGL) jobs, credited
+#      to the TURNOVER-CALL DAY. A row is a turnover job when JobType CONTAINS "TGL" (observed:
+#      "Estimate AC TGL", "Estimate Mini Split TGL"). EstimateSalesSubtotal is already SOLD-ONLY
+#      (0 when nothing was sold on the job), pre-tax. Summed as [decimal].
+#    * Turnover-call day = the TGL job's CREATION day (DateType=2 = Job Creation Date). Verified:
+#      the estimate-TGL job and its source turnover call are created the same Pacific day.
+#    * Flip rate = (TGL jobs with a sold estimate) / (total TGL jobs created), per period.
+#      Shown as '-' when the period has zero TGL jobs.
+#  SOURCE: ServiceTitan Reporting API, saved report 648754648, category 'technician'. Run via
+#    Invoke-StReport (POST + hasMore paging + 429 retry). From/To are PLAIN Pacific calendar dates
+#    "yyyy-MM-dd" - the report windows internally; they are NOT UTC-converted.
+#  EFFICIENCY: ONE pull per snapshot - From = Jan 1 of D's year (Pacific), To = D (Pacific),
+#    DateType=2 (a full year is ~one page, hasMore handles the rare overflow). TGL rows are then
+#    bucketed by CreatedDate's Pacific calendar day to compute Today / MTD / YTD in a single pass.
+#    VERIFIED 2026-08-03: bucketing the YTD pull to 2026-08-03 yields the identical TGL job SET and
+#    revenue as a direct From=To=2026-08-03 pull.
+#  NOT FROZEN / RETROACTIVE BY DESIGN: an estimate sold later retroactively adds to its earlier
+#    turnover day, so past days can still rise. The whole year is recomputed every refresh; this
+#    block is NEVER cached/frozen (unlike Plumbing revenue). That is correct, not a bug.
+#  FAIL LOUD: if the report POST errors, or JobType / EstimateSalesSubtotal / CreatedDate are
+#    absent, the metric errors - it never fabricates a number.
+# ============================================================================
+$script:SILO_REV_REPORT_ID  = '648754648'
+$script:SILO_REV_REPORT_CAT = 'technician'
+
+# The report's CreatedDate is a Pacific-local ISO string carrying its own offset (e.g.
+# '2026-08-03T00:00:00-07:00'). Parse as DateTimeOffset and convert to the Pacific zone before
+# taking the calendar date, so day-bucketing is correct regardless of the host machine's timezone.
+# FAIL-LOUD GUARD: [DateTimeOffset]::Parse on a string with NO explicit offset (e.g.
+# "2026-08-03T00:00:00") silently assumes the HOST machine's local offset - on a UTC deploy
+# runner that would shift every row 7-8h into the wrong Pacific day with no error at all. The
+# live report has always returned an explicit offset (trailing 'Z' or '+HH:MM'/'-HH:MM'); require
+# that here so a future report change that drops the offset fails loud instead of silently
+# mis-bucketing revenue.
+function Get-SiloReportPacDay($Ctx, [string]$s) {
+    if ($s -notmatch '(Z|[+\-]\d{2}:?\d{2})$') {
+        throw "Get-SiloReportPacDay: CreatedDate '$s' has no explicit UTC offset (Z or +/-HH:MM) - refusing to guess the host timezone."
+    }
+    $dto = [DateTimeOffset]::Parse($s, [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::RoundtripKind)
+    ([TimeZoneInfo]::ConvertTime($dto, $Ctx.Pac)).Date
+}
+
+function Get-Metric-SiloRevenue($Ctx, [datetime]$Date) {
+    # $Date is the Pacific-selected snapshot date (the day the dashboard is being viewed "as of").
+    # Get-UtcMonthStart/Get-UtcYearStart are reused here only for their .Year/.Month arithmetic
+    # (finding the 1st of the month / Jan 1) - that's timezone-agnostic despite the "Utc" name.
+    # This is NOT a UTC day-boundary computation; all day bucketing below is done in Pacific via
+    # Get-SiloReportPacDay.
+    $monthStart = Get-UtcMonthStart $Date            # 1st of D's calendar month
+    $yearStart  = Get-UtcYearStart $Date             # Jan 1 of D's year
+    $fromStr = $yearStart.ToString('yyyy-MM-dd')     # PLAIN Pacific calendar dates - not UTC-converted
+    $toStr   = $Date.ToString('yyyy-MM-dd')
+
+    $body = @{ parameters = @(
+        @{ name='DateType'; value=2 },               # 2 = Job Creation Date = the turnover-call day
+        @{ name='From'; value=$fromStr },
+        @{ name='To';   value=$toStr }
+    ) }
+    $rep = Invoke-StReport $Ctx $script:SILO_REV_REPORT_CAT $script:SILO_REV_REPORT_ID $body
+    $col = Get-ReportColMap $rep.fields @('JobType','EstimateSalesSubtotal','CreatedDate')
+    $iType = $col['JobType']; $iSub = $col['EstimateSalesSubtotal']; $iCr = $col['CreatedDate']
+
+    $dDay = $Date.Date; $mDay = $monthStart.Date
+    $per = @{}; foreach ($p in 'today','mtd','ytd') { $per[$p] = @{ rev=[decimal]0; total=0; sold=0 } }
+
+    foreach ($row in $rep.rows) {
+        # JobType substring match ("TGL") is the VERIFIED source of truth for this metric - it
+        # reproduces the manager's real target (18 jobs on 2026-08-03, 2,220 YTD vs the ~2,229
+        # target), independently reproduced to the cent (2026-08-03 Today $72,713.62; 2026-07-29
+        # $213,964.02 / 9 of 21). The report exposes no JobTypeId column, so there is no way to
+        # filter against the canonical $script:SILO_EST_TGL id list here. Do NOT "optimize" this
+        # to an id-based filter without re-verifying against those exact target numbers first.
+        if ("$($row[$iType])" -notmatch 'TGL') { continue }        # turnover jobs only
+        $sub = [decimal]$row[$iSub]                                # sold-only, pre-tax; 0 if nothing sold
+        $pac = Get-SiloReportPacDay $Ctx "$($row[$iCr])"           # turnover day (Pacific)
+        if ($pac -gt $dDay) { continue }                           # guard: creation after D (shouldn't occur, To=D)
+        $per['ytd'].rev += $sub; $per['ytd'].total++; if ($sub -gt 0) { $per['ytd'].sold++ }
+        if ($pac -ge $mDay) { $per['mtd'].rev += $sub; $per['mtd'].total++; if ($sub -gt 0) { $per['mtd'].sold++ } }
+        if ($pac -eq $dDay) { $per['today'].rev += $sub; $per['today'].total++; if ($sub -gt 0) { $per['today'].sold++ } }
+    }
+
+    $lbls = @{
+        today = "Today ($($Date.ToString('MMM d')))"
+        mtd   = "Month to date ($($monthStart.ToString('MMM 1')) - $($Date.ToString('MMM d')))"
+        ytd   = "Year to date ($($yearStart.ToString('MMM 1')) - $($Date.ToString('MMM d')))"
+    }
+    $revRows=@(); $flipRows=@()
+    foreach ($p in 'today','mtd','ytd') {
+        $x = $per[$p]
+        $revRows  += ,@($lbls[$p], (Format-Money $x.rev))
+        $flip = if ($x.total -gt 0) { "{0:N1}%" -f (100.0*$x.sold/$x.total) } else { '-' }
+        $flipRows += ,@($lbls[$p], $flip, "$($x.sold) of $($x.total)")
+    }
+
+    $notes = @(
+        'SILO revenue = the SOLD / signed estimate subtotal (PRE-TAX) on turnover (TGL) jobs, credited to the TURNOVER-CALL DAY (the day the TGL job was created). Sold-only: a turnover with nothing sold contributes $0.',
+        'Flip rate = turnover jobs that sold an estimate / total turnover jobs created, per period. The count behind each % is shown as "N of M turnovers sold".',
+        'Turnover (TGL) jobs only. Day boundaries are Pacific (the report''s Created Date carries its own Pacific offset).',
+        'NOT FINAL / RETROACTIVE BY DESIGN: an estimate sold later adds to its earlier turnover day, so Today, MTD and YTD can still rise. The full year is recomputed every refresh; this block is never frozen.'
+    )
+
+    @{ id='silo-revenue'; title='Revenue - SILO (sold/signed, pre-tax)'; status='ok'; error=$null;
+       notes=$notes;
+       tables=@(
+         @{ subtitle='SILO revenue'; columns=@('Period','Revenue'); rows=$revRows; footer='' },
+         @{ subtitle='Flip rate'; columns=@('Period','Flip Rate','Turnovers sold'); rows=$flipRows; footer='' }
+       ) }
+}
+
 # ---------- registry + snapshot assembler ----------
 $script:METRIC_DEFS = @(
     @{ id='call-counts';    title='Call Count';               act={ param($c,$d) Get-Metric-CallCounts   $c $d } },
@@ -1011,7 +1123,8 @@ $script:METRIC_DEFS = @(
     @{ id='club-members';   title='Club Members Left to Run'; act={ param($c,$d) Get-Metric-ClubMembers   $c $d } },
     @{ id='call-board';     title='3-Day Call Board';         act={ param($c,$d) Get-Metric-CallBoard     $c $d } },
     @{ id='booking-source'; title='Booking Rate by Source';   act={ param($c,$d) Get-Metric-BookingBySource $c $d } },
-    @{ id='revenue';        title='Revenue - Plumbing';       act={ param($c,$d) Get-Metric-Revenue       $c $d } }
+    @{ id='revenue';        title='Revenue - Plumbing';       act={ param($c,$d) Get-Metric-Revenue       $c $d } },
+    @{ id='silo-revenue';   title='Revenue - SILO';           act={ param($c,$d) Get-Metric-SiloRevenue   $c $d } }
 )
 
 function New-ErrorBlock($id,$title,$msg) { @{ id=$id; title=$title; status='error'; error=$msg; notes=@(); tables=@(); pulledAt=(Get-UtcNow) } }

@@ -3,35 +3,35 @@
     "metrics":  [
                     {
                         "id":  "call-counts",
-                        "pulledAt":  "2026-08-04T00:22:50.1018234Z",
+                        "pulledAt":  "2026-08-04T01:35:00.1356813Z",
                         "error":  null,
                         "notes":  [
                                       "Booked = calls SCHEDULED FOR the day. Completed = calls finished that day. Different jobs; not expected to match."
                                   ],
                         "tables":  [
                                        {
-                                           "footer":  "TOTAL   Booked 304    Completed 165",
+                                           "footer":  "TOTAL   Booked 301    Completed 180",
                                            "subtitle":  "",
                                            "rows":  [
                                                         [
                                                             "HVAC - Service",
-                                                            111,
-                                                            64
+                                                            112,
+                                                            70
                                                         ],
                                                         [
                                                             "HVAC - Install - AOR",
                                                             18,
-                                                            6
+                                                            7
                                                         ],
                                                         [
                                                             "HVAC - Maintenance",
-                                                            58,
-                                                            22
+                                                            54,
+                                                            25
                                                         ],
                                                         [
                                                             "HVAC - Sales (NR)",
-                                                            21,
-                                                            16
+                                                            22,
+                                                            17
                                                         ],
                                                         [
                                                             "HVAC - Sales Costco (NR)",
@@ -40,22 +40,22 @@
                                                         ],
                                                         [
                                                             "Plumbing - Service",
-                                                            28,
+                                                            29,
                                                             20
                                                         ],
                                                         [
                                                             "Plumbing - Maintenance",
-                                                            46,
-                                                            24
+                                                            45,
+                                                            27
                                                         ],
                                                         [
                                                             "Plumbing - Install",
                                                             13,
-                                                            7
+                                                            8
                                                         ],
                                                         [
                                                             "Plumbing - Drains",
-                                                            4,
+                                                            3,
                                                             1
                                                         ]
                                                     ],
@@ -71,7 +71,7 @@
                     },
                     {
                         "id":  "cancellations",
-                        "pulledAt":  "2026-08-04T00:22:54.1640299Z",
+                        "pulledAt":  "2026-08-04T01:35:04.6358769Z",
                         "error":  null,
                         "notes":  [
                                       "Dated to the day the call was scheduled for service (the dispatch-board cancel tray), not the day someone pressed cancel. Detail: job type, when cancelled, reason, who.",
@@ -81,12 +81,12 @@
                                   ],
                         "tables":  [
                                        {
-                                           "footer":  "TOTAL   32",
+                                           "footer":  "TOTAL   34",
                                            "subtitle":  "By business unit",
                                            "rows":  [
                                                         [
                                                             "HVAC - Service",
-                                                            5
+                                                            7
                                                         ],
                                                         [
                                                             "HVAC - Install - AOR",
@@ -180,14 +180,6 @@
                                                         ],
                                                         [
                                                             "HVAC - Service",
-                                                            "AC Issue 4-7 yrs",
-                                                            "2026-08-03 08:00",
-                                                            "2026-08-01 16:51",
-                                                            "Problem fixed itself (CSR tried to save)",
-                                                            "Esteisi Morales"
-                                                        ],
-                                                        [
-                                                            "HVAC - Service",
                                                             "AC Issue 8+ yrs",
                                                             "2026-08-03 08:00",
                                                             "2026-08-03 07:20",
@@ -195,12 +187,12 @@
                                                             "Ariana Burns"
                                                         ],
                                                         [
-                                                            "Plumbing - Maintenance",
-                                                            "Plumbing SAM Tanked Water Heater Service 6+ Yrs",
+                                                            "HVAC - Service",
+                                                            "AC Issue 4-7 yrs",
                                                             "2026-08-03 08:00",
-                                                            "2026-07-28 12:12",
+                                                            "2026-08-01 16:51",
                                                             "Problem fixed itself (CSR tried to save)",
-                                                            "Gabrielle Evangelista"
+                                                            "Esteisi Morales"
                                                         ],
                                                         [
                                                             "Plumbing - Maintenance",
@@ -209,6 +201,14 @@
                                                             "2026-08-02 22:43",
                                                             "Problem fixed itself (CSR tried to save)",
                                                             "Nancy Rodriguez"
+                                                        ],
+                                                        [
+                                                            "Plumbing - Maintenance",
+                                                            "Plumbing SAM Tanked Water Heater Service 6+ Yrs",
+                                                            "2026-08-03 08:00",
+                                                            "2026-07-28 12:12",
+                                                            "Problem fixed itself (CSR tried to save)",
+                                                            "Gabrielle Evangelista"
                                                         ],
                                                         [
                                                             "Plumbing - Service",
@@ -228,17 +228,17 @@
                                                         ],
                                                         [
                                                             "HVAC - Sales (NR)",
-                                                            "Estimate AC",
+                                                            "Estimate Humidifier",
                                                             "2026-08-03 10:00",
-                                                            "2026-08-02 11:59",
+                                                            "2026-08-02 17:26",
                                                             "Problem fixed itself (CSR tried to save)",
                                                             "Esteisi Morales"
                                                         ],
                                                         [
                                                             "HVAC - Sales (NR)",
-                                                            "Estimate Humidifier",
+                                                            "Estimate AC",
                                                             "2026-08-03 10:00",
-                                                            "2026-08-02 17:26",
+                                                            "2026-08-02 11:59",
                                                             "Problem fixed itself (CSR tried to save)",
                                                             "Esteisi Morales"
                                                         ],
@@ -268,19 +268,19 @@
                                                         ],
                                                         [
                                                             "Plumbing - Maintenance",
-                                                            "Plumbing SAM Tanked Water Heater Service 6+ Yrs",
-                                                            "2026-08-03 11:00",
-                                                            "2026-08-02 16:14",
-                                                            "Problem fixed itself (CSR tried to save)",
-                                                            "Jeremy Von Samson"
-                                                        ],
-                                                        [
-                                                            "Plumbing - Maintenance",
                                                             "Plumbing SAM Tanked Water Heater Service 1-5 Yrs",
                                                             "2026-08-03 11:00",
                                                             "2026-07-30 09:32",
                                                             "Problem fixed itself (CSR tried to save)",
                                                             "Ariana Burns"
+                                                        ],
+                                                        [
+                                                            "Plumbing - Maintenance",
+                                                            "Plumbing SAM Tanked Water Heater Service 6+ Yrs",
+                                                            "2026-08-03 11:00",
+                                                            "2026-08-02 16:14",
+                                                            "Problem fixed itself (CSR tried to save)",
+                                                            "Jeremy Von Samson"
                                                         ],
                                                         [
                                                             "Plumbing - Maintenance",
@@ -379,12 +379,28 @@
                                                             "Derik King - OFFICE"
                                                         ],
                                                         [
+                                                            "HVAC - Service",
+                                                            "AC Issue 1-3 yrs",
+                                                            "2026-08-03 17:30",
+                                                            "2026-08-03 17:31",
+                                                            "Problem fixed itself (CSR tried to save)",
+                                                            "Kendall Page"
+                                                        ],
+                                                        [
                                                             "Plumbing - Service",
                                                             "Plumbing Toilet Clog",
                                                             "2026-08-03 19:05",
                                                             "2026-08-03 16:07",
                                                             "Problem fixed itself (CSR tried to save)",
                                                             "Ciara Stoner"
+                                                        ],
+                                                        [
+                                                            "HVAC - Service",
+                                                            "Semi Annual Tune-up 1-3 yrs",
+                                                            "2026-08-03 19:09",
+                                                            "2026-08-03 18:06",
+                                                            "Problem fixed itself (CSR tried to save)",
+                                                            "Esteisi Morales"
                                                         ]
                                                     ],
                                            "columns":  [
@@ -402,7 +418,7 @@
                     },
                     {
                         "id":  "calls-per-tech",
-                        "pulledAt":  "2026-08-04T00:23:06.4338400Z",
+                        "pulledAt":  "2026-08-04T01:35:16.6523321Z",
                         "error":  null,
                         "notes":  [
                                       "Service units only. Techs = distinct PRIMARY technician per job (earliest-assigned active tech runs the call); helpers/ride-alongs on the same job do not add to the count. Single day only."
@@ -414,9 +430,9 @@
                                            "rows":  [
                                                         [
                                                             "HVAC - Service",
-                                                            64,
+                                                            70,
                                                             33,
-                                                            "1.9"
+                                                            "2.1"
                                                         ],
                                                         [
                                                             "Plumbing - Service",
@@ -438,7 +454,7 @@
                     },
                     {
                         "id":  "overtime",
-                        "pulledAt":  "2026-08-04T00:23:14.7307858Z",
+                        "pulledAt":  "2026-08-04T01:35:25.8743160Z",
                         "warnings":  [
                                          {
                                              "message":  "Overtime workweek still in progress (started Fri 07/31) - totals will keep rising until the week closes.",
@@ -446,32 +462,32 @@
                                              "type":  "workweek-in-progress"
                                          },
                                          {
-                                             "message":  "Payroll for Monday 08/03 looks incomplete - only 49% of a typical Monday. Overtime is likely understated.",
-                                             "itemCount":  1054,
-                                             "pct":  49,
+                                             "message":  "Payroll for Monday 08/03 looks incomplete - only 53% of a typical Monday. Overtime is likely understated.",
+                                             "itemCount":  1139,
+                                             "pct":  53,
                                              "type":  "partial-day-payroll",
                                              "medianCount":  2140.5,
-                                             "ratio":  0.49240831581406214,
+                                             "ratio":  0.53211866386358331,
                                              "day":  "2026-08-03"
                                          }
                                      ],
                         "title":  "Overtime hours - Service, by activity",
                         "tables":  [
                                        {
-                                           "footer":  "TOTAL   HVAC-Service 58.7    Plumbing-Service 24.5",
+                                           "footer":  "TOTAL   HVAC-Service 66.6    Plumbing-Service 25.6",
                                            "subtitle":  "By activity",
                                            "rows":  [
                                                         [
                                                             "Driving",
-                                                            13.6,
-                                                            2.4,
-                                                            16
+                                                            14.9,
+                                                            2.7,
+                                                            17.6
                                                         ],
                                                         [
                                                             "Idle",
-                                                            5.6,
-                                                            5.6,
-                                                            11.2
+                                                            7.1,
+                                                            4.4,
+                                                            11.5
                                                         ],
                                                         [
                                                             "Training/Information",
@@ -481,9 +497,9 @@
                                                         ],
                                                         [
                                                             "Working",
-                                                            39.6,
-                                                            4.2,
-                                                            43.7
+                                                            44.7,
+                                                            6.2,
+                                                            50.9
                                                         ]
                                                     ],
                                            "columns":  [
@@ -499,21 +515,21 @@
                                            "rows":  [
                                                         [
                                                             "Overtime (all hours)",
-                                                            58.7,
-                                                            24.5,
-                                                            83.2
+                                                            66.6,
+                                                            25.6,
+                                                            92.3
                                                         ],
                                                         [
                                                             "Overtime (on jobs only)",
-                                                            53.2,
-                                                            6.6,
-                                                            59.7
+                                                            59.6,
+                                                            8.9,
+                                                            68.4
                                                         ],
                                                         [
                                                             "Overtime (non-job: idle/driving/training)",
-                                                            5.6,
-                                                            17.9,
-                                                            23.5
+                                                            7.1,
+                                                            16.8,
+                                                            23.8
                                                         ]
                                                     ],
                                            "columns":  [
@@ -533,7 +549,7 @@
                     },
                     {
                         "id":  "dispatch-arrival",
-                        "pulledAt":  "2026-08-04T00:23:18.9443293Z",
+                        "pulledAt":  "2026-08-04T01:35:30.1189432Z",
                         "warnings":  [
                                          {
                                              "message":  "Selected day still in progress - dispatch/arrival is only meaningful once the day is done.",
@@ -549,11 +565,11 @@
                                            "rows":  [
                                                         [
                                                             "Average dispatch to arrival (minutes)",
-                                                            "41.4"
+                                                            "41.8"
                                                         ],
                                                         [
                                                             "Matched dispatch/arrival pairs",
-                                                            97
+                                                            103
                                                         ],
                                                         [
                                                             "Anomalies (unmatched dispatch/arrival, or unattributed to a primary tech)",
@@ -952,19 +968,19 @@
                     },
                     {
                         "id":  "maint-14d",
-                        "pulledAt":  "2026-08-04T00:23:46.1988067Z",
+                        "pulledAt":  "2026-08-04T01:35:58.8554432Z",
                         "error":  null,
                         "notes":  [
                                       "Window starts TOMORROW (Pacific), not today, and runs 14 days from there. Today is excluded. As of the pull time (forward-looking; not tied to the selected day). Booked appointments. Sections are provisional."
                                   ],
                         "tables":  [
                                        {
-                                           "footer":  "GRAND TOTAL   481",
+                                           "footer":  "GRAND TOTAL   488",
                                            "subtitle":  "By section (14-day totals)",
                                            "rows":  [
                                                         [
                                                             "SAM Cooling (HVAC)",
-                                                            258
+                                                            263
                                                         ],
                                                         [
                                                             "SAM Heating (HVAC)",
@@ -972,7 +988,7 @@
                                                         ],
                                                         [
                                                             "HVAC Semi-Annual Tune-ups",
-                                                            35
+                                                            36
                                                         ],
                                                         [
                                                             "Filter Changes",
@@ -980,7 +996,7 @@
                                                         ],
                                                         [
                                                             "Plumbing WH Maintenance (SAM)",
-                                                            171
+                                                            172
                                                         ],
                                                         [
                                                             "Plumbing WH Tune-ups",
@@ -1002,15 +1018,15 @@
                                            "rows":  [
                                                         [
                                                             "2026-08-04",
-                                                            78,
+                                                            81,
                                                             37,
-                                                            115
+                                                            118
                                                         ],
                                                         [
                                                             "2026-08-05",
-                                                            49,
-                                                            31,
-                                                            80
+                                                            51,
+                                                            32,
+                                                            83
                                                         ],
                                                         [
                                                             "2026-08-06",
@@ -1050,9 +1066,9 @@
                                                         ],
                                                         [
                                                             "2026-08-12",
-                                                            23,
+                                                            24,
                                                             4,
-                                                            27
+                                                            28
                                                         ],
                                                         [
                                                             "2026-08-13",
@@ -1098,7 +1114,7 @@
                     },
                     {
                         "id":  "club-members",
-                        "pulledAt":  "2026-08-04T00:23:52.5270705Z",
+                        "pulledAt":  "2026-08-04T01:36:05.0953380Z",
                         "error":  null,
                         "notes":  [
                                       "As of pull time. Active residential SAM members with no completed Cooling maintenance in last 16 months. Customer-level."
@@ -1110,11 +1126,11 @@
                                            "rows":  [
                                                         [
                                                             "Active HVAC club members",
-                                                            9709
+                                                            9710
                                                         ],
                                                         [
                                                             "Ran Cooling in last 16 mo",
-                                                            7675
+                                                            7676
                                                         ],
                                                         [
                                                             "LEFT TO RUN",
@@ -1132,7 +1148,7 @@
                     },
                     {
                         "id":  "call-board",
-                        "pulledAt":  "2026-08-04T00:24:57.4436417Z",
+                        "pulledAt":  "2026-08-04T01:37:06.4166084Z",
                         "error":  null,
                         "notes":  [
                                       "Booked = new-opportunity calls SCHEDULED for that day (HVAC-Service + Plumbing-Service). Light days show as thin cells - that is open room on the board.",
@@ -1141,27 +1157,27 @@
                         "tables":  [
                                        {
                                            "footer":  "",
-                                           "subtitle":  "14-day total booked: 228",
+                                           "subtitle":  "14-day total booked: 232",
                                            "rows":  [
                                                         [
                                                             "2026-08-03",
-                                                            111,
-                                                            28,
-                                                            139,
+                                                            112,
+                                                            29,
+                                                            141,
                                                             63
                                                         ],
                                                         [
                                                             "2026-08-04",
-                                                            32,
-                                                            8,
+                                                            31,
+                                                            9,
                                                             40,
                                                             63
                                                         ],
                                                         [
                                                             "2026-08-05",
-                                                            8,
-                                                            2,
                                                             10,
+                                                            2,
+                                                            12,
                                                             63
                                                         ],
                                                         [
@@ -1256,7 +1272,7 @@
                     },
                     {
                         "id":  "booking-source",
-                        "pulledAt":  "2026-08-04T00:25:11.6076381Z",
+                        "pulledAt":  "2026-08-04T01:37:20.2096418Z",
                         "error":  null,
                         "notes":  [
                                       "Booked = lead has a booking (bookingId). Converted (last column) = lead became a job. Period: last 30 days.",
@@ -1270,8 +1286,8 @@
                                            "rows":  [
                                                         [
                                                             "Angi",
-                                                            88,
-                                                            88,
+                                                            89,
+                                                            89,
                                                             "100%",
                                                             6
                                                         ],
@@ -1371,9 +1387,146 @@
                                    ],
                         "title":  "Booking Rate by Source - last 30 days",
                         "status":  "ok"
+                    },
+                    {
+                        "id":  "revenue",
+                        "pulledAt":  "2026-08-04T01:37:21.1957872Z",
+                        "error":  null,
+                        "notes":  [
+                                      "Revenue = each invoice\u0027s pre-tax subTotal, summed by the invoice date. BILLED / invoiced, NOT collected. Tax excluded.",
+                                      "Discounts, refunds and credits are included as-is - they appear naturally as negative-dollar invoices; nothing is stripped out.",
+                                      "Plumbing = Service + Maintenance + Drains + Install. Day boundaries are plain UTC calendar dates (the invoice date), not Pacific.",
+                                      "This month and last month are fully recomputed on every refresh (so backdated corrections update them); any older month is frozen after its first computation.",
+                                      "CAVEAT - NOT FINAL: Today, this month\u0027s MTD, and YTD are PARTIAL. Invoices keep posting, so these figures will keep rising through the day and month."
+                                  ],
+                        "tables":  [
+                                       {
+                                           "footer":  "",
+                                           "subtitle":  "Plumbing revenue",
+                                           "rows":  [
+                                                        [
+                                                            "Today (Aug 3)",
+                                                            "$20,534.95"
+                                                        ],
+                                                        [
+                                                            "Month to date (Aug 1 - Aug 3)",
+                                                            "$43,655.95"
+                                                        ],
+                                                        [
+                                                            "Year to date (Jan 1 - Aug 3)",
+                                                            "$7,395,151.31"
+                                                        ]
+                                                    ],
+                                           "columns":  [
+                                                           "Period",
+                                                           "Revenue"
+                                                       ]
+                                       },
+                                       {
+                                           "footer":  "PLUMBING TOTAL   Today $20,534.95    MTD $43,655.95    YTD $7,395,151.31",
+                                           "subtitle":  "By business unit",
+                                           "rows":  [
+                                                        [
+                                                            "Service",
+                                                            "$3,337.90",
+                                                            "$4,865.90",
+                                                            "$408,449.65"
+                                                        ],
+                                                        [
+                                                            "Maintenance",
+                                                            "$1,350.00",
+                                                            "$1,350.00",
+                                                            "$134,389.47"
+                                                        ],
+                                                        [
+                                                            "Drains",
+                                                            "$0.00",
+                                                            "$6,197.00",
+                                                            "$208,496.41"
+                                                        ],
+                                                        [
+                                                            "Install",
+                                                            "$15,847.05",
+                                                            "$31,243.05",
+                                                            "$6,643,815.78"
+                                                        ]
+                                                    ],
+                                           "columns":  [
+                                                           "Business Unit",
+                                                           "Today",
+                                                           "MTD",
+                                                           "YTD"
+                                                       ]
+                                       }
+                                   ],
+                        "title":  "Revenue - Plumbing (billed, pre-tax)",
+                        "status":  "ok"
+                    },
+                    {
+                        "id":  "silo-revenue",
+                        "pulledAt":  "2026-08-04T01:37:45.5486059Z",
+                        "error":  null,
+                        "notes":  [
+                                      "SILO revenue = the SOLD / signed estimate subtotal (PRE-TAX) on turnover (TGL) jobs, credited to the TURNOVER-CALL DAY (the day the TGL job was created). Sold-only: a turnover with nothing sold contributes $0.",
+                                      "Flip rate = turnover jobs that sold an estimate / total turnover jobs created, per period. The count behind each % is shown as \"N of M turnovers sold\".",
+                                      "Turnover (TGL) jobs only. Day boundaries are Pacific (the report\u0027s Created Date carries its own Pacific offset).",
+                                      "NOT FINAL / RETROACTIVE BY DESIGN: an estimate sold later adds to its earlier turnover day, so Today, MTD and YTD can still rise. The full year is recomputed every refresh; this block is never frozen."
+                                  ],
+                        "tables":  [
+                                       {
+                                           "footer":  "",
+                                           "subtitle":  "SILO revenue",
+                                           "rows":  [
+                                                        [
+                                                            "Today (Aug 3)",
+                                                            "$72,713.62"
+                                                        ],
+                                                        [
+                                                            "Month to date (Aug 1 - Aug 3)",
+                                                            "$311,357.19"
+                                                        ],
+                                                        [
+                                                            "Year to date (Jan 1 - Aug 3)",
+                                                            "$20,615,595.70"
+                                                        ]
+                                                    ],
+                                           "columns":  [
+                                                           "Period",
+                                                           "Revenue"
+                                                       ]
+                                       },
+                                       {
+                                           "footer":  "",
+                                           "subtitle":  "Flip rate",
+                                           "rows":  [
+                                                        [
+                                                            "Today (Aug 3)",
+                                                            "21.1%",
+                                                            "4 of 19"
+                                                        ],
+                                                        [
+                                                            "Month to date (Aug 1 - Aug 3)",
+                                                            "40.5%",
+                                                            "15 of 37"
+                                                        ],
+                                                        [
+                                                            "Year to date (Jan 1 - Aug 3)",
+                                                            "38.4%",
+                                                            "853 of 2221"
+                                                        ]
+                                                    ],
+                                           "columns":  [
+                                                           "Period",
+                                                           "Flip Rate",
+                                                           "Turnovers sold"
+                                                       ]
+                                       }
+                                   ],
+                        "title":  "Revenue - SILO (sold/signed, pre-tax)",
+                        "status":  "ok"
                     }
                 ],
-    "generatedAt":  "2026-08-04T00:25:12.5262909Z",
+    "generatedAt":  "2026-08-04T01:37:47.3661105Z",
     "isToday":  true,
     "final":  false
 }

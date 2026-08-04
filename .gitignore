@@ -24,3 +24,4 @@ tmp/
 # NOTE: do NOT ignore data/last-refresh.txt — the CI heartbeat file MUST commit
 # on every run so the scheduled workflow keeps showing activity (GitHub disables
 # schedules after 60 days of inactivity). Nothing here excludes it.
+scratch_*.ps1

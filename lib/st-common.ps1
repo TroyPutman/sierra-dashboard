@@ -197,6 +197,58 @@ function Get-Invoices($Ctx, [string]$StartIso, [string]$EndIso) {
     ,$out
 }
 
+# ---- Reporting API v2: run a saved report -----------------------------------------------------
+# POSTs to the report data endpoint, pages on hasMore (pageSize default 5000 - a full year of the
+# SILO report fits in one page), and RETRIES on HTTP 429 honoring the Retry-After header. This
+# tenant's report-run endpoint THROTTLES rapid successive POSTs (verified: two quick pulls -> the
+# second returns HTTP 429 "try again in 60 seconds"). Returns @{ fields=@(); rows=@() } where each
+# row is a POSITIONAL array - index columns by NAME via Get-ReportColMap, never a hard-coded index.
+function Invoke-StReport {
+    param($Ctx, [string]$Category, [string]$ReportId, [hashtable]$Body, [int]$PageSize = 5000)
+    $allRows = New-Object System.Collections.ArrayList
+    $fields = $null; $page = 1; $maxPages = 200
+    $json = ($Body | ConvertTo-Json -Depth 8)
+    while ($true) {
+        $url = "$script:ApiBase/reporting/v2/tenant/$($Ctx.Tenant)/report-category/$Category/reports/$ReportId/data?page=$page&pageSize=$PageSize"
+        $resp = Invoke-StReportPost $Ctx $url $json
+        if ($null -eq $resp.PSObject.Properties['fields']) { throw "report $ReportId returned no 'fields' field" }
+        if ($null -eq $fields) { $fields = @($resp.fields) }
+        if ($resp.data) { [void]$allRows.AddRange(@($resp.data)) }
+        if (-not $resp.hasMore) { break }
+        $page++; if ($page -gt $maxPages) { throw "report $ReportId paging exceeded $maxPages pages" }
+    }
+    @{ fields = $fields; rows = $allRows }
+}
+# Single POST with 429 retry+backoff. Retry-After header is honored when present; otherwise falls
+# back to 60s (the tenant's stated cooldown). Any non-429 failure fails loud immediately.
+function Invoke-StReportPost($Ctx, [string]$Url, [string]$JsonBody) {
+    $maxRetries = 5
+    for ($attempt = 0; $attempt -le $maxRetries; $attempt++) {
+        try {
+            return Invoke-RestMethod -Method Post -Uri $Url -Headers $Ctx.Headers -ContentType 'application/json' -Body $JsonBody
+        } catch {
+            $st = if ($_.Exception.Response) { [int]$_.Exception.Response.StatusCode } else { 0 }
+            if ($st -eq 429 -and $attempt -lt $maxRetries) {
+                $wait = 0
+                try { $ra = $_.Exception.Response.Headers['Retry-After']; if ($ra) { [int]::TryParse("$ra", [ref]$wait) | Out-Null } } catch { }
+                if ($wait -le 0) { $wait = 60 }
+                Start-Sleep -Seconds $wait
+                continue
+            }
+            throw "report POST failed (HTTP $st)"
+        }
+    }
+    throw "report POST kept returning HTTP 429 after $maxRetries retries"
+}
+# fields[] (each {name,label}) -> @{ columnName = columnIndex }. Rows are positional arrays; use
+# this to index by column NAME. Pass required column names to assert they exist (fail loud if not).
+function Get-ReportColMap($fields, [string[]]$Require = @()) {
+    $m = @{}
+    for ($i = 0; $i -lt $fields.Count; $i++) { $m["$($fields[$i].name)"] = $i }
+    foreach ($r in $Require) { if (-not $m.ContainsKey($r)) { throw "report is missing expected column '$r'" } }
+    $m
+}
+
 # new-opportunity filter (M1/M3): recallForId empty AND warrantyId empty AND job type name not recall/warranty/parts-install
 function Test-NewOpportunity($job, $jobTypes) {
     foreach ($p in 'recallForId','warrantyId','jobTypeId','businessUnitId') {
