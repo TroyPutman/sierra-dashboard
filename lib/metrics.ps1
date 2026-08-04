@@ -856,6 +856,150 @@ function Build-SiloSnapshot {
     @{ month=$MonthFirst.ToString('yyyy-MM'); final=($MonthFirst -lt $CurMonthFirst); generatedAt=(Get-UtcNow); block=$b }
 }
 
+# ============================================================================
+#  M-Revenue: Plumbing revenue (pre-tax subTotal, billed not collected), Today / MTD / YTD
+#  DEFINITION (verbatim from the Plumbing manager, verified 2026-08-03 against their revenue.json:
+#  Install BU 408662213 on 2026-08-03 = $15,847.05, exact match):
+#    * Revenue = sum of each invoice's `subTotal` (PRE-TAX), grouped by the invoice's date.
+#      Billed / invoiced, NOT collected. Tax excluded. Discounts / refunds / credits are NOT
+#      stripped - they appear naturally as negative-dollar invoices; subTotal is summed as-is
+#      (a value can be negative).
+#    * Source = ServiceTitan Accounting API v2 invoices endpoint (NOT the reporting API), filtered
+#      by invoicedOnOrAfter / invoicedOnBefore. That endpoint SILENTLY IGNORES a businessUnitIds
+#      query param on this tenant, so the Plumbing BU set is filtered in code (Get-Invoices).
+#    * Time boundaries = plain UTC calendar days (invoiceDate is a UTC-midnight date). We do NOT
+#      use Get-PacDayWindow here (it would shift +7/8h and bucket the wrong day).
+#    * Money is summed as [decimal], never [double], so totals match to the cent.
+#  CACHING / FRESHNESS (matches the manager's "recompute this month + last month, freeze older"):
+#    Per-month cache files data/revenue-<YYYY-MM>.json store per-BU per-day subTotal sums for the 4
+#    Plumbing BUs, plus a `final` flag + generatedAt. The current month and the previous month
+#    (relative to today's calendar month) are ALWAYS recomputed on every run (final=false), so
+#    backdated corrections flow into them. Any month older than the previous month is frozen: if a
+#    final cache exists it is reused; otherwise it is computed once and written final=true. The very
+#    first run therefore backfills + freezes Jan .. prev-month for the selected date's year.
+#  AS-OF: computed as of the snapshot's selected date D. Today = D's single day; MTD = 1st of D's
+#  month .. D inclusive; YTD = Jan 1 of D's year .. D inclusive. Days after D (later postings in a
+#  past month's cache) are excluded by comparing the stored day key to D.
+# ============================================================================
+$script:REV_PLMB_BUS = [ordered]@{ '353'='Service'; '354'='Maintenance'; '595105985'='Drains'; '408662213'='Install' }
+
+function Get-RevenueDataDir {
+    $d = Join-Path (Split-Path $script:LibRoot -Parent) 'data'
+    if (-not (Test-Path $d)) { New-Item -ItemType Directory -Path $d | Out-Null }
+    $d
+}
+function Format-Money([decimal]$v) {
+    $s = ([Math]::Abs($v)).ToString('#,##0.00', [Globalization.CultureInfo]::InvariantCulture)
+    if ($v -lt 0) { "-`$$s" } else { "`$$s" }
+}
+# Compute per-BU per-day subTotal sums (decimal, cent-rounded) for one calendar month, Plumbing BUs only.
+function Compute-RevenueMonth($Ctx, [datetime]$MonthFirst) {
+    $startIso = Get-UtcDayIso $MonthFirst
+    $endIso   = Get-UtcDayIso ($MonthFirst.AddMonths(1))
+    $inv = Get-Invoices $Ctx $startIso $endIso
+    $days = [ordered]@{}
+    foreach ($bu in $script:REV_PLMB_BUS.Keys) { $days[$bu] = @{} }
+    foreach ($i in $inv) {
+        $bu = $i.buId
+        if (-not $script:REV_PLMB_BUS.Contains($bu)) { continue }   # filter Plumbing BUs in CODE (server ignores the filter)
+        $dayKey = (Parse-Utc $i.invoiceDate).ToString('yyyy-MM-dd') # plain-UTC calendar date
+        if (-not $days[$bu].ContainsKey($dayKey)) { $days[$bu][$dayKey] = [decimal]0 }
+        $days[$bu][$dayKey] += $i.subTotal
+    }
+    foreach ($bu in $script:REV_PLMB_BUS.Keys) {
+        foreach ($k in @($days[$bu].Keys)) { $days[$bu][$k] = [decimal][Math]::Round($days[$bu][$k], 2) }
+    }
+    $days
+}
+# Ensure the month cache for $MonthFirst exists per the freshness rule, and return the parsed cache.
+function Ensure-RevenueMonth($Ctx, [datetime]$MonthFirst, [datetime]$CurFirst) {
+    $dataDir  = Get-RevenueDataDir
+    $monthStr = $MonthFirst.ToString('yyyy-MM')
+    $file     = Join-Path $dataDir "revenue-$monthStr.json"
+    $prevFirst = $CurFirst.AddMonths(-1)
+    $recompute = ($MonthFirst -ge $prevFirst)   # current or previous month -> always recompute
+    if (-not $recompute -and (Test-Path $file)) {
+        $c = $null; try { $c = Get-Content $file -Raw | ConvertFrom-Json } catch { $c = $null }
+        if ($c -and $c.final -eq $true) { return $c }   # frozen month with a final cache: reuse
+    }
+    $days    = Compute-RevenueMonth $Ctx $MonthFirst
+    $isFinal = (-not $recompute)                 # frozen months written final=true; cur/prev final=false
+    $cache   = [ordered]@{ month=$monthStr; final=$isFinal; generatedAt=(Get-UtcNow); days=$days }
+    ($cache | ConvertTo-Json -Depth 8) | Set-Content -Path $file -Encoding UTF8
+    Get-Content $file -Raw | ConvertFrom-Json   # re-read for a consistent PSCustomObject shape
+}
+
+function Get-Metric-Revenue($Ctx, [datetime]$Date) {
+    $today    = Get-TodayPac $Ctx.Pac
+    $curFirst = Get-UtcMonthStart $today            # today's calendar month (Pacific is irrelevant to the rule)
+    $dMonth   = Get-UtcMonthStart $Date
+    $yearStart= Get-UtcYearStart $Date
+
+    # Ensure a cache for every month Jan(D.year) .. month(D) (YTD needs them all).
+    $monthCaches = [ordered]@{}
+    $m = $yearStart
+    while ($m -le $dMonth) {
+        $monthCaches[$m.ToString('yyyy-MM')] = (Ensure-RevenueMonth $Ctx $m $curFirst)
+        $m = $m.AddMonths(1)
+    }
+
+    $dKey          = $Date.ToString('yyyy-MM-dd')
+    $monthStartKey = $dMonth.ToString('yyyy-MM-dd')
+    $yearStartKey  = $yearStart.ToString('yyyy-MM-dd')
+
+    $tot = @{}   # period -> bu -> [decimal]
+    foreach ($p in 'today','mtd','ytd') { $tot[$p]=@{}; foreach ($bu in $script:REV_PLMB_BUS.Keys) { $tot[$p][$bu]=[decimal]0 } }
+    foreach ($mk in $monthCaches.Keys) {
+        $cache = $monthCaches[$mk]
+        if ($null -eq $cache.days) { continue }
+        foreach ($bu in $script:REV_PLMB_BUS.Keys) {
+            $buProp = $cache.days.PSObject.Properties[$bu]
+            if (-not $buProp) { continue }
+            foreach ($dp in $buProp.Value.PSObject.Properties) {
+                $dayKey = $dp.Name
+                if ($dayKey -gt $dKey) { continue }         # a later posting in a past month - not yet as of D
+                if ($dayKey -lt $yearStartKey) { continue } # safety (should not occur)
+                $val = [decimal]$dp.Value
+                $tot['ytd'][$bu] += $val
+                if ($dayKey -ge $monthStartKey) { $tot['mtd'][$bu] += $val }
+                if ($dayKey -eq $dKey)          { $tot['today'][$bu] += $val }
+            }
+        }
+    }
+
+    $plmb = @{}; foreach ($p in 'today','mtd','ytd') { $s=[decimal]0; foreach ($bu in $script:REV_PLMB_BUS.Keys){ $s += $tot[$p][$bu] }; $plmb[$p]=$s }
+
+    $todayLbl = "Today ($($Date.ToString('MMM d')))"
+    $mtdLbl   = "Month to date ($($dMonth.ToString('MMM 1')) - $($Date.ToString('MMM d')))"
+    $ytdLbl   = "Year to date ($($yearStart.ToString('MMM 1')) - $($Date.ToString('MMM d')))"
+
+    $summaryRows = @(
+        ,@($todayLbl, (Format-Money $plmb['today']))
+        ,@($mtdLbl,   (Format-Money $plmb['mtd']))
+        ,@($ytdLbl,   (Format-Money $plmb['ytd']))
+    )
+    $buRows = @()
+    foreach ($bu in $script:REV_PLMB_BUS.Keys) {
+        $buRows += ,@($script:REV_PLMB_BUS[$bu], (Format-Money $tot['today'][$bu]), (Format-Money $tot['mtd'][$bu]), (Format-Money $tot['ytd'][$bu]))
+    }
+    $buFoot = "PLUMBING TOTAL   Today {0}    MTD {1}    YTD {2}" -f (Format-Money $plmb['today']), (Format-Money $plmb['mtd']), (Format-Money $plmb['ytd'])
+
+    $notes = @(
+        'Revenue = each invoice''s pre-tax subTotal, summed by the invoice date. BILLED / invoiced, NOT collected. Tax excluded.',
+        'Discounts, refunds and credits are included as-is - they appear naturally as negative-dollar invoices; nothing is stripped out.',
+        'Plumbing = Service + Maintenance + Drains + Install. Day boundaries are plain UTC calendar dates (the invoice date), not Pacific.',
+        'This month and last month are fully recomputed on every refresh (so backdated corrections update them); any older month is frozen after its first computation.',
+        'CAVEAT - NOT FINAL: Today, this month''s MTD, and YTD are PARTIAL. Invoices keep posting, so these figures will keep rising through the day and month.'
+    )
+
+    @{ id='revenue'; title='Revenue - Plumbing (billed, pre-tax)'; status='ok'; error=$null;
+       notes=$notes;
+       tables=@(
+         @{ subtitle='Plumbing revenue'; columns=@('Period','Revenue'); rows=$summaryRows; footer='' },
+         @{ subtitle='By business unit'; columns=@('Business Unit','Today','MTD','YTD'); rows=$buRows; footer=$buFoot }
+       ) }
+}
+
 # ---------- registry + snapshot assembler ----------
 $script:METRIC_DEFS = @(
     @{ id='call-counts';    title='Call Count';               act={ param($c,$d) Get-Metric-CallCounts   $c $d } },
@@ -866,7 +1010,8 @@ $script:METRIC_DEFS = @(
     @{ id='maint-14d';      title='Maintenances (14d)';       act={ param($c,$d) Get-Metric-Maint14       $c $d } },
     @{ id='club-members';   title='Club Members Left to Run'; act={ param($c,$d) Get-Metric-ClubMembers   $c $d } },
     @{ id='call-board';     title='3-Day Call Board';         act={ param($c,$d) Get-Metric-CallBoard     $c $d } },
-    @{ id='booking-source'; title='Booking Rate by Source';   act={ param($c,$d) Get-Metric-BookingBySource $c $d } }
+    @{ id='booking-source'; title='Booking Rate by Source';   act={ param($c,$d) Get-Metric-BookingBySource $c $d } },
+    @{ id='revenue';        title='Revenue - Plumbing';       act={ param($c,$d) Get-Metric-Revenue       $c $d } }
 )
 
 function New-ErrorBlock($id,$title,$msg) { @{ id=$id; title=$title; status='error'; error=$msg; notes=@(); tables=@(); pulledAt=(Get-UtcNow) } }

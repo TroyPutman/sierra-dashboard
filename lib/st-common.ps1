@@ -160,6 +160,43 @@ function Get-PacDayWindow($Ctx, [datetime]$Date) {
        EndIso=$endUtc.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ") }
 }
 
+# ---- plain-UTC calendar boundaries (NOT Pacific-shifted) --------------------------------------
+# The accounting invoices endpoint's `invoiceDate` is a UTC-midnight calendar date (e.g.
+# 2026-08-03T00:00:00Z). Day / month / year buckets for revenue MUST therefore use plain
+# <date>T00:00:00Z boundaries - do NOT run these through Get-PacDayWindow, which shifts the day
+# by +7/8h and would bucket an invoice onto the wrong calendar day. Returns ISO strings the
+# invoices endpoint's invoicedOnOrAfter / invoicedOnBefore filters accept.
+function Get-UtcDayIso([datetime]$d)   { $d.Date.ToString('yyyy-MM-dd') + 'T00:00:00Z' }
+function Get-UtcMonthStart([datetime]$d) { [datetime]::new($d.Year, $d.Month, 1) }
+function Get-UtcYearStart([datetime]$d)  { [datetime]::new($d.Year, 1, 1) }
+
+# Fetch accounting invoices whose invoiceDate falls in [StartIso, EndIso) (plain-UTC calendar
+# boundaries - see Get-UtcDayIso). Returns one lightweight record per invoice:
+#   id (string), buId (businessUnit.id as string), subTotal ([decimal], PRE-TAX, can be negative),
+#   invoiceDate (raw ISO string), jobId (job.id as string, or '' when absent - kept for later SILO work).
+# HARD RULE: this tenant's invoices endpoint SILENTLY IGNORES a businessUnitIds query param -
+# callers MUST filter by buId in code and never trust a server-side BU filter here. pageSize 2500.
+function Get-Invoices($Ctx, [string]$StartIso, [string]$EndIso) {
+    $raw = Invoke-StPaged $Ctx "/accounting/v2/tenant/$($Ctx.Tenant)/invoices" `
+        @{ invoicedOnOrAfter=$StartIso; invoicedOnBefore=$EndIso } 2500
+    $out = New-Object System.Collections.ArrayList
+    foreach ($i in $raw) {
+        foreach ($p in 'id','subTotal','invoiceDate','businessUnit') {
+            if ($null -eq $i.PSObject.Properties[$p]) { throw "invoice $($i.id) is missing field '$p'" }
+        }
+        $buId  = if ($i.businessUnit) { "$($i.businessUnit.id)" } else { '' }
+        $jobId = if ($i.job -and -not (Is-EmptyVal $i.job.id)) { "$($i.job.id)" } else { '' }
+        [void]$out.Add([pscustomobject]@{
+            id          = "$($i.id)"
+            buId        = $buId
+            subTotal    = [decimal]$i.subTotal
+            invoiceDate = "$($i.invoiceDate)"
+            jobId       = $jobId
+        })
+    }
+    ,$out
+}
+
 # new-opportunity filter (M1/M3): recallForId empty AND warrantyId empty AND job type name not recall/warranty/parts-install
 function Test-NewOpportunity($job, $jobTypes) {
     foreach ($p in 'recallForId','warrantyId','jobTypeId','businessUnitId') {

@@ -219,6 +219,16 @@
   .cal-wknd-tag{font-size:.66rem; color:var(--dim2); text-transform:uppercase; letter-spacing:.04em;}
   .cal-legend{font-size:.72rem; color:var(--dim2); margin-top:6px;}
   .cal-legend .swatch{display:inline-block; width:10px; height:10px; border-radius:3px; background:var(--panel2); border:1px solid var(--hair); vertical-align:middle; margin:0 5px 1px 12px;}
+
+  /* REVENUE - three hero numbers (Today/MTD/YTD) + per-BU breakdown */
+  .revgrid{display:flex; gap:22px; margin:6px 0 20px; flex-wrap:wrap;}
+  .revhero{background:var(--panel); border:1px solid var(--hair); box-shadow:0 1px 4px rgba(8,66,122,.05);
+     border-radius:18px; padding:20px 30px 22px; flex:1; min-width:300px;}
+  .revhero .rl{font-size:1rem; font-weight:700; letter-spacing:.05em; color:var(--brand); text-transform:uppercase;}
+  .revhero .rv{font-size:clamp(2.4rem,4.6vw,3.8rem); font-weight:650; line-height:1; margin-top:10px;
+     letter-spacing:-.01em; font-variant-numeric:tabular-nums; color:var(--text);}
+  .revhero.today{border-color:var(--gold); box-shadow:0 1px 8px rgba(244,165,34,.18);}
+  .revcav{font-size:.95rem; color:var(--warn); font-weight:600; margin:2px 0 14px; line-height:1.35;}
 </style>
 </head>
 <body>
@@ -262,6 +272,7 @@ const TABS = [
   {id:'pipeline', label:'Pipeline'},
   {id:'callboard', label:'Call Board'},
   {id:'sources', label:'Sources'},
+  {id:'revenue', label:'Revenue'},
   {id:'silo', label:'SILO'},
 ];
 let active = 'overview';
@@ -707,7 +718,39 @@ function renderSilo(){
   return `<div class="silowrap">${hd}${hero}${leaderboard}${cav}</div>`;
 }
 
-const RENDER = {overview:renderOverview, calls:renderCalls, cancellations:renderCancellations, staffing:renderStaffing, pipeline:renderPipeline, callboard:renderCallBoard, sources:renderSources, silo:renderSilo};
+/* ---------- REVENUE (Plumbing; billed pre-tax subTotal; Today/MTD/YTD + per-BU) ---------- */
+function currencyTable(t){
+  if(!t) return '';
+  const cols = asArray(t.columns); const rows = asArray(t.rows).map(r=>asArray(r));
+  let h = '<table><thead><tr>';
+  cols.forEach((c,i)=> h += `<th class="${i>0?'r':''}">${esc(c)}</th>`);
+  h += '</tr></thead><tbody>';
+  if(rows.length===0) h += `<tr><td colspan="${cols.length}" style="color:var(--dim)">none</td></tr>`;
+  rows.forEach(r=>{ h+='<tr>'; r.forEach((c,i)=> h += `<td class="${i>0?'r num':''}">${esc(c)}</td>`); h+='</tr>'; });
+  h += '</tbody>';
+  if(t.footer) h += `<tfoot><tr><td colspan="${cols.length}">${esc(t.footer)}</td></tr></tfoot>`;
+  h += '</table>';
+  return h;
+}
+function renderRevenue(){
+  const b = block('revenue');
+  let h = '<div class="wrap"><div class="head"><h2>Revenue &mdash; Plumbing</h2>'
+        + '<div class="kpi">billed, pre-tax</div></div>';
+  if(!b||b.status==='error'){ return h + errBlock(b,'Revenue') + '</div>'; }
+  const sum = asArray(b.tables)[0];   // Period | Revenue  (Today / MTD / YTD)
+  const bu  = asArray(b.tables)[1];   // Business Unit | Today | MTD | YTD
+  const sr = asArray(sum.rows).map(r=>asArray(r));
+  const heroCls = ['today','',''];
+  const hero = sr.map((r,i)=>`<div class="revhero ${heroCls[i]||''}"><div class="rl">${esc(r[0])}</div><div class="rv">${esc(r[1])}</div></div>`).join('');
+  h += `<div class="revcav">NOT FINAL &mdash; Today, this month (MTD) and YTD are partial; invoices keep posting so these will keep rising.</div>`;
+  h += `<div class="revgrid">${hero}</div>`;
+  h += `<h3>By business unit</h3><div class="big">${currencyTable(bu)}</div>`;
+  h += notesHtml(b);
+  h += '</div>';
+  return h;
+}
+
+const RENDER = {overview:renderOverview, calls:renderCalls, cancellations:renderCancellations, staffing:renderStaffing, pipeline:renderPipeline, callboard:renderCallBoard, sources:renderSources, revenue:renderRevenue, silo:renderSilo};
 
 function updatePickers(){
   const s = (active==='silo');
