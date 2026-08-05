@@ -1,0 +1,36 @@
+#!/bin/sh
+# Pre-commit guard: manual commits are code-only. The scheduled workflow
+# (.github/workflows/deploy.yml) owns data/ -- it commits the heartbeat and
+# frozen (final:true) snapshots back to the repo on its own schedule.
+# Manual commits that also touch data/*.json cause merge conflicts when the
+# workflow's next commit diverges from local history. This hook blocks that.
+#
+# Bypass paths (both intentional):
+#   - CI runs (the workflow itself) always pass, via $GITHUB_ACTIONS/$CI.
+#   - A human who really means to commit a data file locally can set
+#     ALLOW_DATA_COMMIT=1, or use `git commit --no-verify`.
+
+if [ "$GITHUB_ACTIONS" = "true" ] || [ -n "$CI" ] || [ "$ALLOW_DATA_COMMIT" = "1" ]; then
+  exit 0
+fi
+
+offending=$(git diff --cached --name-only | grep -E '^data/')
+
+if [ -n "$offending" ]; then
+  echo "ERROR: refusing to commit file(s) under data/:" >&2
+  echo "$offending" | sed 's/^/  /' >&2
+  echo "" >&2
+  echo "The scheduled workflow (.github/workflows/deploy.yml) owns data/ -- it" >&2
+  echo "commits the heartbeat + frozen snapshots itself. Manual commits that" >&2
+  echo "touch data/ cause merge conflicts with the workflow's own commits." >&2
+  echo "" >&2
+  echo "To fix: unstage the data file(s) and commit code only:" >&2
+  echo "  git restore --staged data/" >&2
+  echo "" >&2
+  echo "If you really mean to commit a data file locally, override with:" >&2
+  echo "  ALLOW_DATA_COMMIT=1 git commit ..." >&2
+  echo "  (or) git commit --no-verify" >&2
+  exit 1
+fi
+
+exit 0

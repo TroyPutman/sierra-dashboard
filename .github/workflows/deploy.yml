@@ -11,10 +11,14 @@ name: Deploy dashboard to GitHub Pages
 #   6. Builds the static site (build-static.ps1 -> site/) with -NoGate: NO client-side
 #      password gate. This is a fully PUBLIC dashboard by design -- there is no login of
 #      any kind, so there is no password hash to inject.
-#   7. Commits the heartbeat + regenerated data/ snapshots back to the repo on EVERY run.
-#      This guarantees repo activity so GitHub does NOT auto-disable the scheduled workflow
-#      after 60 days of inactivity. The message carries [skip ci] so the push does not
-#      re-trigger this workflow. secrets.json and site/ are NEVER committed.
+#   7. Commits the heartbeat + any newly-FROZEN (final:true) data/ snapshots back to the
+#      repo on EVERY run. This guarantees repo activity so GitHub does NOT auto-disable the
+#      scheduled workflow after 60 days of inactivity. Today's live snapshot and the
+#      current/previous-month revenue caches (final:false, change every run) are
+#      intentionally NOT committed -- they're rebuilt fresh from the API every run, and
+#      committing them constantly caused merge conflicts with manual commits. The message
+#      carries [skip ci] so the push does not re-trigger this workflow. secrets.json and
+#      site/ are NEVER committed.
 #   8. Publishes site/ to GitHub Pages via the official Pages actions
 #      (configure-pages -> upload-pages-artifact -> deploy-pages).
 #
@@ -167,25 +171,50 @@ jobs:
           # client-side password gate and no password hash to inject.
           pwsh ./build-static.ps1 -OutDir site -NoGate
 
-      - name: Commit heartbeat + snapshots (every run, keeps schedule alive)
+      - name: Commit heartbeat + frozen snapshots (every run, keeps schedule alive)
         shell: bash
         run: |
           set -euo pipefail
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # Stage ONLY data/ : today's snapshot, any newly-frozen yesterday, silo files,
-          # and the heartbeat. secrets.json lives at repo root (not data/) AND is gitignored,
-          # so it can never be staged here. site/ is gitignored and never committed.
-          git add data/
+          # Narrowed on purpose: we do NOT `git add data/` wholesale anymore. That used
+          # to commit today's live snapshot and the current/previous-month revenue caches
+          # on every single run (they change every run, since they're volatile/final:false),
+          # which caused manual commits and this workflow's own commits to collide and
+          # produce merge conflicts on data/*.json.
+          #
+          # Instead: always stage the heartbeat, and stage a changed/untracked data/*.json
+          # file ONLY if it is a FROZEN snapshot/cache -- i.e. its JSON has a top-level
+          # "final": true. That captures newly-finalized past days (e.g. yesterday, once
+          # frozen) and any newly-frozen revenue month cache, while excluding today's live
+          # snapshot and any still-open (final:false) revenue month cache. Those are
+          # rebuilt fresh every run from the API and never need to be committed --
+          # build-static.ps1 reads them straight from the working directory regardless.
+          #
+          # secrets.json lives at repo root (not data/) AND is gitignored, so it can never
+          # be staged here. site/ is gitignored and never committed.
+          git add data/last-refresh.txt
+
+          while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            f="${line:3}"
+            case "$f" in
+              data/*.json)
+                if [ -f "$f" ] && grep -Eq '"final":[[:space:]]*true' "$f"; then
+                  git add "$f"
+                fi
+                ;;
+            esac
+          done <<< "$(git status --porcelain -- data/)"
 
           if git diff --cached --quiet; then
-            # The heartbeat changes every run, so this branch should effectively never hit;
-            # kept as a safety net so an unchanged tree does not fail the job.
+            # Nothing frozen changed this run (heartbeat somehow unchanged too) -- kept
+            # as a safety net so an unchanged tree does not fail the job.
             echo "Nothing to commit (unexpected -- heartbeat should always change)."
           else
             # [skip ci] + GITHUB_TOKEN pushes don't re-trigger this workflow (no loop).
-            git commit -m "Refresh snapshots + heartbeat [skip ci]"
+            git commit -m "Refresh: heartbeat + frozen snapshots [skip ci]"
             git push
           fi
 

@@ -196,6 +196,31 @@ The workflow file has a full comment block explaining the cadence right above th
 
 ---
 
+## Repo hygiene / avoiding data conflicts
+
+- **Manual commits are code-only.** The scheduled workflow (`.github/workflows/deploy.yml`)
+  owns `data/` — it commits back only the heartbeat (`data/last-refresh.txt`) and any
+  newly-**frozen** (`"final": true`) snapshot/cache files. Today's live snapshot and the
+  current/previous-month revenue caches are volatile (`"final": false"`, rebuilt every run)
+  and are never committed by the workflow, on purpose — committing those every run used to
+  collide with manual commits and produce merge conflicts on `data/*.json`.
+- **A pre-commit guard enforces this locally.** `.githooks/pre-commit` blocks a manual
+  commit if any staged path is under `data/`. On a **fresh clone**, this hook is not active
+  until you run, once:
+  ```powershell
+  git config core.hooksPath .githooks
+  ```
+  After that, `git commit` will refuse (with an explanatory message) if it finds a staged
+  `data/*.json` or `data/last-refresh.txt` file.
+- **Override, if you really mean to commit a data file locally:**
+  ```powershell
+  $env:ALLOW_DATA_COMMIT = "1"; git commit -m "..."
+  ```
+  or bypass the hook entirely with `git commit --no-verify`. The workflow's own commits
+  always pass (it runs in CI, which the hook detects via `GITHUB_ACTIONS`/`CI`).
+
+---
+
 ## Troubleshooting
 
 - **Actions run failed on "Reconstruct secrets.json":** one of `ST_CLIENT_ID`,
