@@ -1,62 +1,62 @@
 ﻿{
-    "date":  "2026-08-03",
+    "date":  "2026-08-04",
     "metrics":  [
                     {
                         "id":  "call-counts",
-                        "pulledAt":  "2026-08-05T14:36:44.8728429Z",
+                        "pulledAt":  "2026-08-05T14:40:08.2417459Z",
                         "error":  null,
                         "notes":  [
                                       "Booked = calls SCHEDULED FOR the day. Completed = calls finished that day. Different jobs; not expected to match."
                                   ],
                         "tables":  [
                                        {
-                                           "footer":  "TOTAL   Booked 284    Completed 267",
+                                           "footer":  "TOTAL   Booked 273    Completed 242",
                                            "subtitle":  "",
                                            "rows":  [
                                                         [
                                                             "HVAC - Service",
-                                                            109,
-                                                            105
+                                                            99,
+                                                            89
                                                         ],
                                                         [
                                                             "HVAC - Install - AOR",
-                                                            19,
-                                                            15
+                                                            29,
+                                                            23
                                                         ],
                                                         [
                                                             "HVAC - Maintenance",
-                                                            39,
-                                                            39
+                                                            53,
+                                                            44
                                                         ],
                                                         [
                                                             "HVAC - Sales (NR)",
-                                                            26,
-                                                            22
+                                                            21,
+                                                            19
                                                         ],
                                                         [
                                                             "HVAC - Sales Costco (NR)",
-                                                            5,
-                                                            5
+                                                            7,
+                                                            6
                                                         ],
                                                         [
                                                             "Plumbing - Service",
-                                                            29,
-                                                            28
+                                                            17,
+                                                            17
                                                         ],
                                                         [
                                                             "Plumbing - Maintenance",
-                                                            41,
-                                                            40
+                                                            30,
+                                                            30
                                                         ],
                                                         [
                                                             "Plumbing - Install",
-                                                            13,
+                                                            14,
                                                             11
                                                         ],
                                                         [
                                                             "Plumbing - Drains",
                                                             3,
-                                                            2
+                                                            3
                                                         ]
                                                     ],
                                            "columns":  [
@@ -71,30 +71,30 @@
                     },
                     {
                         "id":  "cancellations",
-                        "pulledAt":  "2026-08-05T14:36:50.0538690Z",
+                        "pulledAt":  "2026-08-05T14:40:16.4010354Z",
                         "error":  null,
                         "notes":  [
                                       "Dated to the day the call was scheduled for service (the dispatch-board cancel tray), not the day someone pressed cancel. Detail: job type, when cancelled, reason, who.",
                                       "One job = one cancellation, counted ONCE on the FIRST Pacific day it ever had a visit booked (a multi-day job cancelled mid-way shows on day 1 only, not later days). Counted whether that day\u0027s visit reads Canceled or Done - a job cancelled after its visit was marked Done still counts. A cancelled visit that was only RESCHEDULED does not count; only jobs that are genuinely cancelled do.",
                                       "NOT FINAL - CAVEAT: this is the count AS OF THIS PULL. Cancellations recorded later still date back onto the day the work was scheduled for, so this number CAN STILL RISE. Do not read yesterday\u0027s count as final.",
-                                      "EXCLUDED as administrative cleanup, not lost work: 9 on this day (Duplicate entry x8, Avoca Duplicate x1). These are duplicate / data-entry records. Excluded reasons: Duplicate entry, Avoca Duplicate, History call clean up (legacy), Reschedule (legacy)."
+                                      "EXCLUDED as administrative cleanup, not lost work: 5 on this day (Avoca Duplicate x2, Duplicate entry x3). These are duplicate / data-entry records. Excluded reasons: Duplicate entry, Avoca Duplicate, History call clean up (legacy), Reschedule (legacy)."
                                   ],
                         "tables":  [
                                        {
-                                           "footer":  "TOTAL   43",
+                                           "footer":  "TOTAL   30",
                                            "subtitle":  "By business unit",
                                            "rows":  [
                                                         [
                                                             "HVAC - Service",
-                                                            10
+                                                            9
                                                         ],
                                                         [
                                                             "HVAC - Install - AOR",
-                                                            1
+                                                            0
                                                         ],
                                                         [
                                                             "HVAC - Maintenance",
-                                                            8
+                                                            5
                                                         ],
                                                         [
                                                             "HVAC - Sales (NR)",
@@ -102,15 +102,15 @@
                                                         ],
                                                         [
                                                             "HVAC - Sales Costco (NR)",
-                                                            3
+                                                            1
                                                         ],
                                                         [
                                                             "Plumbing - Service",
-                                                            6
+                                                            4
                                                         ],
                                                         [
                                                             "Plumbing - Maintenance",
-                                                            9
+                                                            5
                                                         ],
                                                         [
                                                             "Plumbing - Install",
@@ -131,348 +131,244 @@
                                            "subtitle":  "Detail",
                                            "rows":  [
                                                         [
-                                                            "HVAC - Install - AOR",
-                                                            "Recall/Warranty",
-                                                            "2026-08-03 08:00",
-                                                            "2026-08-02 18:11",
-                                                            "Problem fixed itself (CSR tried to save)",
-                                                            "Ashley Morales"
-                                                        ],
-                                                        [
                                                             "HVAC - Maintenance",
-                                                            "SAM Cooling Service (1 System) 4-7 Yrs",
-                                                            "2026-08-03 08:00",
-                                                            "2026-07-09 12:07",
-                                                            "Problem fixed itself (CSR tried to save)",
-                                                            "Shanelle Poti"
-                                                        ],
-                                                        [
-                                                            "HVAC - Maintenance",
-                                                            "SAM Cooling Service (2 System) 4-7 Yrs",
-                                                            "2026-08-03 08:00",
-                                                            "2026-08-02 13:20",
-                                                            "Problem fixed itself (CSR tried to save)",
-                                                            "Shanelle Poti"
-                                                        ],
-                                                        [
-                                                            "HVAC - Sales (NR)",
-                                                            "Estimate Mini Split",
-                                                            "2026-08-03 08:00",
-                                                            "2026-08-03 09:14",
-                                                            "H/O can\u0027t today - Lead Follow up",
-                                                            "Derik King - OFFICE"
-                                                        ],
-                                                        [
-                                                            "HVAC - Sales Costco (NR)",
-                                                            "Estimate AC Costco",
-                                                            "2026-08-03 08:00",
-                                                            "2026-08-03 08:35",
-                                                            "Problem fixed itself (CSR tried to save)",
-                                                            "Kansas Buck"
-                                                        ],
-                                                        [
-                                                            "HVAC - Service",
-                                                            "AC Issue 4-7 yrs",
-                                                            "2026-08-03 08:00",
-                                                            "2026-08-01 16:51",
-                                                            "Problem fixed itself (CSR tried to save)",
-                                                            "Esteisi Morales"
-                                                        ],
-                                                        [
-                                                            "HVAC - Service",
-                                                            "AC Issue 8+ yrs",
-                                                            "2026-08-03 08:00",
-                                                            "2026-08-03 07:20",
-                                                            "Problem fixed itself (CSR tried to save)",
-                                                            "Ariana Burns"
-                                                        ],
-                                                        [
-                                                            "HVAC - Service",
-                                                            "AC Issue 8+ yrs",
-                                                            "2026-08-03 08:00",
-                                                            "2026-08-03 07:45",
+                                                            "SAM Cooling Service (1 System) 1-3 Yrs",
+                                                            "2026-08-04 08:00",
+                                                            "2026-08-03 08:56",
                                                             "Problem fixed itself (CSR tried to save)",
                                                             "Susan Valenzuela"
                                                         ],
                                                         [
-                                                            "Plumbing - Maintenance",
-                                                            "Plumbing SAM Tanked Water Heater Service 6+ Yrs",
-                                                            "2026-08-03 08:00",
-                                                            "2026-08-04 12:22",
-                                                            "H/O can\u0027t today - Lead Follow up",
-                                                            "Kendall Page"
-                                                        ],
-                                                        [
-                                                            "Plumbing - Service",
-                                                            "Plumbing Part Install 3-5 HRS",
-                                                            "2026-08-03 08:00",
-                                                            "2026-08-03 08:11",
-                                                            "3 attempts at contact, no response",
-                                                            "Abigail Solano"
-                                                        ],
-                                                        [
-                                                            "Plumbing - Service",
-                                                            "Estimate Move Equipment",
-                                                            "2026-08-03 08:00",
-                                                            "2026-08-03 21:03",
-                                                            "H/O can\u0027t today - Lead Follow up",
-                                                            "James Douglas"
-                                                        ],
-                                                        [
-                                                            "Plumbing - Service",
-                                                            "Plumbing Water Test/Treatment",
-                                                            "2026-08-03 08:00",
-                                                            "2026-07-30 10:38",
-                                                            "Problem fixed itself (CSR tried to save)",
-                                                            "Kayla Mergersen"
-                                                        ],
-                                                        [
-                                                            "HVAC - Sales (NR)",
-                                                            "Estimate Humidifier",
-                                                            "2026-08-03 10:00",
-                                                            "2026-08-02 17:26",
-                                                            "Problem fixed itself (CSR tried to save)",
-                                                            "Esteisi Morales"
-                                                        ],
-                                                        [
-                                                            "HVAC - Sales (NR)",
-                                                            "Estimate AC",
-                                                            "2026-08-03 10:00",
-                                                            "2026-08-03 10:07",
-                                                            "Going with Install over Repair",
-                                                            "Derik King - OFFICE"
-                                                        ],
-                                                        [
-                                                            "HVAC - Sales (NR)",
-                                                            "Estimate AC",
-                                                            "2026-08-03 10:00",
-                                                            "2026-08-02 11:59",
-                                                            "Problem fixed itself (CSR tried to save)",
-                                                            "Esteisi Morales"
-                                                        ],
-                                                        [
-                                                            "HVAC - Sales Costco (NR)",
-                                                            "Estimate AC Costco",
-                                                            "2026-08-03 10:00",
-                                                            "2026-08-03 09:10",
-                                                            "Problem fixed itself (CSR tried to save)",
-                                                            "Kaylah Deitz"
-                                                        ],
-                                                        [
-                                                            "HVAC - Service",
-                                                            "Thermostat Issue",
-                                                            "2026-08-03 10:00",
-                                                            "2026-08-01 07:09",
-                                                            "Problem fixed itself (CSR tried to save)",
-                                                            "Kayla Mergersen"
-                                                        ],
-                                                        [
-                                                            "Plumbing - Maintenance",
-                                                            "Plumbing SAM Tanked Water Heater Service 6+ Yrs",
-                                                            "2026-08-03 11:00",
-                                                            "2026-08-02 13:22",
-                                                            "Problem fixed itself (CSR tried to save)",
-                                                            "Shanelle Poti"
-                                                        ],
-                                                        [
-                                                            "Plumbing - Maintenance",
-                                                            "Plumbing SAM Tanked Water Heater Service 1-5 Yrs",
-                                                            "2026-08-03 11:00",
-                                                            "2026-07-30 09:32",
-                                                            "Problem fixed itself (CSR tried to save)",
-                                                            "Ariana Burns"
-                                                        ],
-                                                        [
-                                                            "Plumbing - Maintenance",
-                                                            "Plumbing SAM Tanked Water Heater Service 6+ Yrs",
-                                                            "2026-08-03 11:00",
-                                                            "2026-08-02 16:14",
-                                                            "Problem fixed itself (CSR tried to save)",
-                                                            "Jeremy Von Samson"
-                                                        ],
-                                                        [
-                                                            "HVAC - Sales (NR)",
-                                                            "Estimate AC TGL",
-                                                            "2026-08-03 12:35",
-                                                            "2026-08-03 12:59",
-                                                            "H/O can\u0027t today - Lead Follow up",
-                                                            "Derik King - OFFICE"
-                                                        ],
-                                                        [
-                                                            "Plumbing - Maintenance",
-                                                            "Plumbing SAM Tanked Water Heater Service 1-5 Yrs",
-                                                            "2026-08-03 14:00",
-                                                            "2026-08-02 18:30",
-                                                            "Problem fixed itself (CSR tried to save)",
-                                                            "Esteisi Morales"
-                                                        ],
-                                                        [
-                                                            "Plumbing - Service",
-                                                            "Plumbing Leak Other/Unknown Origin",
-                                                            "2026-08-03 14:00",
-                                                            "2026-08-03 14:12",
-                                                            "Problem fixed itself (CSR tried to save)",
-                                                            "Kayla Mergersen"
-                                                        ],
-                                                        [
-                                                            "HVAC - Maintenance",
-                                                            "SAM Cooling Service (3 System) 8+ Yrs",
-                                                            "2026-08-03 14:52",
-                                                            "2026-08-03 14:30",
-                                                            "Problem fixed itself (CSR tried to save)",
-                                                            "Ciara Stoner"
-                                                        ],
-                                                        [
-                                                            "Plumbing - Service",
-                                                            "Plumbing Estimate Main Water Line",
-                                                            "2026-08-03 15:00",
-                                                            "2026-08-03 07:09",
-                                                            "Problem fixed itself (CSR tried to save)",
-                                                            "Kaylah Deitz"
-                                                        ],
-                                                        [
-                                                            "HVAC - Sales Costco (NR)",
-                                                            "Estimate AC Costco",
-                                                            "2026-08-03 16:00",
-                                                            "2026-08-03 15:13",
-                                                            "H/O can\u0027t today - Lead Follow up",
-                                                            "Derik King - OFFICE"
-                                                        ],
-                                                        [
-                                                            "HVAC - Maintenance",
-                                                            "SAM Cooling Service (1 System) 4-7 Yrs",
-                                                            "2026-08-03 16:59",
-                                                            "2026-08-03 17:02",
-                                                            "Problem fixed itself (CSR tried to save)",
-                                                            "Esteisi Morales"
-                                                        ],
-                                                        [
-                                                            "Plumbing - Maintenance",
-                                                            "Plumbing SAM Tanked Water Heater Service 1-5 Yrs",
-                                                            "2026-08-03 17:00",
-                                                            "2026-08-02 18:51",
-                                                            "Problem fixed itself (CSR tried to save)",
-                                                            "Shanelle Poti"
-                                                        ],
-                                                        [
-                                                            "HVAC - Service",
-                                                            "Filter Change 1-7 Yrs",
-                                                            "2026-08-03 17:09",
-                                                            "2026-08-03 15:20",
-                                                            "Problem fixed itself (CSR tried to save)",
-                                                            "Kaylah Deitz"
-                                                        ],
-                                                        [
-                                                            "Plumbing - Maintenance",
-                                                            "Plumbing SAM Tankless Water Heater Service 1-5 Yrs",
-                                                            "2026-08-03 17:26",
-                                                            "2026-08-03 11:31",
-                                                            "3 attempts at contact, no response",
-                                                            "Abigail Solano"
-                                                        ],
-                                                        [
-                                                            "HVAC - Sales (NR)",
-                                                            "Estimate Mini Split",
-                                                            "2026-08-03 17:30",
-                                                            "2026-08-03 15:18",
-                                                            "H/O can\u0027t today - Lead Follow up",
-                                                            "Derik King - OFFICE"
-                                                        ],
-                                                        [
-                                                            "HVAC - Service",
-                                                            "AC Issue 1-3 yrs",
-                                                            "2026-08-03 17:30",
-                                                            "2026-08-03 17:31",
-                                                            "Problem fixed itself (CSR tried to save)",
-                                                            "Kendall Page"
-                                                        ],
-                                                        [
-                                                            "Plumbing - Maintenance",
-                                                            "Plumbing SAM Tanked Water Heater Service 6+ Yrs",
-                                                            "2026-08-03 18:31",
-                                                            "2026-08-03 19:26",
-                                                            "H/O can\u0027t today - Lead Follow up",
-                                                            "James Douglas"
-                                                        ],
-                                                        [
-                                                            "Plumbing - Maintenance",
-                                                            "Plumbing SAM Tanked Water Heater Service 6+ Yrs",
-                                                            "2026-08-03 18:40",
-                                                            "2026-08-03 18:45",
-                                                            "H/O can\u0027t today - Lead Follow up",
-                                                            "Yailin Solano "
-                                                        ],
-                                                        [
-                                                            "Plumbing - Service",
-                                                            "Plumbing Toilet Clog",
-                                                            "2026-08-03 19:05",
-                                                            "2026-08-03 16:07",
-                                                            "Problem fixed itself (CSR tried to save)",
-                                                            "Ciara Stoner"
-                                                        ],
-                                                        [
-                                                            "HVAC - Service",
-                                                            "Semi Annual Tune-up 1-3 yrs",
-                                                            "2026-08-03 19:09",
-                                                            "2026-08-03 18:06",
-                                                            "Problem fixed itself (CSR tried to save)",
-                                                            "Esteisi Morales"
-                                                        ],
-                                                        [
-                                                            "HVAC - Maintenance",
-                                                            "SAM Cooling Service (1 System) 4-7 Yrs",
-                                                            "2026-08-03 19:41",
-                                                            "2026-08-03 19:57",
-                                                            "3 attempts at contact, no response",
-                                                            "LaToya Dennis"
-                                                        ],
-                                                        [
-                                                            "HVAC - Maintenance",
-                                                            "SAM Cooling Service (1 System) 4-7 Yrs",
-                                                            "2026-08-03 19:45",
-                                                            "2026-08-03 20:05",
-                                                            "3 attempts at contact, no response",
-                                                            "LaToya Dennis"
-                                                        ],
-                                                        [
-                                                            "HVAC - Maintenance",
-                                                            "SAM Cooling Service (1 System) 4-7 Yrs",
-                                                            "2026-08-03 19:55",
-                                                            "2026-08-03 21:31",
-                                                            "3 attempts at contact, no response",
-                                                            "LaToya Dennis"
-                                                        ],
-                                                        [
-                                                            "HVAC - Maintenance",
-                                                            "SAM Cooling Service (2 System) 8+ Yrs",
-                                                            "2026-08-03 20:01",
-                                                            "2026-08-03 20:32",
-                                                            "Problem fixed itself (CSR tried to save)",
-                                                            "Yailin Solano "
-                                                        ],
-                                                        [
-                                                            "HVAC - Service",
-                                                            "AC Issue 4-7 yrs",
-                                                            "2026-08-03 20:30",
-                                                            "2026-08-03 19:30",
-                                                            "Problem fixed itself (CSR tried to save)",
-                                                            "Kayla Mergersen"
-                                                        ],
-                                                        [
                                                             "HVAC - Service",
                                                             "AC Issue 8+ yrs",
-                                                            "2026-08-03 20:30",
-                                                            "2026-08-03 20:52",
+                                                            "2026-08-04 08:00",
+                                                            "2026-08-03 08:34",
+                                                            "Problem fixed itself (CSR tried to save)",
+                                                            "Ciara Stoner"
+                                                        ],
+                                                        [
+                                                            "HVAC - Service",
+                                                            "Semi Annual Tune-up 8+ yrs",
+                                                            "2026-08-04 08:00",
+                                                            "2026-08-03 08:01",
+                                                            "Problem fixed itself (CSR tried to save)",
+                                                            "Susan Valenzuela"
+                                                        ],
+                                                        [
+                                                            "HVAC - Service",
+                                                            "Install HVAC Part 1-2 HRS",
+                                                            "2026-08-04 08:00",
+                                                            "2026-08-04 18:44",
                                                             "Problem fixed itself (CSR tried to save)",
                                                             "Ashley Morales"
                                                         ],
                                                         [
                                                             "HVAC - Service",
-                                                            "Semi Annual Tune-up 1-3 yrs",
-                                                            "2026-08-03 20:30",
-                                                            "2026-08-03 20:09",
+                                                            "Install HVAC Part 4-5 HRS",
+                                                            "2026-08-04 08:00",
+                                                            "2026-08-04 13:59",
+                                                            "Competitor arrived",
+                                                            "Kendall Page"
+                                                        ],
+                                                        [
+                                                            "Plumbing - Maintenance",
+                                                            "Plumbing SAM Tankless Water Heater Service 1-5 Yrs",
+                                                            "2026-08-04 08:00",
+                                                            "2026-08-03 11:35",
+                                                            "Problem fixed itself (CSR tried to save)",
+                                                            "Kaylah Deitz"
+                                                        ],
+                                                        [
+                                                            "Plumbing - Service",
+                                                            "Plumbing Faucet Bathtub/Shower Valve Issue",
+                                                            "2026-08-04 08:00",
+                                                            "2026-08-03 07:25",
+                                                            "Problem fixed itself (CSR tried to save)",
+                                                            "Kaylah Deitz"
+                                                        ],
+                                                        [
+                                                            "Plumbing - Service",
+                                                            "Plumbing Part Install 3-5 HRS",
+                                                            "2026-08-04 08:00",
+                                                            "2026-08-04 07:34",
+                                                            "Problem fixed itself (CSR tried to save)",
+                                                            "Nancy Rodriguez"
+                                                        ],
+                                                        [
+                                                            "HVAC - Sales (NR)",
+                                                            "Estimate Mini Split TGL",
+                                                            "2026-08-04 10:00",
+                                                            "2026-08-04 09:59",
+                                                            "H/O can\u0027t today - Lead Follow up",
+                                                            "Derik King - OFFICE"
+                                                        ],
+                                                        [
+                                                            "HVAC - Sales (NR)",
+                                                            "Estimate AC",
+                                                            "2026-08-04 10:00",
+                                                            "2026-08-04 09:53",
+                                                            "H/O can\u0027t today - Lead Follow up",
+                                                            "Derik King - OFFICE"
+                                                        ],
+                                                        [
+                                                            "Plumbing - Maintenance",
+                                                            "Plumbing SAM Tanked Water Heater Service 6+ Yrs",
+                                                            "2026-08-04 10:00",
+                                                            "2026-08-04 07:01",
+                                                            "H/O can\u0027t today - Lead Follow up",
+                                                            "Ariana Burns"
+                                                        ],
+                                                        [
+                                                            "Plumbing - Maintenance",
+                                                            "Plumbing SAM Tanked Water Heater Service 1-5 Yrs",
+                                                            "2026-08-04 10:01",
+                                                            "2026-08-04 08:06",
+                                                            "Problem fixed itself (CSR tried to save)",
+                                                            "Nancy Rodriguez"
+                                                        ],
+                                                        [
+                                                            "Plumbing - Maintenance",
+                                                            "Plumbing SAM Tankless Water Heater Service 6+ Yrs",
+                                                            "2026-08-04 10:30",
+                                                            "2026-08-04 10:47",
+                                                            "Problem fixed itself (CSR tried to save)",
+                                                            "Nancy Rodriguez"
+                                                        ],
+                                                        [
+                                                            "HVAC - Service",
+                                                            "Thermostat Issue",
+                                                            "2026-08-04 11:00",
+                                                            "2026-08-03 16:55",
                                                             "Problem fixed itself (CSR tried to save)",
                                                             "Esteisi Morales"
+                                                        ],
+                                                        [
+                                                            "HVAC - Sales (NR)",
+                                                            "Estimate AC TGL",
+                                                            "2026-08-04 13:00",
+                                                            "2026-08-04 12:36",
+                                                            "H/O can\u0027t today - Lead Follow up",
+                                                            "Derik King - OFFICE"
+                                                        ],
+                                                        [
+                                                            "HVAC - Sales (NR)",
+                                                            "Estimate AC TGL",
+                                                            "2026-08-04 13:00",
+                                                            "2026-08-03 21:20",
+                                                            "Problem fixed itself (CSR tried to save)",
+                                                            "Esteisi Morales"
+                                                        ],
+                                                        [
+                                                            "HVAC - Sales (NR)",
+                                                            "Estimate AC TGL",
+                                                            "2026-08-04 13:00",
+                                                            "2026-08-04 18:19",
+                                                            "3 attempts at contact, no response",
+                                                            "Derik King - OFFICE"
+                                                        ],
+                                                        [
+                                                            "Plumbing - Service",
+                                                            "Plumbing Faucet Kitchen/Lav/Laundry Issue/Leak",
+                                                            "2026-08-04 14:00",
+                                                            "2026-08-03 12:39",
+                                                            "Problem fixed itself (CSR tried to save)",
+                                                            "Kayla Mergersen"
+                                                        ],
+                                                        [
+                                                            "HVAC - Maintenance",
+                                                            "SAM Cooling Service (1 System) 8+ Yrs",
+                                                            "2026-08-04 15:00",
+                                                            "2026-08-04 08:31",
+                                                            "Problem fixed itself (CSR tried to save)",
+                                                            "Ciara Stoner"
+                                                        ],
+                                                        [
+                                                            "HVAC - Service",
+                                                            "Semi Annual Tune-up 8+ yrs",
+                                                            "2026-08-04 15:03",
+                                                            "2026-08-04 14:05",
+                                                            "Problem fixed itself (CSR tried to save)",
+                                                            "Susan Valenzuela"
+                                                        ],
+                                                        [
+                                                            "HVAC - Maintenance",
+                                                            "SAM Cooling Service (2 System) 8+ Yrs",
+                                                            "2026-08-04 15:31",
+                                                            "2026-08-04 11:04",
+                                                            "Problem fixed itself (CSR tried to save)",
+                                                            "Susan Valenzuela"
+                                                        ],
+                                                        [
+                                                            "Plumbing - Service",
+                                                            "Plumbing Faucet Kitchen/Lav/Laundry Issue/Leak",
+                                                            "2026-08-04 15:31",
+                                                            "2026-08-04 10:35",
+                                                            "3 attempts at contact, no response",
+                                                            "Abigail Solano"
+                                                        ],
+                                                        [
+                                                            "HVAC - Sales (NR)",
+                                                            "Estimate AC",
+                                                            "2026-08-04 16:00",
+                                                            "2026-08-04 17:20",
+                                                            "3 attempts at contact, no response",
+                                                            "Derik King - OFFICE"
+                                                        ],
+                                                        [
+                                                            "HVAC - Sales Costco (NR)",
+                                                            "Estimate AC Costco",
+                                                            "2026-08-04 16:00",
+                                                            "2026-08-04 17:31",
+                                                            "H/O can\u0027t today - Lead Follow up",
+                                                            "Derik King - OFFICE"
+                                                        ],
+                                                        [
+                                                            "HVAC - Service",
+                                                            "AC Issue 8+ yrs",
+                                                            "2026-08-04 16:24",
+                                                            "2026-08-04 09:31",
+                                                            "Problem fixed itself (CSR tried to save)",
+                                                            "Justine Caldera"
+                                                        ],
+                                                        [
+                                                            "Plumbing - Maintenance",
+                                                            "Plumbing SAM Tanked Water Heater Service 6+ Yrs",
+                                                            "2026-08-04 16:52",
+                                                            "2026-08-04 15:28",
+                                                            "H/O can\u0027t today - Lead Follow up",
+                                                            "Kendall Page"
+                                                        ],
+                                                        [
+                                                            "HVAC - Maintenance",
+                                                            "SAM Cooling Service (1 System) 4-7 Yrs",
+                                                            "2026-08-04 18:05",
+                                                            "2026-08-04 18:12",
+                                                            "H/O can\u0027t today - Lead Follow up",
+                                                            "Yailin Solano "
+                                                        ],
+                                                        [
+                                                            "HVAC - Maintenance",
+                                                            "SAM Cooling Service (2 System) 8+ Yrs",
+                                                            "2026-08-04 19:29",
+                                                            "2026-08-04 19:56",
+                                                            "3 attempts at contact, no response",
+                                                            "LaToya Dennis"
+                                                        ],
+                                                        [
+                                                            "HVAC - Service",
+                                                            "Semi Annual Tune-up 8+ yrs",
+                                                            "2026-08-04 19:38",
+                                                            "2026-08-04 21:50",
+                                                            "3 attempts at contact, no response",
+                                                            "LaToya Dennis"
+                                                        ],
+                                                        [
+                                                            "HVAC - Service",
+                                                            "AC Issue 4-7 yrs",
+                                                            "2026-08-04 20:04",
+                                                            "2026-08-04 20:06",
+                                                            "Problem fixed itself (CSR tried to save)",
+                                                            "LaToya Dennis"
                                                         ]
                                                     ],
                                            "columns":  [
@@ -490,7 +386,7 @@
                     },
                     {
                         "id":  "calls-per-tech",
-                        "pulledAt":  "2026-08-05T14:37:04.4527939Z",
+                        "pulledAt":  "2026-08-05T14:40:27.6492176Z",
                         "error":  null,
                         "notes":  [
                                       "Service units only. Techs = distinct PRIMARY technician per job (earliest-assigned active tech runs the call); helpers/ride-alongs on the same job do not add to the count. Single day only."
@@ -502,14 +398,14 @@
                                            "rows":  [
                                                         [
                                                             "HVAC - Service",
-                                                            105,
-                                                            35,
-                                                            "3.0"
+                                                            89,
+                                                            31,
+                                                            "2.9"
                                                         ],
                                                         [
                                                             "Plumbing - Service",
-                                                            28,
-                                                            19,
+                                                            17,
+                                                            11,
                                                             "1.5"
                                                         ]
                                                     ],
@@ -526,46 +422,52 @@
                     },
                     {
                         "id":  "overtime",
-                        "pulledAt":  "2026-08-05T14:37:17.1317008Z",
+                        "pulledAt":  "2026-08-05T14:40:37.8771124Z",
                         "warnings":  [
                                          {
                                              "message":  "Overtime workweek still in progress (started Fri 07/31) - totals will keep rising until the week closes.",
-                                             "day":  "2026-08-03",
+                                             "day":  "2026-08-04",
                                              "type":  "workweek-in-progress"
                                          },
                                          {
-                                             "message":  "Payroll for Monday 08/03 looks incomplete - only 65% of a typical Monday. Overtime is likely understated.",
-                                             "itemCount":  1400,
-                                             "pct":  65,
+                                             "message":  "Payroll for Tuesday 08/04 looks incomplete - only 55% of a typical Tuesday. Overtime is likely understated.",
+                                             "itemCount":  1117,
+                                             "pct":  55,
                                              "type":  "partial-day-payroll",
-                                             "medianCount":  2148.5,
-                                             "ratio":  0.6516174074936002,
-                                             "day":  "2026-08-03"
+                                             "medianCount":  2018,
+                                             "ratio":  0.55351833498513381,
+                                             "day":  "2026-08-04"
                                          }
                                      ],
                         "title":  "Overtime hours - Service, by activity",
                         "tables":  [
                                        {
-                                           "footer":  "TOTAL   HVAC-Service 99.6    Plumbing-Service 14.6",
+                                           "footer":  "TOTAL   HVAC-Service 120.3    Plumbing-Service 29.9",
                                            "subtitle":  "By activity",
                                            "rows":  [
                                                         [
                                                             "Driving",
-                                                            22,
-                                                            2.7,
-                                                            24.6
+                                                            23.1,
+                                                            5.3,
+                                                            28.3
                                                         ],
                                                         [
                                                             "Idle",
-                                                            14.3,
-                                                            3.1,
-                                                            17.5
+                                                            30.1,
+                                                            11.5,
+                                                            41.6
+                                                        ],
+                                                        [
+                                                            "Training/Information",
+                                                            1.7,
+                                                            0,
+                                                            1.7
                                                         ],
                                                         [
                                                             "Working",
-                                                            63.3,
-                                                            8.8,
-                                                            72.1
+                                                            65.4,
+                                                            13.2,
+                                                            78.6
                                                         ]
                                                     ],
                                            "columns":  [
@@ -581,21 +483,21 @@
                                            "rows":  [
                                                         [
                                                             "Overtime (all hours)",
-                                                            99.6,
-                                                            14.6,
-                                                            114.2
+                                                            120.3,
+                                                            29.9,
+                                                            150.2
                                                         ],
                                                         [
                                                             "Overtime (on jobs only)",
-                                                            85.3,
-                                                            11.5,
-                                                            96.8
+                                                            88.5,
+                                                            18.4,
+                                                            106.9
                                                         ],
                                                         [
                                                             "Overtime (non-job: idle/driving/training)",
-                                                            14.3,
-                                                            3.1,
-                                                            17.4
+                                                            31.8,
+                                                            11.5,
+                                                            43.3
                                                         ]
                                                     ],
                                            "columns":  [
@@ -615,7 +517,7 @@
                     },
                     {
                         "id":  "dispatch-arrival",
-                        "pulledAt":  "2026-08-05T14:37:21.3655283Z",
+                        "pulledAt":  "2026-08-05T14:40:42.0100913Z",
                         "warnings":  [
 
                                      ],
@@ -627,27 +529,27 @@
                                            "rows":  [
                                                         [
                                                             "Average dispatch to arrival (minutes)",
-                                                            "40.2"
+                                                            "41.1"
                                                         ],
                                                         [
                                                             "Matched dispatch/arrival pairs",
-                                                            155
+                                                            126
                                                         ],
                                                         [
                                                             "Anomalies (unmatched dispatch/arrival, or unattributed to a primary tech)",
-                                                            13
+                                                            6
                                                         ],
                                                         [
                                                             "Techs dispatched before 8:30 (of all techs with a matched call)",
-                                                            "33 of 54"
+                                                            "19 of 43"
                                                         ],
                                                         [
                                                             "On-time % (first call, arrival also before 8:30)",
-                                                            "24.2%"
+                                                            "42.1%"
                                                         ],
                                                         [
                                                             "On-time count",
-                                                            "8 of 33"
+                                                            "8 of 19"
                                                         ]
                                                     ],
                                            "columns":  [
@@ -660,380 +562,303 @@
                                            "subtitle":  "By technician (first call of the day)",
                                            "rows":  [
                                                         [
-                                                            "Michael Washington",
-                                                            "07:16",
-                                                            "08:46",
-                                                            "yes",
-                                                            "no"
-                                                        ],
-                                                        [
-                                                            "Corey Reding",
-                                                            "07:16",
-                                                            "08:32",
-                                                            "yes",
-                                                            "no"
-                                                        ],
-                                                        [
-                                                            "Josue Arciga",
+                                                            "Mario Conant",
                                                             "07:17",
-                                                            "08:06",
+                                                            "08:37",
                                                             "yes",
-                                                            "yes"
+                                                            "no"
+                                                        ],
+                                                        [
+                                                            "Amar Collado",
+                                                            "17:46",
+                                                            "18:20",
+                                                            "no",
+                                                            "-"
+                                                        ],
+                                                        [
+                                                            "Juan Bernal",
+                                                            "19:15",
+                                                            "19:23",
+                                                            "no",
+                                                            "-"
                                                         ],
                                                         [
                                                             "Kevin Rodriguez",
-                                                            "07:17",
-                                                            "08:29",
+                                                            "21:11",
+                                                            "21:56",
+                                                            "no",
+                                                            "-"
+                                                        ],
+                                                        [
+                                                            "Michael Washington",
+                                                            "07:16",
+                                                            "08:18",
                                                             "yes",
                                                             "yes"
-                                                        ],
-                                                        [
-                                                            "Mike (Jiangtao) Li",
-                                                            "07:17",
-                                                            "08:33",
-                                                            "yes",
-                                                            "no"
-                                                        ],
-                                                        [
-                                                            "Xavier Paredes",
-                                                            "07:17",
-                                                            "08:27",
-                                                            "yes",
-                                                            "yes"
-                                                        ],
-                                                        [
-                                                            "Pedro Manzanares",
-                                                            "07:18",
-                                                            "08:35",
-                                                            "yes",
-                                                            "no"
                                                         ],
                                                         [
                                                             "Christopher Moreno",
-                                                            "07:20",
-                                                            "08:49",
+                                                            "07:18",
+                                                            "08:26",
                                                             "yes",
-                                                            "no"
+                                                            "yes"
                                                         ],
                                                         [
-                                                            "Stanley Kim",
-                                                            "07:29",
+                                                            "Josue Arciga",
+                                                            "07:18",
                                                             "08:19",
                                                             "yes",
                                                             "yes"
                                                         ],
                                                         [
                                                             "Matthew Graves",
-                                                            "07:29",
-                                                            "08:41",
-                                                            "yes",
-                                                            "no"
-                                                        ],
-                                                        [
-                                                            "Mario Castro",
-                                                            "07:35",
-                                                            "08:44",
-                                                            "yes",
-                                                            "no"
-                                                        ],
-                                                        [
-                                                            "Noah Weng",
-                                                            "07:35",
-                                                            "08:44",
-                                                            "yes",
-                                                            "no"
-                                                        ],
-                                                        [
-                                                            "Benjamin Wyllie",
-                                                            "07:37",
-                                                            "08:26",
+                                                            "07:20",
+                                                            "08:27",
                                                             "yes",
                                                             "yes"
                                                         ],
                                                         [
-                                                            "Robert Silinzy",
-                                                            "07:39",
-                                                            "07:53",
+                                                            "Mike (Jiangtao) Li",
+                                                            "07:30",
+                                                            "08:09",
                                                             "yes",
                                                             "yes"
-                                                        ],
-                                                        [
-                                                            "David Canales",
-                                                            "07:39",
-                                                            "08:40",
-                                                            "yes",
-                                                            "no"
-                                                        ],
-                                                        [
-                                                            "Andrew Trujillo",
-                                                            "07:39",
-                                                            "09:39",
-                                                            "yes",
-                                                            "no"
-                                                        ],
-                                                        [
-                                                            "Juan Tlatenchi",
-                                                            "07:43",
-                                                            "08:31",
-                                                            "yes",
-                                                            "no"
-                                                        ],
-                                                        [
-                                                            "Nathan Colquitt",
-                                                            "07:45",
-                                                            "08:54",
-                                                            "yes",
-                                                            "no"
-                                                        ],
-                                                        [
-                                                            "Nikko April",
-                                                            "07:46",
-                                                            "08:31",
-                                                            "yes",
-                                                            "no"
-                                                        ],
-                                                        [
-                                                            "Brandon Moreno",
-                                                            "07:47",
-                                                            "08:13",
-                                                            "yes",
-                                                            "yes"
-                                                        ],
-                                                        [
-                                                            "Justin Hill",
-                                                            "07:58",
-                                                            "08:55",
-                                                            "yes",
-                                                            "no"
-                                                        ],
-                                                        [
-                                                            "Fabian Pantoja",
-                                                            "07:59",
-                                                            "08:56",
-                                                            "yes",
-                                                            "no"
-                                                        ],
-                                                        [
-                                                            "J Boothe",
-                                                            "07:59",
-                                                            "09:46",
-                                                            "yes",
-                                                            "no"
                                                         ],
                                                         [
                                                             "Glenn Mitchell",
-                                                            "08:00",
-                                                            "09:15",
+                                                            "07:31",
+                                                            "08:47",
                                                             "yes",
                                                             "no"
                                                         ],
                                                         [
-                                                            "Carlos Camacho",
-                                                            "08:00",
-                                                            "08:53",
-                                                            "yes",
-                                                            "no"
-                                                        ],
-                                                        [
-                                                            "Soren Maxwell",
-                                                            "08:00",
-                                                            "08:49",
+                                                            "Christian Arellano",
+                                                            "07:33",
+                                                            "08:30",
                                                             "yes",
                                                             "no"
                                                         ],
                                                         [
                                                             "Christian Goree",
-                                                            "08:05",
-                                                            "08:35",
+                                                            "07:38",
+                                                            "08:27",
+                                                            "yes",
+                                                            "yes"
+                                                        ],
+                                                        [
+                                                            "David Canales",
+                                                            "07:42",
+                                                            "08:41",
                                                             "yes",
                                                             "no"
                                                         ],
                                                         [
-                                                            "Talik Williams",
-                                                            "08:06",
+                                                            "Noah Weng",
+                                                            "07:42",
+                                                            "08:34",
+                                                            "yes",
+                                                            "no"
+                                                        ],
+                                                        [
+                                                            "Cole Pantol",
+                                                            "07:46",
+                                                            "08:29",
+                                                            "yes",
+                                                            "yes"
+                                                        ],
+                                                        [
+                                                            "Juan Tlatenchi",
+                                                            "07:49",
+                                                            "08:57",
+                                                            "yes",
+                                                            "no"
+                                                        ],
+                                                        [
+                                                            "Andrew Trujillo",
+                                                            "07:50",
+                                                            "08:24",
+                                                            "yes",
+                                                            "yes"
+                                                        ],
+                                                        [
+                                                            "Nathan Colquitt",
+                                                            "07:51",
+                                                            "09:00",
+                                                            "yes",
+                                                            "no"
+                                                        ],
+                                                        [
+                                                            "Carlos Camacho",
+                                                            "07:58",
+                                                            "09:01",
+                                                            "yes",
+                                                            "no"
+                                                        ],
+                                                        [
+                                                            "Soren Maxwell",
+                                                            "08:03",
                                                             "09:12",
                                                             "yes",
                                                             "no"
                                                         ],
                                                         [
-                                                            "CJ Jackson",
-                                                            "08:09",
-                                                            "08:38",
+                                                            "Xavier Paredes",
+                                                            "08:19",
+                                                            "08:56",
                                                             "yes",
                                                             "no"
-                                                        ],
-                                                        [
-                                                            "Amar Collado",
-                                                            "08:09",
-                                                            "08:42",
-                                                            "yes",
-                                                            "no"
-                                                        ],
-                                                        [
-                                                            "Alex (Efrain) Martinez",
-                                                            "08:11",
-                                                            "08:26",
-                                                            "yes",
-                                                            "yes"
-                                                        ],
-                                                        [
-                                                            "Christian Arellano",
-                                                            "08:11",
-                                                            "08:58",
-                                                            "yes",
-                                                            "no"
-                                                        ],
-                                                        [
-                                                            "JR Willis",
-                                                            "08:17",
-                                                            "08:50",
-                                                            "yes",
-                                                            "no"
-                                                        ],
-                                                        [
-                                                            "Tyler Battershell ",
-                                                            "08:38",
-                                                            "08:38",
-                                                            "no",
-                                                            "-"
-                                                        ],
-                                                        [
-                                                            "Nicolas Sauro",
-                                                            "08:54",
-                                                            "09:34",
-                                                            "no",
-                                                            "-"
-                                                        ],
-                                                        [
-                                                            "Juan Bernal",
-                                                            "09:45",
-                                                            "09:54",
-                                                            "no",
-                                                            "-"
-                                                        ],
-                                                        [
-                                                            "Cole Pantol",
-                                                            "10:01",
-                                                            "10:36",
-                                                            "no",
-                                                            "-"
-                                                        ],
-                                                        [
-                                                            "Adrian Muniz",
-                                                            "10:19",
-                                                            "10:56",
-                                                            "no",
-                                                            "-"
                                                         ],
                                                         [
                                                             "AJ Munoz",
-                                                            "10:35",
-                                                            "11:15",
+                                                            "08:21",
+                                                            "08:40",
+                                                            "yes",
+                                                            "no"
+                                                        ],
+                                                        [
+                                                            "Brandon Moreno",
+                                                            "08:30",
+                                                            "09:07",
                                                             "no",
                                                             "-"
                                                         ],
                                                         [
-                                                            "Jose Huesca",
-                                                            "10:38",
-                                                            "11:50",
-                                                            "no",
-                                                            "-"
-                                                        ],
-                                                        [
-                                                            "Matthew Arnold",
-                                                            "10:39",
-                                                            "11:12",
-                                                            "no",
-                                                            "-"
-                                                        ],
-                                                        [
-                                                            "Joe Mendoza",
-                                                            "10:49",
-                                                            "11:19",
-                                                            "no",
-                                                            "-"
-                                                        ],
-                                                        [
-                                                            "Joseph Byrd",
-                                                            "11:05",
-                                                            "11:22",
-                                                            "no",
-                                                            "-"
-                                                        ],
-                                                        [
-                                                            "Memo (Guillermo) Hang",
-                                                            "11:39",
-                                                            "12:38",
-                                                            "no",
-                                                            "-"
-                                                        ],
-                                                        [
-                                                            "Bradley Espinoza",
-                                                            "11:50",
-                                                            "12:16",
-                                                            "no",
-                                                            "-"
-                                                        ],
-                                                        [
-                                                            "Andrew Aldrich",
-                                                            "11:55",
-                                                            "12:16",
+                                                            "Stanley Kim",
+                                                            "08:36",
+                                                            "09:02",
                                                             "no",
                                                             "-"
                                                         ],
                                                         [
                                                             "Francisco Valencia",
-                                                            "12:03",
-                                                            "12:45",
+                                                            "08:57",
+                                                            "10:04",
+                                                            "no",
+                                                            "-"
+                                                        ],
+                                                        [
+                                                            "Joseph Byrd",
+                                                            "09:43",
+                                                            "10:22",
                                                             "no",
                                                             "-"
                                                         ],
                                                         [
                                                             "Heather Vautrin",
-                                                            "13:17",
-                                                            "13:52",
+                                                            "09:54",
+                                                            "10:39",
+                                                            "no",
+                                                            "-"
+                                                        ],
+                                                        [
+                                                            "Corey Reding",
+                                                            "09:58",
+                                                            "10:51",
+                                                            "no",
+                                                            "-"
+                                                        ],
+                                                        [
+                                                            "Jack Jonathon Vanos",
+                                                            "10:05",
+                                                            "10:30",
+                                                            "no",
+                                                            "-"
+                                                        ],
+                                                        [
+                                                            "Tyler Battershell ",
+                                                            "11:25",
+                                                            "11:49",
+                                                            "no",
+                                                            "-"
+                                                        ],
+                                                        [
+                                                            "Benjamin Wyllie",
+                                                            "11:32",
+                                                            "12:16",
+                                                            "no",
+                                                            "-"
+                                                        ],
+                                                        [
+                                                            "Robert Silinzy",
+                                                            "11:49",
+                                                            "12:21",
+                                                            "no",
+                                                            "-"
+                                                        ],
+                                                        [
+                                                            "Joe Mendoza",
+                                                            "12:07",
+                                                            "12:25",
+                                                            "no",
+                                                            "-"
+                                                        ],
+                                                        [
+                                                            "Fabian Pantoja",
+                                                            "12:47",
+                                                            "13:41",
                                                             "no",
                                                             "-"
                                                         ],
                                                         [
                                                             "Steven Chavarria",
-                                                            "13:23",
-                                                            "13:42",
+                                                            "13:14",
+                                                            "14:33",
                                                             "no",
                                                             "-"
                                                         ],
                                                         [
-                                                            "Abel Torres",
-                                                            "15:35",
-                                                            "15:40",
-                                                            "no",
-                                                            "-"
-                                                        ],
-                                                        [
-                                                            "Tony Salazar",
-                                                            "16:51",
-                                                            "17:57",
-                                                            "no",
-                                                            "-"
-                                                        ],
-                                                        [
-                                                            "Jaylen Olguin",
-                                                            "18:33",
-                                                            "19:05",
+                                                            "Memo (Guillermo) Hang",
+                                                            "13:32",
+                                                            "14:32",
                                                             "no",
                                                             "-"
                                                         ],
                                                         [
                                                             "Warwick Varaday",
-                                                            "18:58",
-                                                            "19:40",
+                                                            "13:52",
+                                                            "14:48",
                                                             "no",
                                                             "-"
                                                         ],
                                                         [
-                                                            "Mario Conant",
-                                                            "19:51",
-                                                            "20:19",
+                                                            "Nikko April",
+                                                            "15:13",
+                                                            "16:04",
+                                                            "no",
+                                                            "-"
+                                                        ],
+                                                        [
+                                                            "Chris Thomas",
+                                                            "15:23",
+                                                            "15:50",
+                                                            "no",
+                                                            "-"
+                                                        ],
+                                                        [
+                                                            "Adrian Muniz",
+                                                            "15:52",
+                                                            "16:48",
+                                                            "no",
+                                                            "-"
+                                                        ],
+                                                        [
+                                                            "Fred West",
+                                                            "16:34",
+                                                            "17:21",
+                                                            "no",
+                                                            "-"
+                                                        ],
+                                                        [
+                                                            "Aaron Davis",
+                                                            "19:52",
+                                                            "20:17",
+                                                            "no",
+                                                            "-"
+                                                        ],
+                                                        [
+                                                            "J Boothe",
+                                                            "20:16",
+                                                            "21:12",
                                                             "no",
                                                             "-"
                                                         ]
@@ -1053,12 +878,12 @@
                                       "Service units only (HVAC-Service, Plumbing-Service). Pairing: chronological Dispatched/Arrived events per job, LIFO-matched; Dispatch Canceled events are dropped. Times come from the dispatch/arrival events; TECH IDENTITY comes from the job\u0027s PRIMARY TECHNICIAN (same rule as Calls per Tech: earliest-assigned active appointment-assignment) - never the dispatch event\u0027s employeeId, which is the office dispatcher, not the technician.",
                                       "On-time %: for each technician, look only at their FIRST call of the day (earliest dispatch). Denominator = techs whose first-call dispatch was before 8:30 AM Pacific. Numerator = of those, how many arrived before 8:30 AM Pacific.",
                                       "Anomalies = a dispatch with no arrival, an arrival with no open dispatch to match, or a matched pair whose job has no resolvable primary technician - never silently dropped; counted above.",
-                                      "Anomaly detail: job 669361394: 1 dispatch(es) with no matching arrival; job 669863632: 1 dispatch(es) with no matching arrival; job 670539060: 1 dispatch(es) with no matching arrival; job 670562656: 2 dispatch(es) with no matching arrival; job 670591358: 1 dispatch(es) with no matching arrival; job 670658457: arrival with no open dispatch to match; job 670658457: 1 dispatch(es) with no matching arrival; job 670662438: 1 dispatch(es) with no matching arrival ..."
+                                      "Anomaly detail: job 670780281: arrival with no open dispatch to match; job 670780281: 1 dispatch(es) with no matching arrival; job 670859644: 1 dispatch(es) with no matching arrival; job 671012464: 1 dispatch(es) with no matching arrival; job 671236725: 1 dispatch(es) with no matching arrival; job 671263446: 1 dispatch(es) with no matching arrival"
                                   ]
                     },
                     {
                         "id":  "maint-14d",
-                        "pulledAt":  "2026-08-05T14:38:04.5215387Z",
+                        "pulledAt":  "2026-08-05T14:41:18.0612301Z",
                         "error":  null,
                         "notes":  [
                                       "Window starts TOMORROW (Pacific), not today, and runs 14 days from there. Today is excluded. As of the pull time (forward-looking; not tied to the selected day). Booked appointments. Sections are provisional."
@@ -1204,7 +1029,7 @@
                     },
                     {
                         "id":  "club-members",
-                        "pulledAt":  "2026-08-05T14:38:09.1128798Z",
+                        "pulledAt":  "2026-08-05T14:41:23.0737177Z",
                         "error":  null,
                         "notes":  [
                                       "As of pull time. Active residential SAM members with no completed Cooling maintenance in last 16 months. Customer-level."
@@ -1238,7 +1063,7 @@
                     },
                     {
                         "id":  "call-board",
-                        "pulledAt":  "2026-08-05T14:39:24.3004208Z",
+                        "pulledAt":  "2026-08-05T14:42:29.3819089Z",
                         "error":  null,
                         "notes":  [
                                       "Booked = new-opportunity calls SCHEDULED for that day (HVAC-Service + Plumbing-Service). Light days show as thin cells - that is open room on the board.",
@@ -1247,13 +1072,13 @@
                         "tables":  [
                                        {
                                            "footer":  "",
-                                           "subtitle":  "14-day total booked: 112",
+                                           "subtitle":  "14-day total booked: 113",
                                            "rows":  [
                                                         [
                                                             "2026-08-05",
                                                             48,
-                                                            5,
-                                                            53,
+                                                            6,
+                                                            54,
                                                             66
                                                         ],
                                                         [
@@ -1362,7 +1187,7 @@
                     },
                     {
                         "id":  "booking-source",
-                        "pulledAt":  "2026-08-05T14:39:37.7940527Z",
+                        "pulledAt":  "2026-08-05T14:42:41.2643030Z",
                         "error":  null,
                         "notes":  [
                                       "Booked = lead has a booking (bookingId). Converted (last column) = lead became a job. Period: last 30 days.",
@@ -1480,7 +1305,7 @@
                     },
                     {
                         "id":  "revenue",
-                        "pulledAt":  "2026-08-05T14:39:38.9590091Z",
+                        "pulledAt":  "2026-08-05T14:42:42.4155851Z",
                         "error":  null,
                         "notes":  [
                                       "Revenue = each invoice\u0027s pre-tax subTotal, summed by the invoice date. BILLED / invoiced, NOT collected. Tax excluded.",
@@ -1495,16 +1320,16 @@
                                            "subtitle":  "Plumbing revenue",
                                            "rows":  [
                                                         [
-                                                            "Today (Aug 3)",
-                                                            "$51,825.60"
+                                                            "Today (Aug 4)",
+                                                            "$46,346.90"
                                                         ],
                                                         [
-                                                            "Month to date (Aug 1 - Aug 3)",
-                                                            "$70,422.60"
+                                                            "Month to date (Aug 1 - Aug 4)",
+                                                            "$116,769.50"
                                                         ],
                                                         [
-                                                            "Year to date (Jan 1 - Aug 3)",
-                                                            "$7,421,917.96"
+                                                            "Year to date (Jan 1 - Aug 4)",
+                                                            "$7,468,264.86"
                                                         ]
                                                     ],
                                            "columns":  [
@@ -1513,32 +1338,32 @@
                                                        ]
                                        },
                                        {
-                                           "footer":  "PLUMBING TOTAL   Today $51,825.60    MTD $70,422.60    YTD $7,421,917.96",
+                                           "footer":  "PLUMBING TOTAL   Today $46,346.90    MTD $116,769.50    YTD $7,468,264.86",
                                            "subtitle":  "By business unit",
                                            "rows":  [
                                                         [
                                                             "Service",
-                                                            "$3,672.90",
-                                                            "$5,200.90",
-                                                            "$408,784.65"
+                                                            "$1,950.50",
+                                                            "$7,151.40",
+                                                            "$410,735.15"
                                                         ],
                                                         [
                                                             "Maintenance",
-                                                            "$1,498.00",
-                                                            "$1,498.00",
-                                                            "$134,537.47"
+                                                            "$3,197.00",
+                                                            "$4,695.00",
+                                                            "$137,734.47"
                                                         ],
                                                         [
                                                             "Drains",
-                                                            "$0.00",
-                                                            "$6,197.00",
-                                                            "$208,496.41"
+                                                            "$16.00",
+                                                            "$6,213.00",
+                                                            "$208,512.41"
                                                         ],
                                                         [
                                                             "Install",
-                                                            "$46,654.70",
-                                                            "$57,526.70",
-                                                            "$6,670,099.43"
+                                                            "$41,183.40",
+                                                            "$98,710.10",
+                                                            "$6,711,282.83"
                                                         ]
                                                     ],
                                            "columns":  [
@@ -1554,7 +1379,7 @@
                     },
                     {
                         "id":  "silo-revenue",
-                        "pulledAt":  "2026-08-05T14:40:04.2044306Z",
+                        "pulledAt":  "2026-08-05T14:43:09.8586016Z",
                         "error":  null,
                         "notes":  [
                                       "SILO revenue = the SOLD / signed estimate subtotal (PRE-TAX) on turnover (TGL) jobs, credited to the TURNOVER-CALL DAY (the day the TGL job was created). Sold-only: a turnover with nothing sold contributes $0.",
@@ -1568,16 +1393,16 @@
                                            "subtitle":  "SILO revenue",
                                            "rows":  [
                                                         [
-                                                            "Today (Aug 3)",
-                                                            "$186,967.22"
+                                                            "Today (Aug 4)",
+                                                            "$85,059.75"
                                                         ],
                                                         [
-                                                            "Month to date (Aug 1 - Aug 3)",
-                                                            "$425,610.79"
+                                                            "Month to date (Aug 1 - Aug 4)",
+                                                            "$510,670.54"
                                                         ],
                                                         [
-                                                            "Year to date (Jan 1 - Aug 3)",
-                                                            "$20,750,057.75"
+                                                            "Year to date (Jan 1 - Aug 4)",
+                                                            "$20,835,117.50"
                                                         ]
                                                     ],
                                            "columns":  [
@@ -1590,19 +1415,19 @@
                                            "subtitle":  "Flip rate",
                                            "rows":  [
                                                         [
-                                                            "Today (Aug 3)",
-                                                            "37.0%",
-                                                            "10 of 27"
+                                                            "Today (Aug 4)",
+                                                            "20.0%",
+                                                            "5 of 25"
                                                         ],
                                                         [
-                                                            "Month to date (Aug 1 - Aug 3)",
-                                                            "45.7%",
-                                                            "21 of 46"
+                                                            "Month to date (Aug 1 - Aug 4)",
+                                                            "36.6%",
+                                                            "26 of 71"
                                                         ],
                                                         [
-                                                            "Year to date (Jan 1 - Aug 3)",
-                                                            "38.6%",
-                                                            "860 of 2230"
+                                                            "Year to date (Jan 1 - Aug 4)",
+                                                            "38.4%",
+                                                            "865 of 2255"
                                                         ]
                                                     ],
                                            "columns":  [
@@ -1616,7 +1441,7 @@
                         "status":  "ok"
                     }
                 ],
-    "generatedAt":  "2026-08-05T14:40:08.0036859Z",
+    "generatedAt":  "2026-08-05T14:43:12.0760091Z",
     "isToday":  false,
     "final":  true
 }

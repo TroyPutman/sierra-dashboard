@@ -3,19 +3,19 @@
     "metrics":  [
                     {
                         "id":  "call-counts",
-                        "pulledAt":  "2026-08-04T00:15:49.9996445Z",
+                        "pulledAt":  "2026-08-05T14:34:00.1510059Z",
                         "error":  null,
                         "notes":  [
                                       "Booked = calls SCHEDULED FOR the day. Completed = calls finished that day. Different jobs; not expected to match."
                                   ],
                         "tables":  [
                                        {
-                                           "footer":  "TOTAL   Booked 79    Completed 71",
+                                           "footer":  "TOTAL   Booked 78    Completed 71",
                                            "subtitle":  "",
                                            "rows":  [
                                                         [
                                                             "HVAC - Service",
-                                                            40,
+                                                            39,
                                                             43
                                                         ],
                                                         [
@@ -71,7 +71,7 @@
                     },
                     {
                         "id":  "cancellations",
-                        "pulledAt":  "2026-08-04T00:15:52.1035918Z",
+                        "pulledAt":  "2026-08-05T14:34:02.7159371Z",
                         "error":  null,
                         "notes":  [
                                       "Dated to the day the call was scheduled for service (the dispatch-board cancel tray), not the day someone pressed cancel. Detail: job type, when cancelled, reason, who.",
@@ -218,7 +218,7 @@
                     },
                     {
                         "id":  "calls-per-tech",
-                        "pulledAt":  "2026-08-04T00:15:57.4061223Z",
+                        "pulledAt":  "2026-08-05T14:34:07.9527499Z",
                         "error":  null,
                         "notes":  [
                                       "Service units only. Techs = distinct PRIMARY technician per job (earliest-assigned active tech runs the call); helpers/ride-alongs on the same job do not add to the count. Single day only."
@@ -254,7 +254,7 @@
                     },
                     {
                         "id":  "overtime",
-                        "pulledAt":  "2026-08-04T00:16:02.2273395Z",
+                        "pulledAt":  "2026-08-05T14:34:12.3209815Z",
                         "warnings":  [
                                          {
                                              "message":  "Overtime workweek still in progress (started Fri 07/31) - totals will keep rising until the week closes.",
@@ -334,7 +334,7 @@
                     },
                     {
                         "id":  "dispatch-arrival",
-                        "pulledAt":  "2026-08-04T00:16:04.3673747Z",
+                        "pulledAt":  "2026-08-05T14:34:14.7487120Z",
                         "warnings":  [
 
                                      ],
@@ -518,35 +518,35 @@
                     },
                     {
                         "id":  "maint-14d",
-                        "pulledAt":  "2026-08-04T00:16:23.5843506Z",
+                        "pulledAt":  "2026-08-05T14:34:39.8249388Z",
                         "error":  null,
                         "notes":  [
                                       "Window starts TOMORROW (Pacific), not today, and runs 14 days from there. Today is excluded. As of the pull time (forward-looking; not tied to the selected day). Booked appointments. Sections are provisional."
                                   ],
                         "tables":  [
                                        {
-                                           "footer":  "GRAND TOTAL   480",
+                                           "footer":  "GRAND TOTAL   365",
                                            "subtitle":  "By section (14-day totals)",
                                            "rows":  [
                                                         [
                                                             "SAM Cooling (HVAC)",
-                                                            258
+                                                            206
                                                         ],
                                                         [
                                                             "SAM Heating (HVAC)",
-                                                            2
+                                                            1
                                                         ],
                                                         [
                                                             "HVAC Semi-Annual Tune-ups",
-                                                            35
+                                                            22
                                                         ],
                                                         [
                                                             "Filter Changes",
-                                                            4
+                                                            6
                                                         ],
                                                         [
                                                             "Plumbing WH Maintenance (SAM)",
-                                                            170
+                                                            124
                                                         ],
                                                         [
                                                             "Plumbing WH Tune-ups",
@@ -554,7 +554,7 @@
                                                         ],
                                                         [
                                                             "Commercial Maintenance",
-                                                            8
+                                                            3
                                                         ]
                                                     ],
                                            "columns":  [
@@ -567,28 +567,16 @@
                                            "subtitle":  "By day (dead space)",
                                            "rows":  [
                                                         [
-                                                            "2026-08-04",
-                                                            78,
-                                                            37,
-                                                            115
-                                                        ],
-                                                        [
-                                                            "2026-08-05",
-                                                            49,
-                                                            31,
-                                                            80
-                                                        ],
-                                                        [
                                                             "2026-08-06",
-                                                            30,
-                                                            19,
-                                                            49
+                                                            38,
+                                                            18,
+                                                            56
                                                         ],
                                                         [
                                                             "2026-08-07",
-                                                            32,
-                                                            19,
-                                                            51
+                                                            46,
+                                                            26,
+                                                            72
                                                         ],
                                                         [
                                                             "2026-08-08",
@@ -604,33 +592,33 @@
                                                         ],
                                                         [
                                                             "2026-08-10",
-                                                            21,
-                                                            17,
-                                                            38
-                                                        ],
-                                                        [
-                                                            "2026-08-11",
-                                                            30,
-                                                            17,
+                                                            28,
+                                                            19,
                                                             47
                                                         ],
                                                         [
+                                                            "2026-08-11",
+                                                            37,
+                                                            20,
+                                                            57
+                                                        ],
+                                                        [
                                                             "2026-08-12",
-                                                            23,
-                                                            4,
-                                                            27
+                                                            28,
+                                                            5,
+                                                            33
                                                         ],
                                                         [
                                                             "2026-08-13",
-                                                            11,
-                                                            5,
-                                                            16
+                                                            13,
+                                                            6,
+                                                            19
                                                         ],
                                                         [
                                                             "2026-08-14",
-                                                            16,
+                                                            17,
                                                             11,
-                                                            27
+                                                            28
                                                         ],
                                                         [
                                                             "2026-08-15",
@@ -647,8 +635,20 @@
                                                         [
                                                             "2026-08-17",
                                                             15,
-                                                            10,
-                                                            25
+                                                            11,
+                                                            26
+                                                        ],
+                                                        [
+                                                            "2026-08-18",
+                                                            8,
+                                                            5,
+                                                            13
+                                                        ],
+                                                        [
+                                                            "2026-08-19",
+                                                            6,
+                                                            3,
+                                                            9
                                                         ]
                                                     ],
                                            "columns":  [
@@ -664,7 +664,7 @@
                     },
                     {
                         "id":  "club-members",
-                        "pulledAt":  "2026-08-04T00:16:29.6832440Z",
+                        "pulledAt":  "2026-08-05T14:34:45.0296896Z",
                         "error":  null,
                         "notes":  [
                                       "As of pull time. Active residential SAM members with no completed Cooling maintenance in last 16 months. Customer-level."
@@ -676,15 +676,15 @@
                                            "rows":  [
                                                         [
                                                             "Active HVAC club members",
-                                                            9709
+                                                            9720
                                                         ],
                                                         [
                                                             "Ran Cooling in last 16 mo",
-                                                            7675
+                                                            7692
                                                         ],
                                                         [
                                                             "LEFT TO RUN",
-                                                            "2034  (20.9%)"
+                                                            "2028  (20.9%)"
                                                         ]
                                                     ],
                                            "columns":  [
@@ -698,7 +698,7 @@
                     },
                     {
                         "id":  "call-board",
-                        "pulledAt":  "2026-08-04T00:17:31.2278198Z",
+                        "pulledAt":  "2026-08-05T14:35:56.5710920Z",
                         "error":  null,
                         "notes":  [
                                       "Booked = new-opportunity calls SCHEDULED for that day (HVAC-Service + Plumbing-Service). Light days show as thin cells - that is open room on the board.",
@@ -707,42 +707,28 @@
                         "tables":  [
                                        {
                                            "footer":  "",
-                                           "subtitle":  "14-day total booked: 227",
+                                           "subtitle":  "14-day total booked: 112",
                                            "rows":  [
                                                         [
-                                                            "2026-08-03",
-                                                            111,
-                                                            28,
-                                                            139,
-                                                            63
-                                                        ],
-                                                        [
-                                                            "2026-08-04",
-                                                            31,
-                                                            8,
-                                                            39,
-                                                            63
-                                                        ],
-                                                        [
                                                             "2026-08-05",
-                                                            8,
-                                                            2,
-                                                            10,
-                                                            63
+                                                            47,
+                                                            6,
+                                                            53,
+                                                            66
                                                         ],
                                                         [
                                                             "2026-08-06",
-                                                            8,
-                                                            2,
-                                                            10,
-                                                            63
+                                                            12,
+                                                            3,
+                                                            15,
+                                                            66
                                                         ],
                                                         [
                                                             "2026-08-07",
-                                                            3,
-                                                            3,
-                                                            6,
-                                                            63
+                                                            9,
+                                                            4,
+                                                            13,
+                                                            66
                                                         ],
                                                         [
                                                             "2026-08-08",
@@ -763,35 +749,35 @@
                                                             8,
                                                             2,
                                                             10,
-                                                            63
+                                                            66
                                                         ],
                                                         [
                                                             "2026-08-11",
-                                                            2,
+                                                            3,
                                                             0,
-                                                            2,
-                                                            63
+                                                            3,
+                                                            66
                                                         ],
                                                         [
                                                             "2026-08-12",
+                                                            3,
                                                             1,
-                                                            0,
-                                                            1,
-                                                            63
+                                                            4,
+                                                            66
                                                         ],
                                                         [
                                                             "2026-08-13",
                                                             2,
                                                             1,
                                                             3,
-                                                            63
+                                                            66
                                                         ],
                                                         [
                                                             "2026-08-14",
-                                                            2,
-                                                            2,
                                                             4,
-                                                            63
+                                                            2,
+                                                            6,
+                                                            66
                                                         ],
                                                         [
                                                             "2026-08-15",
@@ -806,6 +792,20 @@
                                                             0,
                                                             0,
                                                             9
+                                                        ],
+                                                        [
+                                                            "2026-08-17",
+                                                            1,
+                                                            0,
+                                                            1,
+                                                            66
+                                                        ],
+                                                        [
+                                                            "2026-08-18",
+                                                            1,
+                                                            0,
+                                                            1,
+                                                            66
                                                         ]
                                                     ],
                                            "columns":  [
@@ -822,7 +822,7 @@
                     },
                     {
                         "id":  "booking-source",
-                        "pulledAt":  "2026-08-04T00:17:44.0860198Z",
+                        "pulledAt":  "2026-08-05T14:36:13.3518243Z",
                         "error":  null,
                         "notes":  [
                                       "Booked = lead has a booking (bookingId). Converted (last column) = lead became a job. Period: last 30 days.",
@@ -836,17 +836,17 @@
                                            "rows":  [
                                                         [
                                                             "Angi",
-                                                            88,
-                                                            88,
+                                                            96,
+                                                            96,
                                                             "100%",
                                                             6
                                                         ],
                                                         [
                                                             "Avoca",
-                                                            18,
+                                                            17,
                                                             0,
                                                             "0%",
-                                                            1
+                                                            0
                                                         ],
                                                         [
                                                             "Yelp",
@@ -857,51 +857,51 @@
                                                         ],
                                                         [
                                                             "LSA",
-                                                            37,
+                                                            39,
                                                             0,
                                                             "0%",
                                                             5
                                                         ],
                                                         [
                                                             "Schedule Pro",
-                                                            13,
+                                                            14,
                                                             3,
-                                                            "23%",
+                                                            "21%",
                                                             1
                                                         ],
                                                         [
                                                             "Costco",
-                                                            130,
-                                                            117,
+                                                            135,
+                                                            122,
                                                             "90%",
-                                                            54
+                                                            53
                                                         ],
                                                         [
                                                             "SEO",
                                                             126,
-                                                            45,
-                                                            "36%",
-                                                            15
+                                                            43,
+                                                            "34%",
+                                                            14
                                                         ],
                                                         [
                                                             "Main Line Number",
-                                                            30,
+                                                            29,
                                                             1,
                                                             "3%",
                                                             2
                                                         ],
                                                         [
                                                             "Google PPC",
-                                                            54,
-                                                            7,
-                                                            "13%",
+                                                            57,
+                                                            6,
+                                                            "11%",
                                                             2
                                                         ],
                                                         [
                                                             "Texting",
-                                                            25,
-                                                            17,
-                                                            "68%",
+                                                            24,
+                                                            16,
+                                                            "67%",
                                                             3
                                                         ],
                                                         [
@@ -913,16 +913,16 @@
                                                         ],
                                                         [
                                                             "Google Business Profile",
-                                                            24,
+                                                            22,
                                                             2,
-                                                            "8%",
+                                                            "9%",
                                                             1
                                                         ],
                                                         [
                                                             "Other",
-                                                            41,
-                                                            13,
-                                                            "32%",
+                                                            43,
+                                                            15,
+                                                            "35%",
                                                             3
                                                         ]
                                                     ],
@@ -940,7 +940,7 @@
                     },
                     {
                         "id":  "revenue",
-                        "pulledAt":  "2026-08-04T00:17:45.1161975Z",
+                        "pulledAt":  "2026-08-05T14:36:14.7183947Z",
                         "error":  null,
                         "notes":  [
                                       "Revenue = each invoice\u0027s pre-tax subTotal, summed by the invoice date. BILLED / invoiced, NOT collected. Tax excluded.",
@@ -956,15 +956,15 @@
                                            "rows":  [
                                                         [
                                                             "Today (Aug 2)",
-                                                            "$8,753.00"
+                                                            "$4,229.00"
                                                         ],
                                                         [
                                                             "Month to date (Aug 1 - Aug 2)",
-                                                            "$23,121.00"
+                                                            "$18,597.00"
                                                         ],
                                                         [
                                                             "Year to date (Jan 1 - Aug 2)",
-                                                            "$7,374,616.36"
+                                                            "$7,370,092.36"
                                                         ]
                                                     ],
                                            "columns":  [
@@ -973,7 +973,7 @@
                                                        ]
                                        },
                                        {
-                                           "footer":  "PLUMBING TOTAL   Today $8,753.00    MTD $23,121.00    YTD $7,374,616.36",
+                                           "footer":  "PLUMBING TOTAL   Today $4,229.00    MTD $18,597.00    YTD $7,370,092.36",
                                            "subtitle":  "By business unit",
                                            "rows":  [
                                                         [
@@ -996,9 +996,9 @@
                                                         ],
                                                         [
                                                             "Install",
-                                                            "$8,655.00",
-                                                            "$15,396.00",
-                                                            "$6,627,968.73"
+                                                            "$4,131.00",
+                                                            "$10,872.00",
+                                                            "$6,623,444.73"
                                                         ]
                                                     ],
                                            "columns":  [
@@ -1011,9 +1011,72 @@
                                    ],
                         "title":  "Revenue - Plumbing (billed, pre-tax)",
                         "status":  "ok"
+                    },
+                    {
+                        "id":  "silo-revenue",
+                        "pulledAt":  "2026-08-05T14:36:41.5646085Z",
+                        "error":  null,
+                        "notes":  [
+                                      "SILO revenue = the SOLD / signed estimate subtotal (PRE-TAX) on turnover (TGL) jobs, credited to the TURNOVER-CALL DAY (the day the TGL job was created). Sold-only: a turnover with nothing sold contributes $0.",
+                                      "Flip rate = turnover jobs that sold an estimate / total turnover jobs created, per period. The count behind each % is shown as \"N of M turnovers sold\".",
+                                      "Turnover (TGL) jobs only. Day boundaries are Pacific (the report\u0027s Created Date carries its own Pacific offset).",
+                                      "NOT FINAL / RETROACTIVE BY DESIGN: an estimate sold later adds to its earlier turnover day, so Today, MTD and YTD can still rise. The full year is recomputed every refresh; this block is never frozen."
+                                  ],
+                        "tables":  [
+                                       {
+                                           "footer":  "",
+                                           "subtitle":  "SILO revenue",
+                                           "rows":  [
+                                                        [
+                                                            "Today (Aug 2)",
+                                                            "$133,398.30"
+                                                        ],
+                                                        [
+                                                            "Month to date (Aug 1 - Aug 2)",
+                                                            "$238,643.57"
+                                                        ],
+                                                        [
+                                                            "Year to date (Jan 1 - Aug 2)",
+                                                            "$20,563,090.53"
+                                                        ]
+                                                    ],
+                                           "columns":  [
+                                                           "Period",
+                                                           "Revenue"
+                                                       ]
+                                       },
+                                       {
+                                           "footer":  "",
+                                           "subtitle":  "Flip rate",
+                                           "rows":  [
+                                                        [
+                                                            "Today (Aug 2)",
+                                                            "60.0%",
+                                                            "6 of 10"
+                                                        ],
+                                                        [
+                                                            "Month to date (Aug 1 - Aug 2)",
+                                                            "57.9%",
+                                                            "11 of 19"
+                                                        ],
+                                                        [
+                                                            "Year to date (Jan 1 - Aug 2)",
+                                                            "38.6%",
+                                                            "850 of 2203"
+                                                        ]
+                                                    ],
+                                           "columns":  [
+                                                           "Period",
+                                                           "Flip Rate",
+                                                           "Turnovers sold"
+                                                       ]
+                                       }
+                                   ],
+                        "title":  "Revenue - SILO (sold/signed, pre-tax)",
+                        "status":  "ok"
                     }
                 ],
-    "generatedAt":  "2026-08-04T00:18:08.6329833Z",
+    "generatedAt":  "2026-08-05T14:36:44.6162390Z",
     "isToday":  false,
     "final":  true
 }
