@@ -214,10 +214,24 @@
   .cal-cell.weekend .cal-split, .cal-cell.weekend .cal-split b{color:var(--dim);}
   .cal-hole{font-size:1.8rem; color:var(--dim2); margin-top:8px;}
   .cal-split{display:flex; gap:14px; font-size:.92rem; color:var(--dim);}
+  .cal-split.three{gap:9px; font-size:.82rem;}
   .cal-split b{color:var(--text); font-weight:650;}
   .cal-foot{font-size:.72rem; color:var(--dim2); margin-top:4px;}
   .cal-wknd-tag{font-size:.66rem; color:var(--dim2); text-transform:uppercase; letter-spacing:.04em;}
+  .cal-cell[data-cbday]{cursor:pointer;}
+  .cal-cell[data-cbday]:hover{border-color:var(--brand);}
+  .cal-cell.sel{outline:2px solid var(--brand); outline-offset:-1px; border-color:var(--brand);}
   .cal-legend{font-size:.72rem; color:var(--dim2); margin-top:6px;}
+  /* call-type breakdown for the selected day */
+  .cbtypes{margin-top:16px;}
+  .cbtypes h3{margin-bottom:4px;}
+  table.cbtype{width:auto; min-width:60%; border-collapse:collapse;}
+  table.cbtype th{font-size:.74rem; padding:6px 20px 6px 0; text-align:left;}
+  table.cbtype th.r, table.cbtype td.r{text-align:right; padding-right:0; padding-left:26px;}
+  table.cbtype td{font-size:1.35rem; font-weight:500; padding:8px 20px 8px 0;}
+  table.cbtype td.bk{font-weight:650; color:var(--brand-dark);}
+  table.cbtype td.tot{font-weight:700;}
+  table.cbtype td.z{color:var(--dim2);}
   .cal-legend .swatch{display:inline-block; width:10px; height:10px; border-radius:3px; background:var(--panel2); border:1px solid var(--hair); vertical-align:middle; margin:0 5px 1px 12px;}
 
   /* REVENUE - three hero numbers (Today/MTD/YTD) + per-BU breakdown */
@@ -304,6 +318,7 @@ let active = 'overview';
 let data = null;
 let pollTimer = null;
 let siloData = null, siloLoading = false, siloErr = null;   // SILO tab (monthly, separate endpoint)
+let cbSelDay = null;   // Call Board: day selected for the call-type breakdown (defaults to today)
 
 const $ = id => document.getElementById(id);
 const asArray = x => Array.isArray(x) ? x : (x==null ? [] : [x]);
@@ -417,10 +432,18 @@ function errBlock(b,title){
 }
 
 /* two-week maintenance calendar; empty days render as dashed holes */
-function calGrid(rows, footLabel, weekendAware){
-  const cells = rows.map(r=>({ date:String(r[0]),
-     hvac:(typeof r[1]==='number'?r[1]:0), plmb:(typeof r[2]==='number'?r[2]:0),
-     total:(typeof r[3]==='number'?r[3]:0), foot:(footLabel && r.length>4)? r[4] : null }));
+function calGrid(rows, footLabel, weekendAware, selDay){
+  // Call Board rows are [date, HVAC, ROPPS, Plumbing, Total, Techs] (6 cols); the maintenance
+  // calendar still uses the 5-col [date, HVAC, Plumbing, Total, Techs] shape. Detect by length.
+  const threeCat = rows.length>0 && rows[0].length>=6;
+  const cells = rows.map(r=> threeCat
+    ? ({ date:String(r[0]),
+         hvac:(typeof r[1]==='number'?r[1]:0), ropps:(typeof r[2]==='number'?r[2]:0),
+         plmb:(typeof r[3]==='number'?r[3]:0), total:(typeof r[4]==='number'?r[4]:0),
+         foot:(footLabel && r.length>5)? r[5] : null, three:true })
+    : ({ date:String(r[0]),
+         hvac:(typeof r[1]==='number'?r[1]:0), plmb:(typeof r[2]==='number'?r[2]:0),
+         total:(typeof r[3]==='number'?r[3]:0), foot:(footLabel && r.length>4)? r[4] : null, three:false }));
   if(cells.length===0) return '<div class="cav">none</div>';
   const WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const first = new Date(cells[0].date+'T00:00:00');
@@ -428,25 +451,31 @@ function calGrid(rows, footLabel, weekendAware){
   let h = '<div class="cal">';
   WD.forEach(d=> h += `<div class="cal-wd">${d}</div>`);
   for(let i=0;i<lead;i++) h += '<div class="cal-cell blank"></div>';
+  const pickable = (selDay!==undefined);
   cells.forEach(c=>{
     const dt = new Date(c.date+'T00:00:00');
     const dow = dt.getDay();
     const isWeekend = !!weekendAware && (dow===0 || dow===6);
     const lbl = dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});
     const foot = (c.foot!=null) ? `<div class="cal-foot">${esc(footLabel)} ${esc(String(c.foot))}</div>` : '';
+    // when the grid is day-selectable (Call Board), tag each cell so a click picks the day for the
+    // type breakdown below; the maintenance calendar (no selDay) is unaffected.
+    const pk = pickable ? ` data-cbday="${esc(c.date)}"` : '';
+    const selCls = (pickable && c.date===selDay) ? ' sel' : '';
+    const split = c.three
+      ? `<div class="cal-split three"><span>H <b>${c.hvac}</b></span><span>R <b>${c.ropps}</b></span><span>P <b>${c.plmb}</b></span></div>`
+      : `<div class="cal-split"><span>H <b>${c.hvac}</b></span><span>P <b>${c.plmb}</b></span></div>`;
     if(isWeekend){
       // weekends are non-budgeted, not a "hole" - always show the muted/neutral treatment,
       // even when total is 0, so light weekend volume never reads as a gap to fill.
-      h += `<div class="cal-cell weekend"><div class="cal-date">${esc(lbl)}</div>`+
-           `<div class="cal-total num">${c.total}</div>`+
-           `<div class="cal-split"><span>H <b>${c.hvac}</b></span><span>P <b>${c.plmb}</b></span></div>`+
+      h += `<div class="cal-cell weekend${selCls}"${pk}><div class="cal-date">${esc(lbl)}</div>`+
+           `<div class="cal-total num">${c.total}</div>`+split+
            `<div class="cal-wknd-tag">non-budgeted</div>${foot}</div>`;
     } else if(c.total===0){
-      h += `<div class="cal-cell hole"><div class="cal-date">${esc(lbl)}</div><div class="cal-hole">-</div>${foot}</div>`;
+      h += `<div class="cal-cell hole${selCls}"${pk}><div class="cal-date">${esc(lbl)}</div><div class="cal-hole">-</div>${foot}</div>`;
     } else {
-      h += `<div class="cal-cell"><div class="cal-date">${esc(lbl)}</div>`+
-           `<div class="cal-total num">${c.total}</div>`+
-           `<div class="cal-split"><span>H <b>${c.hvac}</b></span><span>P <b>${c.plmb}</b></span></div>${foot}</div>`;
+      h += `<div class="cal-cell${selCls}"${pk}><div class="cal-date">${esc(lbl)}</div>`+
+           `<div class="cal-total num">${c.total}</div>`+split+`${foot}</div>`;
     }
   });
   const trail = (7 - ((lead + cells.length) % 7)) % 7;
@@ -642,15 +671,41 @@ function renderPipeline(){
     ${cal}</div>`;
 }
 
+function callTypeBreakdown(cb, selDay){
+  // second table: [Date,Bucket,Total,Service,Maintenance,Install,Sales,Drains] - one row per bucket/day
+  const rows = rowsOf(cb,1).filter(r=>String(r[0])===selDay);
+  if(rows.length===0) return '';
+  const cats=['Service','Maintenance','Install','Sales','Drains'];
+  const idx={Service:3,Maintenance:4,Install:5,Sales:6,Drains:7};
+  const grand = rows.reduce((s,r)=>s+(typeof r[2]==='number'?r[2]:0),0);
+  const dt = new Date(selDay+'T00:00:00');
+  const lbl = dt.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  let body='';
+  rows.forEach(r=>{
+    const bkt=String(r[1]), tot=(typeof r[2]==='number'?r[2]:0);
+    const parts = cats.map(c=>{
+      const n=(typeof r[idx[c]]==='number'?r[idx[c]]:0);
+      return `<td class="r${n===0?' z':''}">${n}</td>`;
+    }).join('');
+    body+=`<tr><td class="bk">${esc(bkt)}</td><td class="r tot">${tot}</td>${parts}</tr>`;
+  });
+  return `<div class="cbtypes"><h3>Call types for ${esc(lbl)} <span style="color:var(--dim);font-weight:500">- board total ${grand}. Click any day above to change.</span></h3>`+
+    `<table class="cbtype"><thead><tr><th>Bucket</th><th class="r">Total</th>`+
+    cats.map(c=>`<th class="r">${c}</th>`).join('')+`</tr></thead><tbody>${body}</tbody></table></div>`;
+}
 function renderCallBoard(){
   const cb=block('call-board');
   let h='<div class="wrap"><div class="head"><h2>Call Board</h2></div>';
   if(!cb||cb.status==='error'){ h+=errBlock(cb,'Call Board'); }
   else {
     const sub = asArray(cb.tables)[0] ? cb.tables[0].subtitle : '';
+    // default the type-breakdown to today (first calendar day); keep selection if still in range
+    const dates = rowsOf(cb,0).map(r=>String(r[0]));
+    if(dates.length && (cbSelDay===null || dates.indexOf(cbSelDay)<0)) cbSelDay = dates[0];
     h+=`<h3>${esc(cb.title)}${sub?`  <span style="color:var(--dim);font-weight:500">- ${esc(sub)}</span>`:''}</h3>`;
-    h+=calGrid(rowsOf(cb,0),'techs',true)+notesHtml(cb);
-    h+=`<div class="cal-legend"><span class="swatch"></span>Sat/Sun shaded = non-budgeted (light weekend volume is expected, not a gap)</div>`;
+    h+=calGrid(rowsOf(cb,0),'techs',true,cbSelDay);
+    h+=`<div class="cal-legend">H = HVAC &nbsp; R = ROPPS &nbsp; P = Plumbing (mutually exclusive; completing a call does not change the count)<span class="swatch"></span>Sat/Sun shaded = non-budgeted (light weekend volume is expected, not a gap)</div>`;
+    h+=callTypeBreakdown(cb, cbSelDay)+notesHtml(cb);
   }
   h+='</div>';
   return h;
@@ -885,6 +940,8 @@ async function load(dateStr){
 
 /* delegated click handling for the Cancellations filters (data-cx* elements exist only on that tab) */
 document.addEventListener('click', e=>{
+  const cbd = e.target.closest('[data-cbday]');
+  if(cbd){ cbSelDay = cbd.dataset.cbday; if(active==='callboard'){ renderActive(); } return; }
   const c = e.target.closest('[data-cxdim]');
   if(c){ cxToggle(c.dataset.cxdim, c.dataset.cxval); return; }
   if(e.target.closest('[data-cxclear]')){ cxClearAll(); }
@@ -911,7 +968,9 @@ async function initPickersAndLoad(){
     }
   } else {
     $('dateInput').value = todayStr(); $('dateInput').max = todayStr();
-    $('monthInput').value = prevMonthStr(); $('monthInput').max = curMonthStr();
+    // Default to the CURRENT month (live/in-progress), the monthly analogue of defaulting the
+    // daily picker to today. Past months remain selectable (max = current month).
+    $('monthInput').value = curMonthStr(); $('monthInput').max = curMonthStr();
   }
   $('dateInput').addEventListener('change', ()=> load($('dateInput').value));
   $('monthInput').addEventListener('change', ()=> loadSilo($('monthInput').value));

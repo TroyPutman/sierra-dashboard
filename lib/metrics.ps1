@@ -658,10 +658,27 @@ function Get-Metric-ClubMembers($Ctx, [datetime]$Date) {
        tables=@( @{ subtitle=''; columns=@('Metric','Value'); rows=@( ,@('Active HVAC club members', $members.Count) ; ,@("Ran $season in last $lookback mo", $ranAmong) ; ,@('LEFT TO RUN', ("$left  ($pct)")) ); footer='' } ) }
 }
 
-# ---------- M7: Call board - booked calls per day, next 14 days (calendar view) ----------
+# ---------- M7: Call board - calls SCHEDULED on the board per day, next 14 days (calendar view) ----------
+# DEFINITION REWRITTEN 2026-08-06 (business owner: the board must show what is SCHEDULED that day,
+# not what has been finished). Per Pacific day in the 14-day window, count DISTINCT JOBS that have at
+# least one appointment SCHEDULED that day, split into three MUTUALLY-EXCLUSIVE categories:
+#   * ROPPS   = the job carries the ROPP tag (tagTypeId 962027) - counted here regardless of trade.
+#   * HVAC    = an HVAC business-unit job that is NOT ROPP-tagged.
+#   * Plumbing= a Plumbing business-unit job that is NOT ROPP-tagged.
+# COMPLETION-INDEPENDENT: there is deliberately NO jobStatus='Completed' filter and NO new-opportunity
+# filter. Completing a call does NOT change the count - a call that ran this morning is still a call
+# that was on the board today. The ONLY thing that removes a call is a CANCELLATION:
+#   * an appointment whose status is 'Canceled' does not put the job on that day's board, AND
+#   * a job whose jobStatus is 'Canceled' is off the board entirely.
+# This is why the OLD version read tiny (it counted only HVAC-Service + Plumbing-Service NEW-OPPORTUNITY
+# jobs - dropping HVAC/Plumbing install, maintenance, sales, drains, every recall/warranty, and the
+# whole ROPP book). MUTUALLY EXCLUSIVE (ROPP carved OUT of HVAC/Plumbing) is calibrated to LIVE data:
+# on Fri 2026-08-07 the HVAC-BU non-ROPP job count is 81 and the ROPP-included count is 108 - the board
+# shows the smaller, carved-out figure.
 function Get-Metric-CallBoard($Ctx, [datetime]$Date) {
-    $jt = Get-JobTypeMap $Ctx; $techBU = Get-TechBUMap $Ctx
-    $svc = @('333','353')   # HVAC-Service, Plumbing-Service
+    $techBU = Get-TechBUMap $Ctx
+    $ROPP_TAG = 962027                                   # ServiceTitan job tag "ROPP"
+    $tradeBUs = @($script:HVAC_BUS + $script:PLMB_BUS)   # every HVAC + Plumbing business unit
     $today = Get-TodayPac $Ctx.Pac; $endDay = $today.AddDays(14)
     $sUtc = [TimeZoneInfo]::ConvertTimeToUtc([DateTime]::SpecifyKind($today,'Unspecified'),$Ctx.Pac)
     $eUtc = [TimeZoneInfo]::ConvertTimeToUtc([DateTime]::SpecifyKind($endDay,'Unspecified'),$Ctx.Pac)
@@ -669,7 +686,9 @@ function Get-Metric-CallBoard($Ctx, [datetime]$Date) {
     $days = 0..13 | ForEach-Object { $today.AddDays($_) }
     $dayKeys = @(); foreach ($dd in $days) { $dayKeys += $dd.ToString('yyyy-MM-dd') }
 
-    # booked new-opportunity calls scheduled per day, split HVAC-Service / Plumbing-Service
+    # every appointment starting in the window (ANY status; we exclude Canceled explicitly so a real
+    # cancellation removes the call - completion is NOT a factor). One job can appear on several days;
+    # it is deduped WITHIN each day so a job with two visits the same day counts once that day.
     $appts = Invoke-StPaged $Ctx "/jpm/v2/tenant/$($Ctx.Tenant)/appointments" @{ startsOnOrAfter=$sIso; startsBefore=$eIso }
     $byJob = @{}
     foreach ($a in $appts) {
@@ -680,23 +699,38 @@ function Get-Metric-CallBoard($Ctx, [datetime]$Date) {
         if (-not $byJob.ContainsKey($jid)) { $byJob[$jid]=New-Object System.Collections.ArrayList }
         [void]$byJob[$jid].Add($pd)
     }
-    $hv=@{}; $pl=@{}; foreach ($k in $dayKeys) { $hv[$k]=0; $pl[$k]=0 }
+    # BU id -> call-TYPE category, derived from the BU catalog so it never drifts from st-common.
+    # e.g. 'HVAC - Install - AOR' -> 'Install', 'HVAC - Sales Costco (NR)' -> 'Sales'. Same 5 category
+    # labels span both trades; a bucket's per-type counts sum back to that bucket's total.
+    $catOrder = @('Service','Maintenance','Install','Sales','Drains')
+    $buCat = @{}
+    foreach ($bk in $script:BU_NAMES.Keys) { $buCat["$bk"] = ((("$($script:BU_NAMES[$bk])" -split ' - ')[1]) -split ' ')[0] }
+
+    $hv=@{}; $rp=@{}; $pl=@{}; $brk=@{}
+    foreach ($k in $dayKeys) {
+        $hv[$k]=0; $rp[$k]=0; $pl[$k]=0; $brk[$k]=@{}
+        foreach ($bkt in @('HVAC','ROPPS','Plumbing')) { $brk[$k][$bkt]=@{}; foreach ($c in $catOrder) { $brk[$k][$bkt][$c]=0 } }
+    }
     if ($byJob.Count -gt 0) {
         $jm = Get-JobsByIds $Ctx ($byJob.Keys)
         foreach ($jid in $byJob.Keys) {
-            $job=$jm[$jid]; $bu="$($job.businessUnitId)"; if ($svc -notcontains $bu) { continue }
-            if (-not (Test-NewOpportunity $job $jt)) { continue }
+            $job=$jm[$jid]; $bu="$($job.businessUnitId)"
+            if ($job.jobStatus -eq 'Canceled') { continue }          # cancelled job = off the board (completion is NOT excluded)
+            if ($tradeBUs -notcontains $bu) { continue }             # non-trade unit (e.g. Inventory)
+            $isRopp = (@($job.tagTypeIds) -contains $ROPP_TAG)
+            $cat = $buCat[$bu]; if (-not $cat -or -not ($catOrder -contains $cat)) { $cat='Service' }
             $seen=@{}
             foreach ($pd in $byJob[$jid]) {
-                if ($hv.ContainsKey($pd) -and -not $seen.ContainsKey($pd)) {
-                    if ($bu -eq '333') { $hv[$pd]++ } else { $pl[$pd]++ }
-                    $seen[$pd]=$true
-                }
+                if (-not $hv.ContainsKey($pd) -or $seen.ContainsKey($pd)) { continue }
+                $seen[$pd]=$true
+                if     ($isRopp)                        { $rp[$pd]++; $brk[$pd]['ROPPS'][$cat]++ }    # ROPPS (mutually exclusive)
+                elseif ($script:HVAC_BUS -contains $bu) { $hv[$pd]++; $brk[$pd]['HVAC'][$cat]++ }
+                elseif ($script:PLMB_BUS -contains $bu) { $pl[$pd]++; $brk[$pd]['Plumbing'][$cat]++ }
             }
         }
     }
 
-    # technicians scheduled per day (service units) - secondary context
+    # technicians scheduled per day (HVAC + Plumbing units) - secondary context
     $shifts = Invoke-StPaged $Ctx "/dispatch/v2/tenant/$($Ctx.Tenant)/technician-shifts" @{ startsOnOrAfter=$sIso }   # startsBefore ignored by API; client-filter
     $techByDay=@{}; foreach ($k in $dayKeys) { $techByDay[$k]=New-Object 'System.Collections.Generic.HashSet[string]' }
     foreach ($sh in $shifts) {
@@ -704,20 +738,34 @@ function Get-Metric-CallBoard($Ctx, [datetime]$Date) {
         $t = Parse-Utc $sh.start; if (-not ($t -ge $sUtc -and $t -lt $eUtc)) { continue }
         $pd=([TimeZoneInfo]::ConvertTimeFromUtc($t,$Ctx.Pac)).ToString('yyyy-MM-dd')
         $tid="$($sh.technicianId)"; $bu=$techBU[$tid]
-        if ($null -eq $bu -or $svc -notcontains $bu) { continue }
+        if ($null -eq $bu -or $tradeBUs -notcontains $bu) { continue }
         if ($techByDay.ContainsKey($pd)) { [void]$techByDay[$pd].Add($tid) }
     }
 
-    # one calendar-source table: Date, HVAC-Service, Plumbing-Service, Total booked, Techs (secondary)
+    # one calendar-source table: Date, HVAC, ROPPS, Plumbing, Total, Techs (secondary)
     $rows=@(); $grand=0
     foreach ($dd in $days) {
-        $k=$dd.ToString('yyyy-MM-dd'); $h=$hv[$k]; $p=$pl[$k]; $tot=$h+$p; $tc=$techByDay[$k].Count
-        $rows += ,@($k, $h, $p, $tot, $tc); $grand += $tot
+        $k=$dd.ToString('yyyy-MM-dd'); $h=$hv[$k]; $r=$rp[$k]; $p=$pl[$k]; $tot=$h+$r+$p; $tc=$techByDay[$k].Count
+        $rows += ,@($k, $h, $r, $p, $tot, $tc); $grand += $tot
     }
-    @{ id='call-board'; title='Call Board - booked calls, next 14 days'; status='ok'; error=$null;
-       notes=@('Booked = new-opportunity calls SCHEDULED for that day (HVAC-Service + Plumbing-Service). Light days show as thin cells - that is open room on the board.',
-               'Techs = service technicians scheduled that day (secondary context). As of the pull time, forward-looking.');
-       tables=@( @{ subtitle=("14-day total booked: $grand"); columns=@('Date','HVAC-Service','Plumbing-Service','Total','Techs'); rows=$rows; footer='' } ) }
+    # per-bucket call-TYPE breakdown, one row per (day, bucket). The 5 category counts sum to the
+    # bucket total, and the 3 bucket totals sum to that day's grand total (buckets are exclusive).
+    $brkRows=@()
+    foreach ($dd in $days) {
+        $k=$dd.ToString('yyyy-MM-dd')
+        foreach ($bkt in @('HVAC','ROPPS','Plumbing')) {
+            $b=$brk[$k][$bkt]; $bt=$b['Service']+$b['Maintenance']+$b['Install']+$b['Sales']+$b['Drains']
+            $brkRows += ,@($k, $bkt, [int]$bt, [int]$b['Service'], [int]$b['Maintenance'], [int]$b['Install'], [int]$b['Sales'], [int]$b['Drains'])
+        }
+    }
+    @{ id='call-board'; title='Call Board - calls scheduled, next 14 days'; status='ok'; error=$null;
+       notes=@('Count = calls SCHEDULED on the board for that day (distinct jobs with a visit that day), minus cancellations. Completing a call does NOT change the count - only a cancellation removes one. HVAC / ROPPS / Plumbing are mutually exclusive: ROPPS = the ROPP-tagged book (any trade); HVAC / Plumbing = their business-unit calls that are NOT ROPP-tagged.',
+               'Call TYPE = the job''s business-unit category (Service / Maintenance / Install / Sales / Drains). Within each bucket the type counts sum to the bucket total. ROPPS is split by the same categories (it is mostly HVAC Service/Maintenance).',
+               'Techs = HVAC + Plumbing technicians scheduled that day (secondary context). As of the pull time, forward-looking; light/weekend days are expected to be thin.');
+       tables=@(
+         @{ subtitle=("14-day total scheduled: $grand"); columns=@('Date','HVAC','ROPPS','Plumbing','Total','Techs'); rows=$rows; footer='' },
+         @{ subtitle='Call-type breakdown per bucket (Service / Maintenance / Install / Sales / Drains)'; columns=@('Date','Bucket','Total','Service','Maintenance','Install','Sales','Drains'); rows=$brkRows; footer='' }
+       ) }
 }
 
 # ---------- M8: Booking rate by source (leads grouped by campaign, last 30 days) ----------
@@ -1014,88 +1062,42 @@ function Get-Metric-Revenue($Ctx, [datetime]$Date) {
 #  SOURCE: ServiceTitan Reporting API, saved report 648754648, category 'technician'. Run via
 #    Invoke-StReport (POST + hasMore paging + 429 retry). From/To are PLAIN Pacific calendar dates
 #    "yyyy-MM-dd" - the report windows internally; they are NOT UTC-converted.
-#  EFFICIENCY: ONE pull per snapshot - From = Jan 1 of D's year (Pacific), To = D (Pacific),
-#    DateType=2 (a full year is ~one page, hasMore handles the rare overflow). TGL rows are then
-#    bucketed by CreatedDate's Pacific calendar day to compute Today / MTD / YTD in a single pass.
-#    VERIFIED 2026-08-03: bucketing the YTD pull to 2026-08-03 yields the identical TGL job SET and
-#    revenue as a direct From=To=2026-08-03 pull.
+#  PLATFORM-INDEPENDENT (rewritten 2026-08-06): THREE report pulls per snapshot, one per period,
+#    each using the report's OWN server-side From/To Pacific-day filter (DateType=2). There is NO
+#    client-side date parsing of report rows at all - the report buckets by the tenant's (Pacific)
+#    calendar day internally, so the result is provably identical on Windows PS5.1 and the Linux/UTC
+#    pwsh7 CI runner. This replaces the prior single-pull approach that bucketed each row's
+#    CreatedDate into a Pacific day client-side - fragile because ConvertFrom-Json yields CreatedDate
+#    as a different .NET type per host (offset-bearing [string] on PS5.1 vs UTC-normalized [datetime]
+#    on pwsh7), which tripped the fail-loud guard and broke SILO live.
+#      * Today: From = To = D.   * MTD: From = 1st of D's month, To = D.   * YTD: From = Jan 1, To = D.
+#    From/To are built straight from D's calendar components (year/month/day) - never converted.
+#    TRADEOFF: 3 rapid POSTs will hit the tenant's report-run 429 limit; Invoke-StReport backs off on
+#    Retry-After. Acceptable - SILO recomputes on the schedule, not interactively.
 #  NOT FROZEN / RETROACTIVE BY DESIGN: an estimate sold later retroactively adds to its earlier
 #    turnover day, so past days can still rise. The whole year is recomputed every refresh; this
 #    block is NEVER cached/frozen (unlike Plumbing revenue). That is correct, not a bug.
-#  FAIL LOUD: if the report POST errors, or JobType / EstimateSalesSubtotal / CreatedDate are
-#    absent, the metric errors - it never fabricates a number.
+#  FAIL LOUD: if any report POST errors, or the JobType / EstimateSalesSubtotal columns are absent,
+#    the metric errors - it never fabricates a number.
 # ============================================================================
 $script:SILO_REV_REPORT_ID  = '648754648'
 $script:SILO_REV_REPORT_CAT = 'technician'
 
-# The report's CreatedDate is a Pacific-local timestamp that carries its OWN offset in the source
-# JSON (e.g. '2026-01-02T00:00:00-08:00' in PST, '2026-08-03T00:00:00-07:00' in PDT). We bucket by
-# the Pacific CALENDAR DAY of that instant, correctly on ANY host timezone.
-#
-# CROSS-PLATFORM HAZARD (the CI bug this guards against): the SAME source string reaches this
-# function as two DIFFERENT .NET types depending on the JSON deserializer behind Invoke-RestMethod:
-#   * Windows PowerShell 5.1 (local dev): ConvertFrom-Json leaves it a [string] with the offset
-#     text intact, e.g. '2026-01-02T00:00:00-08:00'.
-#   * PowerShell 7 (GitHub Actions runner, Linux, host TZ = UTC): ConvertFrom-Json (Newtonsoft)
-#     AUTO-CONVERTS ISO-8601 to a [datetime], applying the source offset and normalizing to the
-#     host's local time, then dropping the offset from the text - '...T00:00:00-08:00' becomes the
-#     instant 2026-01-02T08:00:00 (Kind=Local/Utc). Its ToString() is '01/02/2026 08:00:00', which
-#     is what the old string-only guard rejected. Note the INSTANT is preserved in both cases; only
-#     the .NET representation differs (System.Text.Json isn't available on PS 5.1, so we can't rely
-#     on JsonDocument.GetString() as a single cross-platform mechanism - we normalize by type here
-#     instead, which is deterministic and dependency-free on both hosts).
-# Whichever form we get, we recover an offset-correct DateTimeOffset (same instant) and convert to
-# the Pacific zone before taking .Date - identical result on Windows-local and Linux/UTC-CI.
-#
-# FAIL-LOUD GUARD: a value that genuinely carries NO timezone - a [string] with no trailing offset,
-# or a [datetime] with Kind=Unspecified (what a TZ-less ISO string deserializes to) - is ambiguous.
-# Assuming a zone would silently shift every row 7-8h into the wrong Pacific day on a non-Pacific
-# host. We throw instead. With the current report (always an explicit offset) this never fires; it
-# guards a future report change that drops the offset. A datetime with Kind=Local or Kind=Utc is
-# NOT ambiguous - the deserializer already resolved the instant - so those pass.
-function Get-SiloReportPacDay($Ctx, $Raw) {
-    if ($Raw -is [System.DateTimeOffset]) {
-        $dto = $Raw
-    }
-    elseif ($Raw -is [datetime]) {
-        if ($Raw.Kind -eq [System.DateTimeKind]::Unspecified) {
-            throw "Get-SiloReportPacDay: CreatedDate datetime '$($Raw.ToString('o'))' has Unspecified kind (no timezone) - refusing to guess the host timezone."
-        }
-        $dto = [System.DateTimeOffset]$Raw   # Local/Utc kind -> offset-correct instant (host-consistent)
-    }
-    else {
-        $s = "$Raw"
-        if ($s -notmatch '(Z|[+\-]\d{2}:?\d{2})$') {
-            throw "Get-SiloReportPacDay: CreatedDate '$s' has no explicit UTC offset (Z or +/-HH:MM) - refusing to guess the host timezone."
-        }
-        $dto = [DateTimeOffset]::Parse($s, [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::RoundtripKind)
-    }
-    ([TimeZoneInfo]::ConvertTime($dto, $Ctx.Pac)).Date
-}
-
-function Get-Metric-SiloRevenue($Ctx, [datetime]$Date) {
-    # $Date is the Pacific-selected snapshot date (the day the dashboard is being viewed "as of").
-    # Get-UtcMonthStart/Get-UtcYearStart are reused here only for their .Year/.Month arithmetic
-    # (finding the 1st of the month / Jan 1) - that's timezone-agnostic despite the "Utc" name.
-    # This is NOT a UTC day-boundary computation; all day bucketing below is done in Pacific via
-    # Get-SiloReportPacDay.
-    $monthStart = Get-UtcMonthStart $Date            # 1st of D's calendar month
-    $yearStart  = Get-UtcYearStart $Date             # Jan 1 of D's year
-    $fromStr = $yearStart.ToString('yyyy-MM-dd')     # PLAIN Pacific calendar dates - not UTC-converted
-    $toStr   = $Date.ToString('yyyy-MM-dd')
-
+# Run the SILO report for ONE Pacific-day window [From, To] (inclusive, plain "yyyy-MM-dd" strings)
+# and aggregate the TGL turnover rows. NO client-side date handling: the report's server-side From/To
+# filter (DateType=2 = Job Creation Date) does all the Pacific-day bucketing, so this is identical on
+# any host timezone. Returns @{ rev=[decimal]; total=[int]; sold=[int] }. FAIL LOUD: a report error or
+# a missing JobType / EstimateSalesSubtotal column throws (never a silent $0).
+function Get-SiloReportPeriod($Ctx, [string]$FromStr, [string]$ToStr) {
     $body = @{ parameters = @(
         @{ name='DateType'; value=2 },               # 2 = Job Creation Date = the turnover-call day
-        @{ name='From'; value=$fromStr },
-        @{ name='To';   value=$toStr }
+        @{ name='From'; value=$FromStr },            # PLAIN Pacific calendar date; the report windows internally
+        @{ name='To';   value=$ToStr }
     ) }
     $rep = Invoke-StReport $Ctx $script:SILO_REV_REPORT_CAT $script:SILO_REV_REPORT_ID $body
-    $col = Get-ReportColMap $rep.fields @('JobType','EstimateSalesSubtotal','CreatedDate')
-    $iType = $col['JobType']; $iSub = $col['EstimateSalesSubtotal']; $iCr = $col['CreatedDate']
-
-    $dDay = $Date.Date; $mDay = $monthStart.Date
-    $per = @{}; foreach ($p in 'today','mtd','ytd') { $per[$p] = @{ rev=[decimal]0; total=0; sold=0 } }
-
+    $col = Get-ReportColMap $rep.fields @('JobType','EstimateSalesSubtotal')
+    $iType = $col['JobType']; $iSub = $col['EstimateSalesSubtotal']
+    $acc = @{ rev=[decimal]0; total=0; sold=0 }
     foreach ($row in $rep.rows) {
         # JobType substring match ("TGL") is the VERIFIED source of truth for this metric - it
         # reproduces the manager's real target (18 jobs on 2026-08-03, 2,220 YTD vs the ~2,229
@@ -1105,13 +1107,33 @@ function Get-Metric-SiloRevenue($Ctx, [datetime]$Date) {
         # to an id-based filter without re-verifying against those exact target numbers first.
         if ("$($row[$iType])" -notmatch 'TGL') { continue }        # turnover jobs only
         $sub = [decimal]$row[$iSub]                                # sold-only, pre-tax; 0 if nothing sold
-        $pac = Get-SiloReportPacDay $Ctx $row[$iCr]                # turnover day (Pacific); pass RAW value (string on PS5.1, [datetime] on pwsh7) - do NOT pre-stringify or pwsh7 drops the offset
-        if ($pac -gt $dDay) { continue }                           # guard: creation after D (shouldn't occur, To=D)
-        $per['ytd'].rev += $sub; $per['ytd'].total++; if ($sub -gt 0) { $per['ytd'].sold++ }
-        if ($pac -ge $mDay) { $per['mtd'].rev += $sub; $per['mtd'].total++; if ($sub -gt 0) { $per['mtd'].sold++ } }
-        if ($pac -eq $dDay) { $per['today'].rev += $sub; $per['today'].total++; if ($sub -gt 0) { $per['today'].sold++ } }
+        $acc.rev += $sub; $acc.total++
+        if ($sub -gt 0) { $acc.sold++ }
+    }
+    $acc
+}
+
+function Get-Metric-SiloRevenue($Ctx, [datetime]$Date) {
+    # $Date is the Pacific-selected snapshot date (the day the dashboard is viewed "as of"). Build the
+    # three period windows straight from D's calendar components - NO timezone conversion of D, NO
+    # client-side parsing of any report row. Each window is resolved server-side by the report.
+    $y = $Date.Year; $m = $Date.Month; $d = $Date.Day
+    $fmt = { param($yy,$mm,$dd) '{0:D4}-{1:D2}-{2:D2}' -f [int]$yy,[int]$mm,[int]$dd }   # zero-padded, culture-independent
+    $dStr = & $fmt $y $m $d                            # D (Today upper bound; also MTD/YTD 'To')
+    $windows = @{
+        today = @{ from = $dStr;                  to = $dStr }   # From = To = D
+        mtd   = @{ from = (& $fmt $y $m 1);        to = $dStr }   # 1st of D's month .. D
+        ytd   = @{ from = (& $fmt $y 1 1);         to = $dStr }   # Jan 1 of D's year .. D
     }
 
+    # THREE separate report pulls (Today / MTD / YTD), each server-side Pacific-day filtered.
+    $per = @{}
+    foreach ($p in 'today','mtd','ytd') {
+        $per[$p] = Get-SiloReportPeriod $Ctx $windows[$p].from $windows[$p].to
+    }
+
+    $monthStart = [datetime]::new($y, $m, 1)          # for the MTD label only
+    $yearStart  = [datetime]::new($y, 1, 1)           # for the YTD label only
     $lbls = @{
         today = "Today ($($Date.ToString('MMM d')))"
         mtd   = "Month to date ($($monthStart.ToString('MMM 1')) - $($Date.ToString('MMM d')))"
@@ -1128,7 +1150,7 @@ function Get-Metric-SiloRevenue($Ctx, [datetime]$Date) {
     $notes = @(
         'SILO revenue = the SOLD / signed estimate subtotal (PRE-TAX) on turnover (TGL) jobs, credited to the TURNOVER-CALL DAY (the day the TGL job was created). Sold-only: a turnover with nothing sold contributes $0.',
         'Flip rate = turnover jobs that sold an estimate / total turnover jobs created, per period. The count behind each % is shown as "N of M turnovers sold".',
-        'Turnover (TGL) jobs only. Day boundaries are Pacific (the report''s Created Date carries its own Pacific offset).',
+        'Turnover (TGL) jobs only. Day boundaries are Pacific - the ServiceTitan report filters each period by the tenant''s (Pacific) calendar day server-side.',
         'NOT FINAL / RETROACTIVE BY DESIGN: an estimate sold later adds to its earlier turnover day, so Today, MTD and YTD can still rise. The full year is recomputed every refresh; this block is never frozen.'
     )
 

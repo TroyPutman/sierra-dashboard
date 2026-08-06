@@ -146,6 +146,17 @@ jobs:
             Write-Host "Yesterday ($ys) already final - skipping (past days are frozen)."
           }
 
+      - name: Refresh current-month SILO (finalize previous month if needed)
+        shell: pwsh
+        run: |
+          # Monthly analogue of the daily snapshot steps above. Recomputes THIS Pacific
+          # month's SILO (data/silo-<month>.json, written final:false so the UI shows it as
+          # live/in-progress), and freezes last month once if it isn't final yet. Without
+          # this, nothing generated the current month, so build-static's manifest.siloMonths
+          # (globbed from data/silo-*.json) stayed frozen to past committed months and the
+          # month picker could never reach "this month".
+          ./refresh-silo.ps1   # $ErrorActionPreference=Stop -> hard failures fail the job
+
       - name: Write heartbeat file
         shell: pwsh
         run: |
