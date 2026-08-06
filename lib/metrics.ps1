@@ -1028,20 +1028,48 @@ function Get-Metric-Revenue($Ctx, [datetime]$Date) {
 $script:SILO_REV_REPORT_ID  = '648754648'
 $script:SILO_REV_REPORT_CAT = 'technician'
 
-# The report's CreatedDate is a Pacific-local ISO string carrying its own offset (e.g.
-# '2026-08-03T00:00:00-07:00'). Parse as DateTimeOffset and convert to the Pacific zone before
-# taking the calendar date, so day-bucketing is correct regardless of the host machine's timezone.
-# FAIL-LOUD GUARD: [DateTimeOffset]::Parse on a string with NO explicit offset (e.g.
-# "2026-08-03T00:00:00") silently assumes the HOST machine's local offset - on a UTC deploy
-# runner that would shift every row 7-8h into the wrong Pacific day with no error at all. The
-# live report has always returned an explicit offset (trailing 'Z' or '+HH:MM'/'-HH:MM'); require
-# that here so a future report change that drops the offset fails loud instead of silently
-# mis-bucketing revenue.
-function Get-SiloReportPacDay($Ctx, [string]$s) {
-    if ($s -notmatch '(Z|[+\-]\d{2}:?\d{2})$') {
-        throw "Get-SiloReportPacDay: CreatedDate '$s' has no explicit UTC offset (Z or +/-HH:MM) - refusing to guess the host timezone."
+# The report's CreatedDate is a Pacific-local timestamp that carries its OWN offset in the source
+# JSON (e.g. '2026-01-02T00:00:00-08:00' in PST, '2026-08-03T00:00:00-07:00' in PDT). We bucket by
+# the Pacific CALENDAR DAY of that instant, correctly on ANY host timezone.
+#
+# CROSS-PLATFORM HAZARD (the CI bug this guards against): the SAME source string reaches this
+# function as two DIFFERENT .NET types depending on the JSON deserializer behind Invoke-RestMethod:
+#   * Windows PowerShell 5.1 (local dev): ConvertFrom-Json leaves it a [string] with the offset
+#     text intact, e.g. '2026-01-02T00:00:00-08:00'.
+#   * PowerShell 7 (GitHub Actions runner, Linux, host TZ = UTC): ConvertFrom-Json (Newtonsoft)
+#     AUTO-CONVERTS ISO-8601 to a [datetime], applying the source offset and normalizing to the
+#     host's local time, then dropping the offset from the text - '...T00:00:00-08:00' becomes the
+#     instant 2026-01-02T08:00:00 (Kind=Local/Utc). Its ToString() is '01/02/2026 08:00:00', which
+#     is what the old string-only guard rejected. Note the INSTANT is preserved in both cases; only
+#     the .NET representation differs (System.Text.Json isn't available on PS 5.1, so we can't rely
+#     on JsonDocument.GetString() as a single cross-platform mechanism - we normalize by type here
+#     instead, which is deterministic and dependency-free on both hosts).
+# Whichever form we get, we recover an offset-correct DateTimeOffset (same instant) and convert to
+# the Pacific zone before taking .Date - identical result on Windows-local and Linux/UTC-CI.
+#
+# FAIL-LOUD GUARD: a value that genuinely carries NO timezone - a [string] with no trailing offset,
+# or a [datetime] with Kind=Unspecified (what a TZ-less ISO string deserializes to) - is ambiguous.
+# Assuming a zone would silently shift every row 7-8h into the wrong Pacific day on a non-Pacific
+# host. We throw instead. With the current report (always an explicit offset) this never fires; it
+# guards a future report change that drops the offset. A datetime with Kind=Local or Kind=Utc is
+# NOT ambiguous - the deserializer already resolved the instant - so those pass.
+function Get-SiloReportPacDay($Ctx, $Raw) {
+    if ($Raw -is [System.DateTimeOffset]) {
+        $dto = $Raw
     }
-    $dto = [DateTimeOffset]::Parse($s, [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::RoundtripKind)
+    elseif ($Raw -is [datetime]) {
+        if ($Raw.Kind -eq [System.DateTimeKind]::Unspecified) {
+            throw "Get-SiloReportPacDay: CreatedDate datetime '$($Raw.ToString('o'))' has Unspecified kind (no timezone) - refusing to guess the host timezone."
+        }
+        $dto = [System.DateTimeOffset]$Raw   # Local/Utc kind -> offset-correct instant (host-consistent)
+    }
+    else {
+        $s = "$Raw"
+        if ($s -notmatch '(Z|[+\-]\d{2}:?\d{2})$') {
+            throw "Get-SiloReportPacDay: CreatedDate '$s' has no explicit UTC offset (Z or +/-HH:MM) - refusing to guess the host timezone."
+        }
+        $dto = [DateTimeOffset]::Parse($s, [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::RoundtripKind)
+    }
     ([TimeZoneInfo]::ConvertTime($dto, $Ctx.Pac)).Date
 }
 
@@ -1077,7 +1105,7 @@ function Get-Metric-SiloRevenue($Ctx, [datetime]$Date) {
         # to an id-based filter without re-verifying against those exact target numbers first.
         if ("$($row[$iType])" -notmatch 'TGL') { continue }        # turnover jobs only
         $sub = [decimal]$row[$iSub]                                # sold-only, pre-tax; 0 if nothing sold
-        $pac = Get-SiloReportPacDay $Ctx "$($row[$iCr])"           # turnover day (Pacific)
+        $pac = Get-SiloReportPacDay $Ctx $row[$iCr]                # turnover day (Pacific); pass RAW value (string on PS5.1, [datetime] on pwsh7) - do NOT pre-stringify or pwsh7 drops the offset
         if ($pac -gt $dDay) { continue }                           # guard: creation after D (shouldn't occur, To=D)
         $per['ytd'].rev += $sub; $per['ytd'].total++; if ($sub -gt 0) { $per['ytd'].sold++ }
         if ($pac -ge $mDay) { $per['mtd'].rev += $sub; $per['mtd'].total++; if ($sub -gt 0) { $per['mtd'].sold++ } }
