@@ -1,88 +1,89 @@
 {
-  "final": true,
-  "date": "2026-08-05",
-  "generatedAt": "2026-08-06T08:11:13.8129868Z",
+  "date": "2026-08-06",
+  "generatedAt": "2026-08-06T08:08:36.5683290Z",
+  "isToday": true,
   "metrics": [
     {
+      "id": "call-counts",
       "tables": [
         {
+          "subtitle": "",
           "columns": [
             "Business Unit",
             "Booked",
             "Completed"
           ],
-          "footer": "TOTAL   Booked 268    Completed 248",
           "rows": [
             [
               "HVAC - Service",
-              86,
-              83
+              33,
+              1
             ],
             [
               "HVAC - Install - AOR",
-              37,
-              32
+              28,
+              0
             ],
             [
               "HVAC - Maintenance",
-              37,
-              33
+              31,
+              0
             ],
             [
               "HVAC - Sales (NR)",
-              28,
-              24
+              13,
+              0
             ],
             [
               "HVAC - Sales Costco (NR)",
-              4,
-              4
+              2,
+              0
             ],
             [
               "Plumbing - Service",
-              23,
-              22
+              9,
+              0
             ],
             [
               "Plumbing - Maintenance",
-              35,
-              35
+              21,
+              0
             ],
             [
               "Plumbing - Install",
-              12,
-              10
+              3,
+              0
             ],
             [
               "Plumbing - Drains",
-              6,
-              5
+              1,
+              0
             ]
           ],
-          "subtitle": ""
+          "footer": "TOTAL   Booked 141    Completed 1"
         }
       ],
-      "id": "call-counts",
-      "pulledAt": "2026-08-06T08:08:37.1327718Z",
-      "status": "ok",
+      "pulledAt": "2026-08-06T08:06:47.8467952Z",
       "notes": [
         "Booked = calls SCHEDULED FOR the day. Completed = calls finished that day. Different jobs; not expected to match."
       ],
+      "status": "ok",
       "error": null,
       "title": "Call Count - new opportunities"
     },
     {
+      "id": "cancellations",
       "tables": [
         {
+          "subtitle": "By business unit",
           "columns": [
             "Business Unit",
             "Canceled"
           ],
-          "footer": "TOTAL   33",
           "rows": [
             [
               "HVAC - Service",
-              6
+              8
             ],
             [
               "HVAC - Install - AOR",
@@ -90,23 +91,23 @@
             ],
             [
               "HVAC - Maintenance",
-              12
+              4
             ],
             [
               "HVAC - Sales (NR)",
-              9
+              3
             ],
             [
               "HVAC - Sales Costco (NR)",
-              2
+              0
             ],
             [
               "Plumbing - Service",
-              2
+              0
             ],
             [
               "Plumbing - Maintenance",
-              1
+              0
             ],
             [
               "Plumbing - Install",
@@ -117,9 +118,10 @@
               0
             ]
           ],
-          "subtitle": "By business unit"
+          "footer": "TOTAL   16"
         },
         {
+          "subtitle": "Detail",
           "columns": [
             "Business Unit",
             "Job Type",
@@ -128,468 +130,328 @@
             "Reason",
             "By"
           ],
-          "footer": "",
           "rows": [
             [
               "HVAC - Maintenance",
-              "SAM Cooling Service (2 System) 8+ Yrs",
-              "2026-08-05 08:00",
-              "2026-07-01 10:57",
-              "Negative experience",
-              "Haylie Chambers"
-            ],
-            [
-              "HVAC - Maintenance",
-              "SAM Cooling Service (3 System) 4-7 Yrs",
-              "2026-08-05 08:00",
-              "2026-08-05 07:20",
-              "Problem fixed itself (CSR tried to save)",
-              "Nancy Rodriguez"
-            ],
-            [
-              "HVAC - Maintenance",
-              "SAM Cooling Service (3 System) 8+ Yrs",
-              "2026-08-05 08:00",
-              "2026-07-22 08:29",
-              "Problem fixed itself (CSR tried to save)",
-              "Ariana Burns"
+              "Commercial Cooling/Heating Maintenance",
+              "2026-08-06 08:00",
+              "2026-08-05 09:31",
+              "3 attempts at contact, no response",
+              "Abigail Solano"
             ],
             [
               "HVAC - Maintenance",
               "SAM Cooling Service (1 System) 8+ Yrs",
-              "2026-08-05 08:00",
-              "2026-08-04 14:29",
+              "2026-08-06 08:00",
+              "2026-08-05 18:35",
               "Problem fixed itself (CSR tried to save)",
-              "Justine Caldera"
+              "Shanelle Poti"
             ],
             [
-              "HVAC - Sales (NR)",
-              "Estimate AC TGL",
-              "2026-08-05 08:00",
-              "2026-08-05 09:07",
-              "3 attempts at contact, no response",
-              "Ryan Hernlund"
-            ],
-            [
-              "HVAC - Sales (NR)",
-              "Estimate AC",
-              "2026-08-05 08:00",
-              "2026-08-04 21:16",
+              "HVAC - Service",
+              "Semi Annual Tune-up 1-3 yrs",
+              "2026-08-06 08:00",
+              "2026-08-05 16:09",
               "Problem fixed itself (CSR tried to save)",
-              "Ashley Morales"
+              "Shanelle Poti"
             ],
             [
-              "Plumbing - Service",
-              "Plumbing Dishwasher Issue/Leak",
-              "2026-08-05 08:00",
-              "2026-08-05 07:36",
+              "HVAC - Service",
+              "Filter Change 1-7 Yrs",
+              "2026-08-06 08:00",
+              "2026-08-03 09:55",
               "Problem fixed itself (CSR tried to save)",
               "Kaylah Deitz"
             ],
             [
-              "HVAC - Sales (NR)",
-              "Estimate AC TGL",
-              "2026-08-05 10:00",
-              "2026-08-05 07:46",
+              "HVAC - Service",
+              "Commercial Cooling/Heating Issue",
+              "2026-08-06 08:00",
+              "2026-08-05 13:53",
               "Problem fixed itself (CSR tried to save)",
-              "Kaylah Deitz"
-            ],
-            [
-              "HVAC - Sales (NR)",
-              "Estimate AC TGL",
-              "2026-08-05 10:00",
-              "2026-08-04 19:04",
-              "Problem fixed itself (CSR tried to save)",
-              "Devon Hernandez"
-            ],
-            [
-              "HVAC - Sales (NR)",
-              "Estimate AC TGL",
-              "2026-08-05 10:00",
-              "2026-08-05 08:14",
-              "Problem fixed itself (CSR tried to save)",
-              "Kaylah Deitz"
-            ],
-            [
-              "HVAC - Sales (NR)",
-              "Estimate AC TGL",
-              "2026-08-05 13:00",
-              "2026-07-31 15:51",
-              "H/O can't today - Lead Follow up",
-              "Ariana Burns"
-            ],
-            [
-              "HVAC - Sales (NR)",
-              "Estimate AC TGL",
-              "2026-08-05 13:00",
-              "2026-08-05 07:59",
-              "H/O can't today - Lead Follow up",
               "Ariana Burns"
             ],
             [
               "HVAC - Service",
-              "AC Issue 4-7 yrs",
-              "2026-08-05 14:00",
-              "2026-08-05 07:11",
+              "Semi Annual Tune-up 1-3 yrs",
+              "2026-08-06 08:00",
+              "2026-08-03 08:33",
               "Problem fixed itself (CSR tried to save)",
               "Kaylah Deitz"
             ],
             [
-              "Plumbing - Service",
-              "Plumbing Estimate Tanked Water Heater",
-              "2026-08-05 14:23",
-              "2026-08-05 11:51",
+              "HVAC - Service",
+              "AC Issue 1-3 yrs",
+              "2026-08-06 08:00",
+              "2026-08-05 18:43",
               "Competitor arrived",
-              "Brianna Gonzalez"
-            ],
-            [
-              "HVAC - Service",
-              "Install HVAC Part 1-2 HRS",
-              "2026-08-05 15:30",
-              "2026-08-05 15:21",
-              "Negative experience",
-              "James Douglas"
-            ],
-            [
-              "HVAC - Install - AOR",
-              "Portable AC Unit Pick-up/Drop-off",
-              "2026-08-05 16:00",
-              "2026-08-05 15:42",
-              "Problem fixed itself (CSR tried to save)",
               "Shanelle Poti"
             ],
             [
               "HVAC - Sales (NR)",
               "Estimate AC TGL",
-              "2026-08-05 16:00",
-              "2026-08-05 16:15",
+              "2026-08-06 10:00",
+              "2026-08-03 12:43",
               "Problem fixed itself (CSR tried to save)",
-              "Kayla Mergersen"
+              "Susan Valenzuela"
             ],
             [
-              "HVAC - Sales Costco (NR)",
-              "Estimate AC Costco",
-              "2026-08-05 16:00",
-              "2026-08-05 15:45",
-              "H/O can't today - Lead Follow up",
-              "Ryan Hernlund"
+              "HVAC - Sales (NR)",
+              "Estimate AC TGL",
+              "2026-08-06 10:00",
+              "2026-08-05 10:59",
+              "Problem fixed itself (CSR tried to save)",
+              "Ciara Stoner"
             ],
             [
-              "HVAC - Sales Costco (NR)",
-              "Estimate AC Costco",
-              "2026-08-05 16:00",
-              "2026-08-05 18:11",
-              "H/O can't today - Lead Follow up",
-              "Ryan Hernlund"
+              "HVAC - Maintenance",
+              "SAM Cooling Service (2 System) 8+ Yrs",
+              "2026-08-06 10:15",
+              "2026-08-05 18:12",
+              "Problem fixed itself (CSR tried to save)",
+              "Jeremy Von Samson"
             ],
             [
               "HVAC - Service",
               "AC Issue 8+ yrs",
-              "2026-08-05 16:03",
-              "2026-08-05 14:29",
+              "2026-08-06 11:00",
+              "2026-08-05 07:15",
               "Problem fixed itself (CSR tried to save)",
-              "Esteisi Morales"
+              "Ariana Burns"
             ],
             [
-              "HVAC - Maintenance",
-              "Commercial Cooling/Heating Maintenance",
-              "2026-08-05 16:44",
-              "2026-08-05 17:10",
-              "H/O can't today - Lead Follow up",
-              "James Douglas"
+              "HVAC - Install - AOR",
+              "Recall/Warranty",
+              "2026-08-06 12:00",
+              "2026-08-03 14:08",
+              "Problem fixed itself (CSR tried to save)",
+              "Kayla Mergersen"
+            ],
+            [
+              "HVAC - Service",
+              "Semi Annual Tune-up 8+ yrs",
+              "2026-08-06 12:00",
+              "2026-08-03 09:43",
+              "Problem fixed itself (CSR tried to save)",
+              "Kaylah Deitz"
             ],
             [
               "HVAC - Sales (NR)",
               "Estimate AC TGL",
-              "2026-08-05 17:00",
-              "2026-08-05 17:22",
-              "H/O can't today - Lead Follow up",
-              "Ryan Hernlund"
+              "2026-08-06 16:00",
+              "2026-08-05 18:30",
+              "Problem fixed itself (CSR tried to save)",
+              "Jeremy Von Samson"
             ],
             [
               "HVAC - Service",
-              "SAM Cooling Service (2 System) 8+ Yrs",
-              "2026-08-05 17:15",
-              "2026-08-05 20:13",
-              "H/O can't today - Lead Follow up",
-              "James Douglas"
-            ],
-            [
-              "HVAC - Maintenance",
-              "SAM Cooling Service (1 System) 1-3 Yrs",
-              "2026-08-05 17:25",
-              "2026-08-05 17:31",
+              "AC Issue 8+ yrs",
+              "2026-08-06 17:00",
+              "2026-08-05 20:22",
               "Problem fixed itself (CSR tried to save)",
               "Esteisi Morales"
             ],
             [
-              "HVAC - Service",
-              "AC Issue 4-7 yrs",
-              "2026-08-05 17:36",
-              "2026-08-05 17:24",
-              "Problem fixed itself (CSR tried to save)",
-              "Shanelle Poti"
-            ],
-            [
-              "HVAC - Maintenance",
-              "SAM Cooling Service (1 System) 1-3 Yrs",
-              "2026-08-05 18:15",
-              "2026-08-04 09:58",
-              "H/O can't today - Lead Follow up",
-              "Haylie Chambers"
-            ],
-            [
               "HVAC - Maintenance",
               "SAM Cooling Service (1 System) 4-7 Yrs",
-              "2026-08-05 18:55",
-              "2026-08-05 20:35",
-              "3 attempts at contact, no response",
-              "LaToya Dennis"
-            ],
-            [
-              "HVAC - Maintenance",
-              "SAM Cooling Service (1 System) 4-7 Yrs",
-              "2026-08-05 18:55",
-              "2026-08-05 21:07",
-              "3 attempts at contact, no response",
-              "LaToya Dennis"
-            ],
-            [
-              "HVAC - Maintenance",
-              "SAM Cooling Service (1 System) 4-7 Yrs",
-              "2026-08-05 19:48",
-              "2026-08-05 17:51",
-              "Problem fixed itself (CSR tried to save)",
-              "Brianna Gonzalez"
-            ],
-            [
-              "HVAC - Maintenance",
-              "SAM Cooling Service (1 System) 1-3 Yrs",
-              "2026-08-05 19:57",
-              "2026-08-05 21:40",
-              "3 attempts at contact, no response",
-              "LaToya Dennis"
-            ],
-            [
-              "HVAC - Service",
-              "AC Issue 4-7 yrs",
-              "2026-08-05 20:21",
-              "2026-08-05 17:32",
-              "Problem fixed itself (CSR tried to save)",
-              "Shanelle Poti"
-            ],
-            [
-              "Plumbing - Maintenance",
-              "Plumbing SAM Tankless Water Heater Service 6+ Yrs",
-              "2026-08-05 21:04",
-              "2026-08-05 21:41",
-              "H/O can't today - Lead Follow up",
-              "James Douglas"
-            ],
-            [
-              "HVAC - Maintenance",
-              "Recall/Warranty",
-              "2026-08-05 22:08",
-              "2026-08-05 22:08",
-              "Problem fixed itself (CSR tried to save)",
-              "James Douglas"
+              "2026-08-06 18:00",
+              "2026-08-05 18:51",
+              "Negative experience",
+              "Jeremy Von Samson"
             ]
           ],
-          "subtitle": "Detail"
+          "footer": ""
         }
       ],
-      "id": "cancellations",
-      "pulledAt": "2026-08-06T08:08:40.5609516Z",
-      "status": "ok",
+      "pulledAt": "2026-08-06T08:06:50.1113469Z",
       "notes": [
         "Dated to the day the call was scheduled for service (the dispatch-board cancel tray), not the day someone pressed cancel. Detail: job type, when cancelled, reason, who.",
         "One job = one cancellation, counted ONCE on the FIRST Pacific day it ever had a visit booked (a multi-day job cancelled mid-way shows on day 1 only, not later days). Counted whether that day's visit reads Canceled or Done - a job cancelled after its visit was marked Done still counts. A cancelled visit that was only RESCHEDULED does not count; only jobs that are genuinely cancelled do.",
         "NOT FINAL - CAVEAT: this is the count AS OF THIS PULL. Cancellations recorded later still date back onto the day the work was scheduled for, so this number CAN STILL RISE. Do not read yesterday's count as final.",
-        "EXCLUDED as administrative cleanup, not lost work: 9 on this day (Duplicate entry x8, Avoca Duplicate x1). These are duplicate / data-entry records. Excluded reasons: Duplicate entry, Avoca Duplicate, History call clean up (legacy), Reschedule (legacy)."
+        "EXCLUDED as administrative cleanup, not lost work: 6 on this day (Duplicate entry x3, Avoca Duplicate x3). These are duplicate / data-entry records. Excluded reasons: Duplicate entry, Avoca Duplicate, History call clean up (legacy), Reschedule (legacy)."
       ],
+      "status": "ok",
       "error": null,
       "title": "Cancellations - cancel tray"
     },
     {
+      "id": "calls-per-tech",
       "tables": [
         {
+          "subtitle": "",
           "columns": [
             "Business Unit",
             "Completed Calls",
             "Techs",
             "Calls/Tech"
           ],
-          "footer": "",
           "rows": [
             [
               "HVAC - Service",
-              83,
-              33,
-              "2.5"
+              1,
+              1,
+              "1.0"
             ],
             [
               "Plumbing - Service",
-              22,
-              11,
-              "2.0"
+              0,
+              0,
+              "-"
             ]
           ],
-          "subtitle": ""
+          "footer": ""
         }
       ],
-      "id": "calls-per-tech",
-      "pulledAt": "2026-08-06T08:08:52.5985613Z",
-      "status": "ok",
+      "pulledAt": "2026-08-06T08:06:57.5604828Z",
       "notes": [
         "Service units only. Techs = distinct PRIMARY technician per job (earliest-assigned active tech runs the call); helpers/ride-alongs on the same job do not add to the count. Single day only."
       ],
+      "status": "ok",
       "error": null,
       "title": "Calls per Tech - Service"
     },
     {
       "warnings": [
         {
-          "type": "workweek-in-progress",
-          "day": "2026-08-05",
-          "message": "Overtime workweek still in progress (started Fri 07/31) - totals will keep rising until the week closes."
+          "message": "Overtime workweek still in progress (started Fri 07/31) - totals will keep rising until the week closes.",
+          "day": "2026-08-06",
+          "type": "workweek-in-progress"
         },
         {
-          "day": "2026-08-05",
-          "ratio": 0.5075258701787394,
-          "itemCount": 1079,
-          "message": "Payroll for Wednesday 08/05 looks incomplete - only 51% of a typical Wednesday. Overtime is likely understated.",
+          "message": "Payroll for Thursday 08/06 looks incomplete - only 1% of a typical Thursday. Overtime is likely understated.",
           "type": "partial-day-payroll",
-          "pct": 51.0,
-          "medianCount": 2126.0
+          "ratio": 0.010031048483401002,
+          "day": "2026-08-06",
+          "itemCount": 21,
+          "pct": 1.0,
+          "medianCount": 2093.5
         }
       ],
+      "title": "Overtime hours - Service, by activity",
+      "id": "overtime",
+      "status": "ok",
       "notes": [
         "TOTAL overtime CLOCK HOURS - INCLUDES non-job time (Idle, Driving, Training), not just job time.",
         "Grouped by tech payout unit. Payroll figure for the selected day."
       ],
-      "pulledAt": "2026-08-06T08:09:04.6838335Z",
-      "error": null,
-      "status": "ok",
-      "id": "overtime",
-      "title": "Overtime hours - Service, by activity",
       "tables": [
         {
+          "subtitle": "By activity",
           "columns": [
             "Activity",
             "HVAC-Service",
             "Plumbing-Service",
             "Total"
           ],
-          "footer": "TOTAL   HVAC-Service 274.8    Plumbing-Service 86.1",
           "rows": [
             [
-              "Driving",
-              45.4,
-              13.6,
-              59.0
-            ],
-            [
               "Idle",
-              53.4,
-              36.9,
-              90.3
+              12.9,
+              0.0,
+              12.9
             ],
             [
               "Mandatory Training - Attendance required",
-              1.1,
+              14.0,
               0.0,
-              1.1
+              14.0
             ],
             [
               "Working",
-              174.9,
-              35.6,
-              210.5
+              0.5,
+              0.0,
+              0.5
             ]
           ],
-          "subtitle": "By activity"
+          "footer": "TOTAL   HVAC-Service 27.4    Plumbing-Service 0"
         },
         {
+          "subtitle": "All hours vs. job-only",
           "columns": [
             "",
             "HVAC-Service",
             "Plumbing-Service",
             "Total"
           ],
-          "footer": "",
           "rows": [
             [
               "Overtime (all hours)",
-              274.8,
-              86.1,
-              360.9
+              27.4,
+              0.0,
+              27.4
             ],
             [
               "Overtime (on jobs only)",
-              220.3,
-              49.2,
-              269.5
+              0.5,
+              0.0,
+              0.5
             ],
             [
               "Overtime (non-job: idle/driving/training)",
-              54.5,
-              36.9,
-              91.4
+              26.9,
+              0.0,
+              26.9
             ]
           ],
-          "subtitle": "All hours vs. job-only"
+          "footer": ""
         }
-      ]
+      ],
+      "pulledAt": "2026-08-06T08:06:57.8380671Z",
+      "error": null
     },
     {
-      "warnings": [],
+      "warnings": [
+        {
+          "message": "Selected day still in progress - dispatch/arrival is only meaningful once the day is done.",
+          "day": "2026-08-06",
+          "type": "day-in-progress"
+        }
+      ],
+      "title": "Dispatch & Arrival - Service",
+      "id": "dispatch-arrival",
+      "status": "ok",
       "notes": [
         "Service units only (HVAC-Service, Plumbing-Service). Pairing: chronological Dispatched/Arrived events per job, LIFO-matched; Dispatch Canceled events are dropped. Times come from the dispatch/arrival events; TECH IDENTITY comes from the job's PRIMARY TECHNICIAN (same rule as Calls per Tech: earliest-assigned active appointment-assignment) - never the dispatch event's employeeId, which is the office dispatcher, not the technician.",
         "On-time %: for each technician, look only at their FIRST call of the day (earliest dispatch). Denominator = techs whose first-call dispatch was before 8:30 AM Pacific. Numerator = of those, how many arrived before 8:30 AM Pacific.",
-        "Anomalies = a dispatch with no arrival, an arrival with no open dispatch to match, or a matched pair whose job has no resolvable primary technician - never silently dropped; counted above.",
-        "Anomaly detail: job 669120099: arrival with no open dispatch to match; job 669120099: 1 dispatch(es) with no matching arrival; job 669416751: 1 dispatch(es) with no matching arrival; job 670622141: 1 dispatch(es) with no matching arrival; job 670823826: 1 dispatch(es) with no matching arrival; job 671253374: 1 dispatch(es) with no matching arrival; job 672801426: arrival with no open dispatch to match; job 672801426: 1 dispatch(es) with no matching arrival"
+        "Anomalies = a dispatch with no arrival, an arrival with no open dispatch to match, or a matched pair whose job has no resolvable primary technician - never silently dropped; counted above."
       ],
-      "pulledAt": "2026-08-06T08:09:08.2911618Z",
-      "error": null,
-      "status": "ok",
-      "id": "dispatch-arrival",
-      "title": "Dispatch & Arrival - Service",
       "tables": [
         {
+          "subtitle": "Summary",
           "columns": [
             "Metric",
             "Value"
           ],
-          "footer": "",
           "rows": [
             [
               "Average dispatch to arrival (minutes)",
-              "37.9"
+              "34.3"
             ],
             [
               "Matched dispatch/arrival pairs",
-              121
+              1
             ],
             [
               "Anomalies (unmatched dispatch/arrival, or unattributed to a primary tech)",
-              8
+              0
             ],
             [
               "Techs dispatched before 8:30 (of all techs with a matched call)",
-              "20 of 45"
+              "0 of 1"
             ],
             [
               "On-time % (first call, arrival also before 8:30)",
-              "10.0%"
+              "-"
             ],
             [
               "On-time count",
-              "2 of 20"
+              "0 of 0"
             ]
           ],
-          "subtitle": "Summary"
+          "footer": ""
         },
         {
+          "subtitle": "By technician (first call of the day)",
           "columns": [
             "Technician",
             "First Dispatch (Pac)",
@@ -597,336 +459,30 @@
             "Qualified (<8:30)",
             "On-time"
           ],
-          "footer": "",
           "rows": [
             [
-              "Amar Collado",
-              "17:37",
-              "18:00",
-              "no",
-              "-"
-            ],
-            [
-              "Mike (Jiangtao) Li",
-              "07:19",
-              "07:57",
-              "yes",
-              "yes"
-            ],
-            [
-              "Michael Washington",
-              "07:22",
-              "08:39",
-              "yes",
-              "no"
-            ],
-            [
-              "Tyler Battershell ",
-              "07:22",
-              "07:23",
-              "yes",
-              "yes"
-            ],
-            [
-              "Xavier Paredes",
-              "07:23",
-              "08:34",
-              "yes",
-              "no"
-            ],
-            [
-              "Aaron Davis",
-              "07:35",
-              "08:59",
-              "yes",
-              "no"
-            ],
-            [
-              "Andrew Alonso",
-              "08:01",
-              "08:47",
-              "yes",
-              "no"
-            ],
-            [
-              "David Canales",
-              "08:02",
-              "08:45",
-              "yes",
-              "no"
-            ],
-            [
-              "Cole Pantol",
-              "08:03",
-              "08:36",
-              "yes",
-              "no"
-            ],
-            [
-              "Noah Weng",
-              "08:05",
-              "08:59",
-              "yes",
-              "no"
-            ],
-            [
-              "Juan Tlatenchi",
-              "08:05",
-              "09:29",
-              "yes",
-              "no"
-            ],
-            [
-              "Soren Maxwell",
-              "08:06",
-              "09:08",
-              "yes",
-              "no"
-            ],
-            [
               "Robert Silinzy",
-              "08:06",
-              "08:56",
-              "yes",
-              "no"
-            ],
-            [
-              "CJ Jackson",
-              "08:09",
-              "09:06",
-              "yes",
-              "no"
-            ],
-            [
-              "Christopher Moreno",
-              "08:12",
-              "09:15",
-              "yes",
-              "no"
-            ],
-            [
-              "Andrew Trujillo",
-              "08:14",
-              "11:26",
-              "yes",
-              "no"
-            ],
-            [
-              "Francisco Valencia",
-              "08:17",
-              "09:20",
-              "yes",
-              "no"
-            ],
-            [
-              "Christian Goree",
-              "08:18",
-              "08:59",
-              "yes",
-              "no"
-            ],
-            [
-              "Jose Esquivel",
-              "08:19",
-              "09:12",
-              "yes",
-              "no"
-            ],
-            [
-              "Kevin Rodriguez",
-              "08:26",
-              "09:24",
-              "yes",
-              "no"
-            ],
-            [
-              "Fabian Pantoja",
-              "08:27",
-              "09:13",
-              "yes",
-              "no"
-            ],
-            [
-              "Corey Reding",
-              "08:43",
-              "09:53",
-              "no",
-              "-"
-            ],
-            [
-              "Jack Jonathon Vanos",
-              "09:03",
-              "10:07",
-              "no",
-              "-"
-            ],
-            [
-              "Joseph Byrd",
-              "09:03",
-              "10:09",
-              "no",
-              "-"
-            ],
-            [
-              "Benjamin Wyllie",
-              "09:54",
-              "10:24",
-              "no",
-              "-"
-            ],
-            [
-              "Josue Arciga",
-              "09:54",
-              "10:32",
-              "no",
-              "-"
-            ],
-            [
-              "Jose Huesca",
-              "10:04",
-              "10:32",
-              "no",
-              "-"
-            ],
-            [
-              "Mario Conant",
-              "10:51",
-              "11:02",
-              "no",
-              "-"
-            ],
-            [
-              "JR Willis",
-              "10:59",
-              "11:36",
-              "no",
-              "-"
-            ],
-            [
-              "J Boothe",
-              "11:10",
-              "11:18",
-              "no",
-              "-"
-            ],
-            [
-              "Pedro Manzanares",
-              "11:16",
-              "11:37",
-              "no",
-              "-"
-            ],
-            [
-              "Heather Vautrin",
-              "11:24",
-              "12:22",
-              "no",
-              "-"
-            ],
-            [
-              "Bradley Espinoza",
-              "11:36",
-              "12:27",
-              "no",
-              "-"
-            ],
-            [
-              "Nikko April",
-              "11:36",
-              "12:06",
-              "no",
-              "-"
-            ],
-            [
-              "Juan Bernal",
-              "11:53",
-              "12:32",
-              "no",
-              "-"
-            ],
-            [
-              "Stanley Kim",
-              "12:03",
-              "12:46",
-              "no",
-              "-"
-            ],
-            [
-              "Carlos Camacho",
-              "12:08",
-              "12:57",
-              "no",
-              "-"
-            ],
-            [
-              "AJ Munoz",
-              "12:42",
-              "12:55",
-              "no",
-              "-"
-            ],
-            [
-              "Steven Chavarria",
-              "13:57",
-              "14:39",
-              "no",
-              "-"
-            ],
-            [
-              "Mario Castro",
-              "16:40",
-              "16:59",
-              "no",
-              "-"
-            ],
-            [
-              "Jaylen Olguin",
-              "16:54",
-              "17:50",
-              "no",
-              "-"
-            ],
-            [
-              "Alex (Efrain) Martinez",
-              "17:41",
-              "18:08",
-              "no",
-              "-"
-            ],
-            [
-              "Chris Thomas",
-              "17:44",
-              "18:03",
-              "no",
-              "-"
-            ],
-            [
-              "Abel Torres",
-              "18:17",
-              "18:25",
-              "no",
-              "-"
-            ],
-            [
-              "Matthew Arnold",
-              "20:43",
-              "21:12",
+              "21:50",
+              "22:25",
               "no",
               "-"
             ]
           ],
-          "subtitle": "By technician (first call of the day)"
+          "footer": ""
         }
-      ]
+      ],
+      "pulledAt": "2026-08-06T08:07:00.8867427Z",
+      "error": null
     },
     {
+      "id": "maint-14d",
       "tables": [
         {
+          "subtitle": "By section (14-day totals)",
           "columns": [
             "Section",
             "Visits"
           ],
-          "footer": "GRAND TOTAL   370",
           "rows": [
             [
               "SAM Cooling (HVAC)",
@@ -957,16 +513,16 @@
               2
             ]
           ],
-          "subtitle": "By section (14-day totals)"
+          "footer": "GRAND TOTAL   370"
         },
         {
+          "subtitle": "By day (dead space)",
           "columns": [
             "Date",
             "HVAC",
             "Plumbing",
             "Total"
           ],
-          "footer": "",
           "rows": [
             [
               "2026-08-07",
@@ -1053,26 +609,26 @@
               11
             ]
           ],
-          "subtitle": "By day (dead space)"
+          "footer": ""
         }
       ],
-      "id": "maint-14d",
-      "pulledAt": "2026-08-06T08:09:44.4427563Z",
-      "status": "ok",
+      "pulledAt": "2026-08-06T08:07:09.4006615Z",
       "notes": [
         "Window starts TOMORROW (Pacific), not today, and runs 14 days from there. Today is excluded. As of the pull time (forward-looking; not tied to the selected day). Booked appointments. Sections are provisional."
       ],
+      "status": "ok",
       "error": null,
       "title": "Maintenances booked - next 14 days (starting tomorrow)"
     },
     {
+      "id": "club-members",
       "tables": [
         {
+          "subtitle": "",
           "columns": [
             "Metric",
             "Value"
           ],
-          "footer": "",
           "rows": [
             [
               "Active HVAC club members",
@@ -1087,21 +643,22 @@
               "2027  (20.8%)"
             ]
           ],
-          "subtitle": ""
+          "footer": ""
         }
       ],
-      "id": "club-members",
-      "pulledAt": "2026-08-06T08:09:47.8465780Z",
-      "status": "ok",
+      "pulledAt": "2026-08-06T08:07:13.0239087Z",
       "notes": [
         "As of pull time. Active residential SAM members with no completed Cooling maintenance in last 16 months. Customer-level."
       ],
+      "status": "ok",
       "error": null,
       "title": "Club Members Left to Run - Cooling (HVAC)"
     },
     {
+      "id": "call-board",
       "tables": [
         {
+          "subtitle": "14-day total booked: 98",
           "columns": [
             "Date",
             "HVAC-Service",
@@ -1109,7 +666,6 @@
             "Total",
             "Techs"
           ],
-          "footer": "",
           "rows": [
             [
               "2026-08-06",
@@ -1210,22 +766,23 @@
               67
             ]
           ],
-          "subtitle": "14-day total booked: 98"
+          "footer": ""
         }
       ],
-      "id": "call-board",
-      "pulledAt": "2026-08-06T08:10:41.6313622Z",
-      "status": "ok",
+      "pulledAt": "2026-08-06T08:08:01.2592582Z",
       "notes": [
         "Booked = new-opportunity calls SCHEDULED for that day (HVAC-Service + Plumbing-Service). Light days show as thin cells - that is open room on the board.",
         "Techs = service technicians scheduled that day (secondary context). As of the pull time, forward-looking."
       ],
+      "status": "ok",
       "error": null,
       "title": "Call Board - booked calls, next 14 days"
     },
     {
+      "id": "booking-source",
       "tables": [
         {
+          "subtitle": "",
           "columns": [
             "Source",
             "Leads",
@@ -1233,7 +790,6 @@
             "Rate",
             "Converted"
           ],
-          "footer": "",
           "rows": [
             [
               "Angi",
@@ -1327,84 +883,82 @@
               3
             ]
           ],
-          "subtitle": ""
+          "footer": ""
         }
       ],
-      "id": "booking-source",
-      "pulledAt": "2026-08-06T08:10:51.3289402Z",
-      "status": "ok",
+      "pulledAt": "2026-08-06T08:08:12.3115756Z",
       "notes": [
         "Booked = lead has a booking (bookingId). Converted (last column) = lead became a job. Period: last 30 days.",
         "AVOCA CAVEAT: this row is leads ATTRIBUTED TO AVOCA CAMPAIGNS in ServiceTitan and their booked rate. It is NOT Avoca's call-handling booking rate (answered vs booked) - that lives in Avoca and is not reachable here. Different metric; do not confuse.",
         "Source = marketing campaign category/name. Schedule Pro is largely self-serve online booking, so its rate reads high by nature. Other = leads not mapped to a named source."
       ],
+      "status": "ok",
       "error": null,
       "title": "Booking Rate by Source - last 30 days"
     },
     {
+      "id": "revenue",
       "tables": [
         {
+          "subtitle": "Plumbing revenue",
           "columns": [
             "Period",
             "Revenue"
           ],
-          "footer": "",
           "rows": [
             [
-              "Today (Aug 5)",
-              "$38,201.00"
+              "Today (Aug 6)",
+              "$0.00"
             ],
             [
-              "Month to date (Aug 1 - Aug 5)",
+              "Month to date (Aug 1 - Aug 6)",
               "$154,018.50"
             ],
             [
-              "Year to date (Jan 1 - Aug 5)",
+              "Year to date (Jan 1 - Aug 6)",
               "$7,505,513.86"
             ]
           ],
-          "subtitle": "Plumbing revenue"
+          "footer": ""
         },
         {
+          "subtitle": "By business unit",
           "columns": [
             "Business Unit",
             "Today",
             "MTD",
             "YTD"
           ],
-          "footer": "PLUMBING TOTAL   Today $38,201.00    MTD $154,018.50    YTD $7,505,513.86",
           "rows": [
             [
               "Service",
-              "$141.00",
+              "$0.00",
               "$7,203.40",
               "$410,787.15"
             ],
             [
               "Maintenance",
-              "$1,205.00",
+              "$0.00",
               "$5,153.00",
               "$138,192.47"
             ],
             [
               "Drains",
-              "$236.00",
+              "$0.00",
               "$6,449.00",
               "$208,748.41"
             ],
             [
               "Install",
-              "$36,619.00",
+              "$0.00",
               "$135,213.10",
               "$6,747,785.83"
             ]
           ],
-          "subtitle": "By business unit"
+          "footer": "PLUMBING TOTAL   Today $0.00    MTD $154,018.50    YTD $7,505,513.86"
         }
       ],
-      "id": "revenue",
-      "pulledAt": "2026-08-06T08:10:52.4316747Z",
-      "status": "ok",
+      "pulledAt": "2026-08-06T08:08:13.4508892Z",
       "notes": [
         "Revenue = each invoice's pre-tax subTotal, summed by the invoice date. BILLED / invoiced, NOT collected. Tax excluded.",
         "Discounts, refunds and credits are included as-is - they appear naturally as negative-dollar invoices; nothing is stripped out.",
@@ -1412,18 +966,19 @@
         "This month and last month are fully recomputed on every refresh (so backdated corrections update them); any older month is frozen after its first computation.",
         "CAVEAT - NOT FINAL: Today, this month's MTD, and YTD are PARTIAL. Invoices keep posting, so these figures will keep rising through the day and month."
       ],
+      "status": "ok",
       "error": null,
       "title": "Revenue - Plumbing (billed, pre-tax)"
     },
     {
-      "tables": [],
       "id": "silo-revenue",
-      "pulledAt": "2026-08-06T08:11:13.8129429Z",
-      "status": "error",
+      "tables": [],
+      "pulledAt": "2026-08-06T08:08:36.5682849Z",
       "notes": [],
+      "status": "error",
       "error": "Get-SiloReportPacDay: CreatedDate '01/02/2026 08:00:00' has no explicit UTC offset (Z or +/-HH:MM) - refusing to guess the host timezone.",
       "title": "Revenue - SILO"
     }
   ],
-  "isToday": false
+  "final": false
 }
