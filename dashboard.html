@@ -352,6 +352,34 @@
      #activity-frame::before{ animation:none; background:none; }
      #activity-frame.on::after{ box-shadow:inset 0 0 46px 6px rgba(10,102,176,.28); }
   }
+
+  /* ---------------------------------------------------------------------------
+     FULLSCREEN FIT (F11 @ 1920x1080) — compaction so every tab fits one screen
+     with no vertical scroll and no horizontal cut-off. Verified across all 9 tabs
+     (Overview, Calls, Cancellations, Staffing, Pipeline, Call Board, Sources,
+     Revenue, SILO) against live data. Placed LAST so equal-specificity rules here
+     win the cascade tie over the base rules above; higher-specificity Revenue rules
+     (.revtab / .revcols) are left intact except where re-stated below. */
+  .wrap{ padding:14px 30px 16px; }
+  h3{ margin:9px 0 4px; }
+  .cav{ margin-top:5px; line-height:1.35; }
+  .chips{ margin:4px 0 8px; }
+  .cxbar{ margin:8px 0 2px; }
+  .cols{ gap:36px; }
+  .det td{ font-size:.9rem; padding:2px 14px; }
+  .rank td{ padding:4px 10px; font-size:1rem; }
+  .cal{ gap:6px; }
+  .cal-cell{ min-height:88px; padding:8px 8px 9px; }
+  .cal-total{ font-size:2rem; }
+  .silocard{ padding:12px 16px; }
+  .silolb{ margin-top:10px; padding:12px 18px 6px; }
+  .silolb h3{ margin-bottom:6px; }
+  .lbrow{ padding:3px 0; }
+  .silocav{ margin-top:8px; }
+  .revcols{ gap:20px; }
+  .revcols .revhero{ padding:8px 12px 10px; }
+  .revcols .revhero .rv{ font-size:clamp(.9rem,1.15vw,1.15rem); white-space:nowrap; letter-spacing:-.02em; }
+  .revcols .flipcard .fv{ white-space:nowrap; }
 </style>
 </head>
 <body>
