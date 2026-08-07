@@ -268,6 +268,23 @@
   .revtab .flipcard .rl{font-size:.88rem;}
   .revtab .flipcard .fv{font-size:clamp(1.5rem,2.3vw,1.95rem); margin-top:3px;}
   .revtab .flipcard .fs{margin-top:4px; font-size:.82rem;}
+  /* HVAC Sales (sold) + SILO (sold turnovers) sit SIDE-BY-SIDE below Plumbing (billed) so all three
+     revenue streams fit one 1080p screen without clipping. Two equal columns; cards compacted to fit
+     half-width. Plumbing and SILO content/logic are unchanged - only laid out in columns here. */
+  .revcols{display:flex; gap:26px; align-items:flex-start; margin-top:2px;}
+  .revcols > .revcol{flex:1 1 0; min-width:0;}
+  .revcols .revgrid{gap:12px; margin:4px 0 6px;}
+  .revcols .revhero{min-width:140px; padding:8px 16px 10px; border-radius:12px;}
+  .revcols .revhero .rl{font-size:.8rem;}
+  .revcols .revhero .rv{font-size:clamp(1.35rem,1.8vw,1.8rem);}
+  .revcols .fliprow{gap:12px; margin:4px 0 4px;}
+  .revcols .flipcard{min-width:110px; padding:8px 14px 10px; border-radius:12px;}
+  .revcols .flipcard .rl{font-size:.8rem;}
+  .revcols .flipcard .fv{font-size:clamp(1.25rem,1.6vw,1.65rem);}
+  .revcols .flipcard .fs{font-size:.76rem;}
+  .revcols .big td{font-size:1.05rem; padding:4px 10px;}
+  .revcols h3{margin:6px 0 2px;}
+  .revcols .cav{font-size:.74rem;}
 </style>
 </head>
 <body>
@@ -813,24 +830,53 @@ function currencyTable(t){
   return h;
 }
 function renderRevenue(){
-  let h = '<div class="wrap revtab"><div class="head"><h2>Revenue &mdash; Plumbing</h2>'
-        + '<div class="kpi">billed, pre-tax</div></div>';
+  // Three revenue streams SIDE-BY-SIDE (one 1080p screen, no clipping): Plumbing (billed) |
+  // HVAC Sales (sold/signed) | SILO (sold turnovers). Each section's content, wording and logic
+  // are unchanged - they are only placed in flex columns and rendered with the compact .revcols CSS.
+  let plumb = '<div class="head" style="border-top:1px solid var(--hair); padding-top:10px"><h2>Revenue &mdash; Plumbing</h2>'
+            + '<div class="kpi">billed, pre-tax</div></div>';
   const b = block('revenue');
-  if(!b||b.status==='error'){ h += errBlock(b,'Revenue'); }
+  if(!b||b.status==='error'){ plumb += errBlock(b,'Revenue'); }
   else {
     const sum = asArray(b.tables)[0];   // Period | Revenue  (Today / MTD / YTD)
     const bu  = asArray(b.tables)[1];   // Business Unit | Today | MTD | YTD
     const sr = asArray(sum.rows).map(r=>asArray(r));
     const heroCls = ['today','',''];
     const hero = sr.map((r,i)=>`<div class="revhero ${heroCls[i]||''}"><div class="rl">${esc(r[0])}</div><div class="rv">${esc(r[1])}</div></div>`).join('');
-    h += `<div class="revcav">NOT FINAL &mdash; Today, this month (MTD) and YTD are partial; invoices keep posting so these will keep rising.</div>`;
+    plumb += `<div class="revcav">NOT FINAL &mdash; Today, this month (MTD) and YTD are partial; invoices keep posting so these will keep rising.</div>`;
+    plumb += `<div class="revgrid">${hero}</div>`;
+    plumb += `<h3>By business unit</h3><div class="big">${currencyTable(bu)}</div>`;
+    plumb += notesHtml(b);
+  }
+  let h = '<div class="wrap revtab"><div class="revcols">'
+        +   '<div class="revcol">' + plumb + '</div>'
+        +   '<div class="revcol">' + renderHvacSalesSection() + '</div>'
+        +   '<div class="revcol">' + renderSiloRevenueSection() + '</div>'
+        + '</div></div>';
+  return h;
+}
+/* HVAC Sales sold/signed revenue - the pre-tax value of HVAC systems the SALES TEAM sold (sold
+   estimates on the two HVAC Sales BUs), credited to the deal-closed day. Distinct from the Plumbing
+   "billed" figure and the SILO "turnovers" figure. Presentation-isolated like the SILO section. */
+function renderHvacSalesSection(){
+  try {
+    let h = '<div class="head" style="margin-top:12px; border-top:1px solid var(--hair); padding-top:10px"><h2>Revenue &mdash; HVAC Sales</h2>'
+          + '<div class="kpi">sold/signed, pre-tax &middot; sales team</div></div>';
+    const b = block('hvac-sales-sold');
+    if(!b||b.status==='error'){ return h + errBlock(b,'HVAC Sales revenue'); }
+    const sum = asArray(b.tables)[0];   // Period | Sold
+    const bu  = asArray(b.tables)[1];   // Business Unit | Today | MTD | YTD
+    const sr = asArray(sum.rows).map(r=>asArray(r));
+    const hero = sr.map((r,i)=>`<div class="revhero ${i===0?'today':''}"><div class="rl">${esc(r[0])}</div><div class="rv">${esc(r[1])}</div></div>`).join('');
+    h += `<div class="revcav">NOT FINAL &mdash; sold value; keeps rising as more estimates are signed (invoiced later under Install).</div>`;
     h += `<div class="revgrid">${hero}</div>`;
     h += `<h3>By business unit</h3><div class="big">${currencyTable(bu)}</div>`;
     h += notesHtml(b);
+    return h;
+  } catch (e) {
+    return '<div class="head" style="margin-top:12px; border-top:1px solid var(--hair); padding-top:10px"><h2>Revenue &mdash; HVAC Sales</h2></div>'
+         + errBlock({status:'error', error:(e && e.message) || String(e)}, 'HVAC Sales revenue');
   }
-  h += renderSiloRevenueSection();
-  h += '</div>';
-  return h;
 }
 /* SILO revenue + flip rate - same Revenue tab, below the Plumbing section. SOLD/signed pre-tax,
    credited to the turnover-call day; distinct from the Plumbing "billed" figure above. */

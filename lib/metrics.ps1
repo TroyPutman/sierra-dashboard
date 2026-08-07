@@ -1162,6 +1162,112 @@ function Get-Metric-SiloRevenue($Ctx, [datetime]$Date) {
        ) }
 }
 
+# ============================================================================
+#  M-HvacSalesSold: HVAC Sales SOLD / SIGNED revenue (on the Revenue tab), Today / MTD / YTD
+#  WHAT IT IS: the pre-tax dollar value of HVAC systems the SALES TEAM actually SOLD - i.e. the
+#  subtotal of SOLD estimates on the two HVAC Sales business units. This is deliberately NOT a
+#  billed-invoice figure: sales dollars are invoiced later under Install, so a billed "Sales"
+#  revenue reads a misleading ~$816/yr. This metric reads what was SOLD, not what was billed.
+#  SCOPE (business units, decided by scope brief 2026-08-06):
+#    370       = HVAC - Sales (NR)
+#    340802904 = HVAC - Sales Costco (NR)
+#  SOURCE (chosen after live investigation 2026-08-06 - see the block header note):
+#    ServiceTitan sales/v2 estimates endpoint, filtered SERVER-SIDE by soldAfter / soldBefore
+#    (the estimate's SOLD/deal-closed date, soldOn). Chosen over report 648754648 because ONLY the
+#    estimates endpoint buckets by the true SOLD date: the report's DateType options bucket by job
+#    creation / scheduled date, none of which match the sold-date total (verified: Aug 1-6 true
+#    sold = $1,353,856.32 / 63 estimates; report best DateType gave $1,119,853.77 / 52). The
+#    endpoint returns only status=Sold rows (only sold estimates carry a soldOn), pre-tax subtotal.
+#  DATE BASIS: soldOn (the day the deal closed), server-side via soldAfter/soldBefore. A period =
+#    a Pacific calendar window converted to a UTC range ONCE (Get-PacDateUtcIso). NO estimate's date
+#    is ever parsed / bucketed in PowerShell -> provably identical on Windows PS5.1 and Linux/UTC
+#    pwsh7 (this is the SILO platform-independence lesson applied).
+#  BU SCOPING: the estimates endpoint SILENTLY IGNORES a businessUnitIds query param on this tenant
+#    (verified live: returns all 9 BUs), so we filter by buId IN CODE. Verified 2026-08-06 that
+#    filtering by the estimate's businessUnitId reproduces the job-business-unit scoping to the cent
+#    (Aug 1-6: both = $1,353,856.32 / 63), i.e. a Sales-BU estimate lives on a Sales-BU job.
+#  THREE server-side pulls (Today / MTD / YTD), same pattern as SILO revenue - never one pull
+#    bucketed client-side. Recomputed every build; NEVER frozen (an estimate sold later lands on its
+#    own earlier sold day, so past periods can still rise - correct, not a bug).
+#  FAIL LOUD: any API error or missing field throws; a real $0 (no sales that period) is shown as
+#    $0.00, distinct from an error tile.
+# ============================================================================
+$script:HVAC_SALES_BUS = [ordered]@{ '370'='Sales NR'; '340802904'='Sales Costco NR' }
+
+# Pacific calendar date -> its UTC-midnight instant as an ISO string the estimates endpoint's
+# soldAfter/soldBefore accept. Converts the PERIOD boundary once (TimeZoneInfo is cross-platform);
+# this is server-side date filtering, NOT a per-record parse.
+function Get-PacDateUtcIso($Ctx, [datetime]$PacDate) {
+    ([TimeZoneInfo]::ConvertTimeToUtc([DateTime]::SpecifyKind($PacDate.Date,'Unspecified'), $Ctx.Pac)).ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")
+}
+
+function Get-Metric-HvacSalesSold($Ctx, [datetime]$Date) {
+    # Build the three sold-date windows straight from D's Pacific calendar, each [start, D+1):
+    #   Today = D .. D+1 ; MTD = 1st-of-D's-month .. D+1 ; YTD = Jan 1 of D's year .. D+1.
+    # The upper bound is the START of the day after D (exclusive), so D itself is fully included.
+    $dStart      = $Date.Date
+    $nextDay     = $dStart.AddDays(1)
+    $monthStart  = [datetime]::new($Date.Year, $Date.Month, 1)
+    $yearStart   = [datetime]::new($Date.Year, 1, 1)
+    $endIso      = Get-PacDateUtcIso $Ctx $nextDay
+    $windows = [ordered]@{
+        today = @{ startIso = (Get-PacDateUtcIso $Ctx $dStart);     endIso = $endIso }
+        mtd   = @{ startIso = (Get-PacDateUtcIso $Ctx $monthStart); endIso = $endIso }
+        ytd   = @{ startIso = (Get-PacDateUtcIso $Ctx $yearStart);  endIso = $endIso }
+    }
+
+    # THREE server-side pulls; filter Sales BUs in code (server ignores businessUnitIds), sum [decimal].
+    $tot = @{}                     # period -> bu -> [decimal]
+    $cnt = @{}                     # period -> bu -> [int] (number of sold estimates, for context)
+    foreach ($p in 'today','mtd','ytd') {
+        $tot[$p]=@{}; $cnt[$p]=@{}
+        foreach ($bu in $script:HVAC_SALES_BUS.Keys) { $tot[$p][$bu]=[decimal]0; $cnt[$p][$bu]=0 }
+        $est = Get-SoldEstimates $Ctx $windows[$p].startIso $windows[$p].endIso
+        foreach ($e in $est) {
+            if (-not $script:HVAC_SALES_BUS.Contains($e.buId)) { continue }   # Sales BUs only, in code
+            $tot[$p][$e.buId] += $e.subTotal
+            $cnt[$p][$e.buId]++
+        }
+    }
+    # cent-round each cell as [decimal]
+    foreach ($p in 'today','mtd','ytd') { foreach ($bu in $script:HVAC_SALES_BUS.Keys) { $tot[$p][$bu] = [decimal][Math]::Round($tot[$p][$bu],2) } }
+
+    $grp = @{}; $grpCnt=@{}
+    foreach ($p in 'today','mtd','ytd') {
+        $s=[decimal]0; $c=0
+        foreach ($bu in $script:HVAC_SALES_BUS.Keys) { $s += $tot[$p][$bu]; $c += $cnt[$p][$bu] }
+        $grp[$p]=$s; $grpCnt[$p]=$c
+    }
+
+    $lbls = @{
+        today = "Today ($($Date.ToString('MMM d')))"
+        mtd   = "Month to date ($($monthStart.ToString('MMM 1')) - $($Date.ToString('MMM d')))"
+        ytd   = "Year to date ($($yearStart.ToString('MMM 1')) - $($Date.ToString('MMM d')))"
+    }
+    $summaryRows = @()
+    foreach ($p in 'today','mtd','ytd') { $summaryRows += ,@($lbls[$p], (Format-Money $grp[$p])) }
+
+    $buRows = @()
+    foreach ($bu in $script:HVAC_SALES_BUS.Keys) {
+        $buRows += ,@($script:HVAC_SALES_BUS[$bu], (Format-Money $tot['today'][$bu]), (Format-Money $tot['mtd'][$bu]), (Format-Money $tot['ytd'][$bu]))
+    }
+    $buFoot = "HVAC SALES TOTAL   Today {0}    MTD {1}    YTD {2}" -f (Format-Money $grp['today']), (Format-Money $grp['mtd']), (Format-Money $grp['ytd'])
+
+    $notes = @(
+        'HVAC Sales SOLD = the pre-tax subtotal of SOLD estimates on the two HVAC Sales units (Sales NR + Sales Costco NR), credited to the day the deal closed (the estimate''s sold date). What the sales team SOLD - open / unsold estimates are excluded.',
+        'This is SOLD value, NOT billed: HVAC sales dollars are invoiced later under Install, so a billed "Sales" figure reads near-zero and is misleading. This figure is the sales team''s signed business.',
+        'Distinct from Plumbing (billed invoices) and SILO (turnover sold value). Day boundaries are Pacific; the sold-date window is applied server-side so the figure is identical on any host timezone.',
+        'NOT FINAL - Today, MTD and YTD are partial and keep rising as more estimates are sold; an estimate sold later lands on its own sold day. Recomputed every refresh; never frozen.'
+    )
+
+    @{ id='hvac-sales-sold'; title='Revenue - HVAC Sales (sold/signed, pre-tax)'; status='ok'; error=$null;
+       notes=$notes;
+       tables=@(
+         @{ subtitle='HVAC Sales sold revenue'; columns=@('Period','Sold'); rows=$summaryRows; footer='' },
+         @{ subtitle='By business unit'; columns=@('Business Unit','Today','MTD','YTD'); rows=$buRows; footer=$buFoot }
+       ) }
+}
+
 # ---------- registry + snapshot assembler ----------
 $script:METRIC_DEFS = @(
     @{ id='call-counts';    title='Call Count';               act={ param($c,$d) Get-Metric-CallCounts   $c $d } },
@@ -1174,7 +1280,8 @@ $script:METRIC_DEFS = @(
     @{ id='call-board';     title='3-Day Call Board';         act={ param($c,$d) Get-Metric-CallBoard     $c $d } },
     @{ id='booking-source'; title='Booking Rate by Source';   act={ param($c,$d) Get-Metric-BookingBySource $c $d } },
     @{ id='revenue';        title='Revenue - Plumbing';       act={ param($c,$d) Get-Metric-Revenue       $c $d } },
-    @{ id='silo-revenue';   title='Revenue - SILO';           act={ param($c,$d) Get-Metric-SiloRevenue   $c $d } }
+    @{ id='silo-revenue';   title='Revenue - SILO';           act={ param($c,$d) Get-Metric-SiloRevenue   $c $d } },
+    @{ id='hvac-sales-sold'; title='Revenue - HVAC Sales';    act={ param($c,$d) Get-Metric-HvacSalesSold $c $d } }
 )
 
 function New-ErrorBlock($id,$title,$msg) { @{ id=$id; title=$title; status='error'; error=$msg; notes=@(); tables=@(); pulledAt=(Get-UtcNow) } }

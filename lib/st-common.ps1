@@ -197,6 +197,46 @@ function Get-Invoices($Ctx, [string]$StartIso, [string]$EndIso) {
     ,$out
 }
 
+# ---- Sales estimates: SOLD-estimate value (for HVAC Sales sold/signed revenue) ---------------
+# Fetch SOLD sales-estimates whose soldOn falls in [StartIso, EndIso) via the sales/v2 estimates
+# endpoint's SERVER-SIDE soldAfter / soldBefore filter. This is platform-independent by design: the
+# PERIOD boundaries are converted from a Pacific day to a UTC range ONCE by the caller; an individual
+# estimate's soldOn is NEVER parsed / bucketed in PowerShell (that client-side-timezone-parse pattern
+# is exactly what broke SILO on the Linux/UTC CI runner). The server does all the sold-day windowing.
+# Returns one lightweight record per estimate:
+#   id (string), buId (businessUnitId as string), subTotal ([decimal], PRE-TAX), jobId (string or ''),
+#   soldOn (raw ISO - informational only, NEVER bucketed on), status (name string, always 'Sold' here).
+# HARD RULES honoured here:
+#   * soldAfter/soldBefore is [inclusive-start, exclusive-end) - verified live 2026-08-06 (a window
+#     [Aug1 00:00Z, Aug7 00:00Z) returned only soldOn in Aug 1..6). The filter IS honoured by this
+#     tenant (verified), unlike the businessUnitIds param below.
+#   * this tenant's estimates endpoint SILENTLY IGNORES a businessUnitIds query param (verified live
+#     2026-08-06: it returned all 9 business units) - so callers MUST filter by buId in code and never
+#     pass / trust a server-side BU filter here.
+#   * pageSize 500 (verified accepted). NEVER 300 anywhere in this project (tenant paging defect).
+# FAIL LOUD: a missing id / businessUnitId / subTotal / status field throws (never a silent $0).
+function Get-SoldEstimates($Ctx, [string]$StartIso, [string]$EndIso) {
+    $raw = Invoke-StPaged $Ctx "/sales/v2/tenant/$($Ctx.Tenant)/estimates" `
+        @{ soldAfter=$StartIso; soldBefore=$EndIso } 500
+    $out = New-Object System.Collections.ArrayList
+    foreach ($e in $raw) {
+        foreach ($p in 'id','subtotal','businessUnitId','status') {
+            if ($null -eq $e.PSObject.Properties[$p]) { throw "estimate $($e.id) is missing field '$p'" }
+        }
+        $jobId  = if (-not (Is-EmptyVal $e.jobId)) { "$($e.jobId)" } else { '' }
+        $status = if ($e.status -and $e.status.name) { "$($e.status.name)" } else { '' }
+        [void]$out.Add([pscustomobject]@{
+            id       = "$($e.id)"
+            buId     = "$($e.businessUnitId)"
+            subTotal = [decimal]$e.subtotal
+            jobId    = $jobId
+            soldOn   = "$($e.soldOn)"
+            status   = $status
+        })
+    }
+    ,$out
+}
+
 # ---- Reporting API v2: run a saved report -----------------------------------------------------
 # POSTs to the report data endpoint, pages on hasMore (pageSize default 5000 - a full year of the
 # SILO report fits in one page), and RETRIES on HTTP 429 honoring the Retry-After header. This
