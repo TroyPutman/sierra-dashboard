@@ -43,17 +43,17 @@ on:
   # runs/month figures still describe how often the dashboard refreshes.
   # GitHub cron is ALWAYS in UTC and does NOT observe daylight saving.
   #
-  # Default below = "0,30 13-23 * * 1-6":
-  #   * minute 0 and 30  -> every 30 minutes
+  # Default below = "0,15,30,45 13-23 * * 1-6":
+  #   * minutes 0,15,30,45 -> every 15 minutes
   #   * hours 13-23 UTC  -> ~06:00-16:30 Pacific in summer (PDT, UTC-7),
   #                          ~05:00-15:30 Pacific in winter (PST, UTC-8)  [1-hr seasonal drift]
   #   * days 1-6         -> Monday through Saturday (no Sundays)
   #
-  #   Runs/day  = 2 x 11 hours            = ~22
-  #   Runs/month= 22 x 6 days x ~4.345 wk = ~573
+  #   Runs/day  = 4 x 11 hours            = ~44
+  #   Runs/month= 44 x 6 days x ~4.345 wk = ~1,147
   #   Cost/run  ~= 2-3 min (checkout + auth + ~100-200 API calls for today, occasional
   #               +1 day for yesterday, + build + Pages deploy)
-  #   => roughly 1,150-1,700 min/month from the schedule alone. On a PUBLIC repo these
+  #   => roughly 2,300-3,400 min/month from the schedule alone. On a PUBLIC repo these
   #      minutes are free and unlimited; push- and manual-triggered runs add on top.
   #
   # HOW TO CHANGE THE FREQUENCY (pick one, edit the cron line below):
@@ -63,7 +63,7 @@ on:
   #   * More frequent   -> add minute marks e.g. "0,15,30,45"  (doubles the runs)
   # -------------------------------------------------------------------------
   schedule:
-    - cron: "0,30 13-23 * * 1-6"
+    - cron: "0,15,30,45 13-23 * * 1-6"
 
 # contents:write  -> commit the heartbeat + snapshots back on every run.
 # pages:write + id-token:write -> publish to GitHub Pages via the official actions.
