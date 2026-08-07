@@ -322,6 +322,36 @@
   #goalEditor #geCancel{background:var(--panel2); color:var(--sub);}
   #goalEditor .ge-msg{min-height:1.1em; margin-top:8px; font-size:.8rem; font-weight:600;}
   #goalEditor .ge-msg.err{color:var(--err);} #goalEditor .ge-msg.ok{color:var(--ok);}
+
+  /* ---------------------------------------------------------------------------
+     Background-activity frame — a subtle animated edge-glow around the whole screen,
+     shown ONLY while background work is in progress (a goal being edited, or data
+     being fetched/refreshed). Purely visual: a fixed, pointer-events:none overlay at
+     inset:0, so it can never shift layout or add scroll/overflow. Single (light) theme
+     to match the dashboard. Wall-display friendly: soft, slow, low-contrast. */
+  @property --actSpin{ syntax:'<angle>'; inherits:false; initial-value:0deg; }
+  #activity-frame{ position:fixed; inset:0; z-index:9990; pointer-events:none;
+     opacity:0; transition:opacity .5s ease; }
+  #activity-frame.on{ opacity:1; }
+  /* steady feathered base glow hugging the edges (calm brand-blue) */
+  #activity-frame::after{ content:""; position:absolute; inset:0;
+     box-shadow:inset 0 0 42px 4px rgba(10,102,176,.20); }
+  /* moving gradient sheen: a soft light travelling slowly around the frame */
+  #activity-frame::before{ content:""; position:absolute; inset:0; padding:3px;
+     background:conic-gradient(from var(--actSpin),
+        rgba(10,102,176,0) 0deg, rgba(244,165,34,.55) 55deg,
+        rgba(10,102,176,.60) 140deg, rgba(10,102,176,0) 230deg, rgba(10,102,176,0) 360deg);
+     -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+             mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+     -webkit-mask-composite:xor; mask-composite:exclude;
+     filter:blur(1.5px); animation:actSpin 5.5s linear infinite; animation-play-state:paused; }
+  #activity-frame.on::before{ animation-play-state:running; }
+  @keyframes actSpin{ to{ --actSpin:360deg; } }
+  /* Respect reduced motion: hold a steady soft glow (no travel, no pulse). */
+  @media (prefers-reduced-motion: reduce){
+     #activity-frame::before{ animation:none; background:none; }
+     #activity-frame.on::after{ box-shadow:inset 0 0 46px 6px rgba(10,102,176,.28); }
+  }
 </style>
 </head>
 <body>
@@ -353,6 +383,8 @@
     <div class="ge-btns"><button type="button" id="geSave">Save</button><button type="button" id="geCancel">Cancel</button></div>
     <div class="ge-msg" id="geMsg"></div>
   </div>
+  <!-- Purely-visual background-activity frame (animated edge-glow); see #activity-frame CSS. -->
+  <div id="activity-frame" aria-hidden="true"></div>
 
 <script>
 /* STATIC_MODE: when true, the page reads pre-generated static JSON files (data/, manifest.json,
@@ -383,6 +415,19 @@ let siloData = null, siloLoading = false, siloErr = null;   // SILO tab (monthly
 let cbSelDay = null;   // Call Board: day selected for the call-type breakdown (defaults to today)
 
 const $ = id => document.getElementById(id);
+
+/* ---- Background-activity frame (purely visual): show the animated edge-glow while work
+   is in progress — a goal is being edited, or dashboard data is being fetched/refreshed.
+   Ref-counted so overlapping fetches keep it lit; OR'd with the goal-editor open state. */
+let __fetchBusy = 0;
+function refreshActivityFrame(){
+  const ed = $('goalEditor');
+  const editorOpen = !!ed && ed.style.display !== 'none';
+  const f = $('activity-frame');
+  if(f) f.classList.toggle('on', editorOpen || __fetchBusy > 0);
+}
+function beginFetchActivity(){ __fetchBusy++; refreshActivityFrame(); }
+function endFetchActivity(){ __fetchBusy = Math.max(0, __fetchBusy - 1); refreshActivityFrame(); }
 const asArray = x => Array.isArray(x) ? x : (x==null ? [] : [x]);
 const esc = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt = n => (typeof n==='number' ? n.toLocaleString('en-US') : n);
@@ -483,6 +528,7 @@ function openGoalEditor(key, anchor){
   geMsg('');
   const ed = $('goalEditor');
   ed.style.display = 'block';
+  refreshActivityFrame();
   // Position under the clicked bar, kept inside the viewport.
   const r = anchor.getBoundingClientRect();
   const w = 250, h = ed.offsetHeight || 180;
@@ -493,7 +539,7 @@ function openGoalEditor(key, anchor){
   ed.style.top  = top+'px';
   $('gePass').focus();
 }
-function closeGoalEditor(){ $('goalEditor').style.display='none'; $('gePass').value=''; geKey=null; }
+function closeGoalEditor(){ $('goalEditor').style.display='none'; $('gePass').value=''; geKey=null; refreshActivityFrame(); }
 async function saveGoal(){
   if(!geKey) return;
   if(!GOALS_API){ geMsg('goals API not configured', true); return; }
@@ -908,12 +954,14 @@ function prevMonthStr(){ const d=new Date(); d.setDate(1); d.setMonth(d.getMonth
 function curMonthStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
 async function loadSilo(month){
   siloErr=null; siloLoading=true; if(active==='silo'){ renderActive(); }
+  beginFetchActivity();
   try{
     const r = await fetch(siloUrl(month));
     if(!r.ok){ let m='HTTP '+r.status; try{const j=await r.json(); if(j.error)m=j.error;}catch(e){} throw new Error(m); }
     siloData = await r.json(); siloLoading=false;
     if(active==='silo'){ renderActive(); }
   }catch(e){ siloLoading=false; siloErr=e.message; if(active==='silo'){ renderActive(); } }
+  finally{ endFetchActivity(); }
 }
 function updateSiloChrome(){
   if(!siloData){ $('siloWhen').innerHTML='&nbsp;'; $('siloPill').textContent=''; $('siloPill').className='pill'; return; }
@@ -1138,6 +1186,7 @@ async function loadVersion(){
 
 async function load(dateStr){
   $('banner').className='banner';
+  beginFetchActivity();
   try{
     const resp = await fetch(metricsUrl(dateStr));
     if(!resp.ok){ let m='HTTP '+resp.status; try{const j=await resp.json(); if(j.error)m=j.error;}catch(e){} throw new Error(m); }
@@ -1145,12 +1194,13 @@ async function load(dateStr){
     await loadGoals();                     // refresh goal values (no-op + no error when GOALS_API is unset)
     renderChrome(); renderActive(); loadVersion();
     if(pollTimer){clearInterval(pollTimer);pollTimer=null;}
-    if(!STATIC_MODE && dateStr===todayStr()){ pollTimer=setInterval(async()=>{ try{const r=await fetch(metricsUrl(dateStr)); if(r.ok){data=await r.json(); renderChrome(); renderActive(); loadVersion();}}catch(e){} },180000); }
+    if(!STATIC_MODE && dateStr===todayStr()){ pollTimer=setInterval(async()=>{ beginFetchActivity(); try{const r=await fetch(metricsUrl(dateStr)); if(r.ok){data=await r.json(); renderChrome(); renderActive(); loadVersion();}}catch(e){}finally{ endFetchActivity(); } },180000); }
   }catch(e){
     const hint = STATIC_MODE ? '  (is the static file present in data/?)' : '  (is serve.ps1 running? are the credentials valid?)';
     $('banner').textContent='COULD NOT LOAD DATA: '+e.message+hint;
     $('banner').className='banner show';
   }
+  finally{ endFetchActivity(); }
 }
 
 /* delegated click handling for the Cancellations filters (data-cx* elements exist only on that tab) */
