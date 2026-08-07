@@ -1,0 +1,25 @@
+# wrangler.toml — Sierra Morning Dashboard "Goals" Worker
+# Deploy with:  wrangler deploy   (run from this goals-worker/ directory)
+#
+# account_id is intentionally NOT set here: wrangler picks it up from `wrangler login`
+# (interactive) or the CLOUDFLARE_ACCOUNT_ID env var in CI. Do not hardcode it.
+
+name = "sierra-goals"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+# KV namespace binding. The Worker code refers to this as `env.GOALS`.
+# ┌─ REQUIRED ONE-TIME STEP ────────────────────────────────────────────────────────┐
+# │ Create the namespace and paste its id below:                                     │
+# │   wrangler kv namespace create GOALS                                             │
+# │ …then copy the printed `id = "…"` value into the `id` field on the next line.    │
+# │ (Or, in the Cloudflare dashboard: Workers & Pages → KV → Create namespace,       │
+# │  then bind it to this Worker as the variable name GOALS.)                         │
+# └──────────────────────────────────────────────────────────────────────────────────┘
+[[kv_namespaces]]
+binding = "GOALS"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"   # <-- paste your KV namespace id here
+
+# EDIT_PASSWORD is a SECRET — never put it in this file.
+# Set it once with:   wrangler secret put EDIT_PASSWORD
+# (Or in the dashboard: Worker → Settings → Variables and Secrets → add EDIT_PASSWORD, encrypted.)

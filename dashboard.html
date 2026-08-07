@@ -285,6 +285,43 @@
   .revcols .big td{font-size:1.05rem; padding:4px 10px;}
   .revcols h3{margin:6px 0 2px;}
   .revcols .cav{font-size:.74rem;}
+
+  /* GOAL PROGRESS BARS (backed by the Cloudflare goals Worker + KV; graceful when unconfigured).
+     Compact so the 3-column Revenue tab and the fixed Overview grid stay within 1920x1080. */
+  .goalbar{margin:8px 0 2px; cursor:pointer; user-select:none;}
+  .goalbar .gtrack{position:relative; height:9px; border-radius:6px; background:var(--panel2);
+     border:1px solid var(--hair); overflow:hidden;}
+  .goalbar .gfill{position:absolute; left:0; top:0; bottom:0; border-radius:6px;
+     background:linear-gradient(90deg,var(--brand),var(--gold)); transition:width .5s ease;}
+  .goalbar .gfill.over{background:linear-gradient(90deg,var(--ok),#7ad19f);}
+  .goalbar .gmeta{display:flex; justify-content:space-between; align-items:baseline; gap:10px;
+     margin-top:4px; font-size:.8rem; color:var(--dim); line-height:1.2;}
+  .goalbar .gpct{font-weight:700; color:var(--brand-dark); font-variant-numeric:tabular-nums;}
+  .goalbar .gpct.over{color:var(--ok);}
+  .goalbar .ggoal{color:var(--dim2); font-variant-numeric:tabular-nums;}
+  .goalbar .gedit{margin-left:6px; color:var(--brand); font-weight:600; opacity:.7;}
+  .goalbar:hover .gedit{opacity:1; text-decoration:underline;}
+  .goalbar.noGoal{border:1px dashed var(--hair); border-radius:8px; padding:5px 10px; text-align:center;}
+  .goalbar.noGoal .gset{font-size:.8rem; font-weight:600; color:var(--dim); opacity:.75;}
+  .goalbar.noGoal:hover .gset{color:var(--brand); opacity:1;}
+  /* On the dark SILO/flip context, lighten label text for contrast. */
+  .goalbar.dark .gmeta{color:#9fb2cc;} .goalbar.dark .gpct{color:#f4a522;}
+  .goalbar.dark .ggoal{color:#7089ab;} .goalbar.dark .gtrack{background:rgba(255,255,255,.08); border-color:#24344f;}
+
+  /* Inline goal editor — lives OUTSIDE #main so the dashboard's periodic re-render never wipes it. */
+  #goalEditor{position:fixed; z-index:9998; width:250px; background:#fff; border:1px solid var(--hair);
+     border-radius:12px; box-shadow:0 6px 24px rgba(8,66,122,.22); padding:14px 15px; font-size:.9rem;}
+  #goalEditor .ge-title{font-weight:700; color:var(--brand-dark); font-size:.86rem; margin-bottom:9px;}
+  #goalEditor input{width:100%; padding:8px 10px; font-size:.95rem; border:1px solid var(--hair);
+     border-radius:8px; margin-bottom:8px; box-sizing:border-box; color-scheme:light;}
+  #goalEditor .ge-btns{display:flex; gap:8px;}
+  #goalEditor .ge-btns button{flex:1; padding:8px 0; font-size:.9rem; font-weight:600; border:none;
+     border-radius:8px; cursor:pointer;}
+  #goalEditor #geSave{background:var(--brand); color:#fff;}
+  #goalEditor #geSave:hover{background:var(--brand-dark);}
+  #goalEditor #geCancel{background:var(--panel2); color:var(--sub);}
+  #goalEditor .ge-msg{min-height:1.1em; margin-top:8px; font-size:.8rem; font-weight:600;}
+  #goalEditor .ge-msg.err{color:var(--err);} #goalEditor .ge-msg.ok{color:var(--ok);}
 </style>
 </head>
 <body>
@@ -308,6 +345,14 @@
   </header>
   <div class="banner" id="banner"></div>
   <main id="main"></main>
+  <!-- Goal editor popover (rendered once, outside #main so periodic re-renders don't wipe it). -->
+  <div id="goalEditor" style="display:none">
+    <div class="ge-title" id="geTitle"></div>
+    <input type="password" id="gePass" placeholder="edit password" autocomplete="off">
+    <input type="number" id="geVal" placeholder="goal value" step="any">
+    <div class="ge-btns"><button type="button" id="geSave">Save</button><button type="button" id="geCancel">Cancel</button></div>
+    <div class="ge-msg" id="geMsg"></div>
+  </div>
 
 <script>
 /* STATIC_MODE: when true, the page reads pre-generated static JSON files (data/, manifest.json,
@@ -352,6 +397,125 @@ function rowsOf(b, ti=0){ if(!b) return []; const t=asArray(b.tables)[ti]; if(!t
 function sumCol(rows, i){ let s=0; rows.forEach(r=>{ if(typeof r[i]==='number') s+=r[i]; }); return s; }
 function shortBU(s){ return String(s).replace(' - ',' '); }
 
+/* ---------- GOAL PROGRESS BARS (Cloudflare Worker + KV) ----------
+   GOALS_API: paste your deployed Cloudflare Worker URL here, e.g.
+     const GOALS_API = 'https://sierra-goals.<your-subdomain>.workers.dev';
+   Leave it EMPTY to disable the feature entirely: the dashboard then renders normally with NO
+   goal bars and NO errors (fully graceful). When set, goals are fetched from {GOALS_API}/goals
+   and can be edited (password-gated server-side) via {GOALS_API}/goals POST.
+
+   Goal keys (documented) and the period each bar measures:
+     plumbing-rev-mtd    Plumbing revenue, Month-To-Date (billed, pre-tax)      -> currency
+     hvac-sales-mtd      HVAC Sales sold, Month-To-Date (sold/signed, pre-tax)  -> currency
+     calls-booked-today  Calls booked, TODAY (all business units)               -> count
+     silo-flip-mtd       SILO flip rate, Month-To-Date (turnovers sold / total) -> percent
+*/
+const GOALS_API = '';   // <-- paste your Cloudflare Worker URL here (see comment above)
+let GOALS = {};         // key -> goal number (fetched from the Worker; empty when unconfigured)
+
+const GOAL_META = {
+  'plumbing-rev-mtd':  {label:'Plumbing revenue goal (MTD)', kind:'money'},
+  'hvac-sales-mtd':    {label:'HVAC Sales sold goal (MTD)',  kind:'money'},
+  'calls-booked-today':{label:'Calls booked goal (today)',   kind:'count'},
+  'silo-flip-mtd':     {label:'SILO flip rate goal (MTD)',   kind:'percent'},
+};
+function goalFmt(kind, n){
+  if(!isFinite(n)) return String(n);
+  if(kind==='money')   return '$'+Math.round(n).toLocaleString('en-US');
+  if(kind==='percent') return (Math.round(n*10)/10)+'%';
+  return Math.round(n).toLocaleString('en-US');
+}
+/* parse "$154,018.50" -> 154018.5 ; "36.6%" -> 36.6 ; numbers pass through. NaN if unparseable. */
+function parseNum(v){
+  if(typeof v==='number') return v;
+  if(v==null) return NaN;
+  const s=String(v).replace(/[^0-9.\-]/g,'');
+  return s==='' ? NaN : Number(s);
+}
+async function loadGoals(){
+  if(!GOALS_API) return;                       // feature off -> stay graceful, no fetch, no error
+  try{
+    const r = await fetch(GOALS_API.replace(/\/+$/,'')+'/goals', {cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const j = await r.json();
+    if(j && typeof j==='object' && !Array.isArray(j)) GOALS = j;
+  }catch(e){ /* graceful: unreachable/misconfigured goals store must NOT blank or error the page */ }
+}
+/* Build a compact goal bar for `key` given the metric's actual value for that period.
+   Returns '' when the feature is off (GOALS_API empty) so nothing renders. When on but no goal is
+   set, returns a subtle "Set goal" affordance. `opt.dark` styles for the dark SILO context. */
+function goalBar(key, actual, opt){
+  if(!GOALS_API) return '';
+  opt = opt || {};
+  const meta = GOAL_META[key] || {kind:'count', label:'Goal'};
+  const darkCls = opt.dark ? ' dark' : '';
+  const goal = GOALS[key];
+  const hasGoal = typeof goal==='number' && isFinite(goal) && goal>0;
+  if(!hasGoal){
+    return `<div class="goalbar noGoal${darkCls}" data-goalkey="${esc(key)}"><span class="gset">+ Set goal</span></div>`;
+  }
+  const act = parseNum(actual);
+  const known = isFinite(act);
+  const pct = known ? (act/goal*100) : 0;
+  const fill = Math.max(0, Math.min(100, pct));          // bar capped at 100% visually
+  const over = known && pct>=100;
+  const pctText = known ? (Math.round(pct)+'%') : '--';   // real % (uncapped) shown as text
+  const actText = known ? goalFmt(meta.kind, act) : 'n/a';
+  return `<div class="goalbar${darkCls}" data-goalkey="${esc(key)}" title="Click to edit goal">
+    <div class="gtrack"><div class="gfill${over?' over':''}" style="width:${fill}%"></div></div>
+    <div class="gmeta">
+      <span class="gpct${over?' over':''}">${pctText}<span class="gedit">edit</span></span>
+      <span class="ggoal">${esc(actText)} / goal ${esc(goalFmt(meta.kind, goal))}</span>
+    </div>
+  </div>`;
+}
+
+/* ----- goal editor popover (password-gated save to the Worker) ----- */
+let geKey = null;   // key currently being edited
+function geMsg(text, isErr){ const el=$('geMsg'); el.textContent=text||''; el.className='ge-msg'+(text?(isErr?' err':' ok'):''); }
+function openGoalEditor(key, anchor){
+  geKey = key;
+  const meta = GOAL_META[key] || {label:'Goal'};
+  $('geTitle').textContent = meta.label;
+  const cur = GOALS[key];
+  $('geVal').value = (typeof cur==='number' && isFinite(cur)) ? cur : '';
+  $('gePass').value = '';
+  geMsg('');
+  const ed = $('goalEditor');
+  ed.style.display = 'block';
+  // Position under the clicked bar, kept inside the viewport.
+  const r = anchor.getBoundingClientRect();
+  const w = 250, h = ed.offsetHeight || 180;
+  let left = Math.min(r.left, window.innerWidth - w - 12);
+  let top  = r.bottom + 8;
+  if(top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 8);
+  ed.style.left = Math.max(8,left)+'px';
+  ed.style.top  = top+'px';
+  $('gePass').focus();
+}
+function closeGoalEditor(){ $('goalEditor').style.display='none'; $('gePass').value=''; geKey=null; }
+async function saveGoal(){
+  if(!geKey) return;
+  if(!GOALS_API){ geMsg('goals API not configured', true); return; }
+  const val = Number($('geVal').value);
+  if($('geVal').value==='' || !isFinite(val)){ geMsg('enter a number', true); return; }
+  const pass = $('gePass').value;              // kept only in this input / local var; never stored or logged
+  geMsg('saving...', false);
+  try{
+    const r = await fetch(GOALS_API.replace(/\/+$/,'')+'/goals', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Edit-Password':pass},
+      body: JSON.stringify({key:geKey, value:val}),
+    });
+    if(r.status===401){ geMsg('wrong password', true); return; }
+    if(!r.ok){ geMsg('save failed (HTTP '+r.status+')', true); return; }
+    const j = await r.json();
+    if(j && typeof j==='object' && !Array.isArray(j)) GOALS = j;
+    closeGoalEditor();
+    renderActive();                            // reflect the new goal live
+  }catch(e){ geMsg('network error - could not reach goals server', true); }
+}
+
 /* ---------- OVERVIEW (fixed, no scroll) ---------- */
 function tile(label, inner, b, caveat){
   const err = !b || b.status==='error';
@@ -370,7 +534,8 @@ function renderOverview(){
   const cc = block('call-counts'); const ccr = rowsOf(cc);
   h += tile('Calls booked',
     `<div class="tnum num">${fmt(sumCol(ccr,1))}</div>
-     <div class="tsub"><b class="num">${fmt(sumCol(ccr,2))}</b> completed${prog?' <span class="q">so far</span>':''}</div>`, cc);
+     <div class="tsub"><b class="num">${fmt(sumCol(ccr,2))}</b> completed${prog?' <span class="q">so far</span>':''}</div>
+     ${goalBar('calls-booked-today', sumCol(ccr,1))}`, cc);
   // Cancellations
   const cx = block('cancellations'); const cxr = rowsOf(cx,0);
   h += tile('Cancellations', `<div class="tnum num">${fmt(sumCol(cxr,1))}</div>
@@ -845,6 +1010,7 @@ function renderRevenue(){
     const hero = sr.map((r,i)=>`<div class="revhero ${heroCls[i]||''}"><div class="rl">${esc(r[0])}</div><div class="rv">${esc(r[1])}</div></div>`).join('');
     plumb += `<div class="revcav">NOT FINAL &mdash; Today, this month (MTD) and YTD are partial; invoices keep posting so these will keep rising.</div>`;
     plumb += `<div class="revgrid">${hero}</div>`;
+    plumb += goalBar('plumbing-rev-mtd', (sr[1]||[])[1]);   // MTD row (Period|Revenue)
     plumb += `<h3>By business unit</h3><div class="big">${currencyTable(bu)}</div>`;
     plumb += notesHtml(b);
   }
@@ -870,6 +1036,7 @@ function renderHvacSalesSection(){
     const hero = sr.map((r,i)=>`<div class="revhero ${i===0?'today':''}"><div class="rl">${esc(r[0])}</div><div class="rv">${esc(r[1])}</div></div>`).join('');
     h += `<div class="revcav">NOT FINAL &mdash; sold value; keeps rising as more estimates are signed (invoiced later under Install).</div>`;
     h += `<div class="revgrid">${hero}</div>`;
+    h += goalBar('hvac-sales-mtd', (sr[1]||[])[1]);   // MTD row (Period|Sold)
     h += `<h3>By business unit</h3><div class="big">${currencyTable(bu)}</div>`;
     h += notesHtml(b);
     return h;
@@ -899,6 +1066,7 @@ function renderSiloRevenueSection(){
     h += `<h3>Flip rate &mdash; turnovers sold</h3>`;
     const fr = asArray(flip.rows).map(r=>asArray(r));
     h += '<div class="fliprow">' + fr.map((r,i)=>`<div class="flipcard ${i===0?'today':''}"><div class="rl">${esc(r[0])}</div><div class="fv">${esc(r[1])}</div><div class="fs">${esc(r[2])} turnovers sold</div></div>`).join('') + '</div>';
+    h += goalBar('silo-flip-mtd', (fr[1]||[])[1]);   // MTD row (Period|Flip Rate|Turnovers sold)
     h += notesHtml(b);
     return h;
   } catch (e) {
@@ -974,6 +1142,7 @@ async function load(dateStr){
     const resp = await fetch(metricsUrl(dateStr));
     if(!resp.ok){ let m='HTTP '+resp.status; try{const j=await resp.json(); if(j.error)m=j.error;}catch(e){} throw new Error(m); }
     data = await resp.json();
+    await loadGoals();                     // refresh goal values (no-op + no error when GOALS_API is unset)
     renderChrome(); renderActive(); loadVersion();
     if(pollTimer){clearInterval(pollTimer);pollTimer=null;}
     if(!STATIC_MODE && dateStr===todayStr()){ pollTimer=setInterval(async()=>{ try{const r=await fetch(metricsUrl(dateStr)); if(r.ok){data=await r.json(); renderChrome(); renderActive(); loadVersion();}}catch(e){} },180000); }
@@ -990,8 +1159,18 @@ document.addEventListener('click', e=>{
   if(cbd){ cbSelDay = cbd.dataset.cbday; if(active==='callboard'){ renderActive(); } return; }
   const c = e.target.closest('[data-cxdim]');
   if(c){ cxToggle(c.dataset.cxdim, c.dataset.cxval); return; }
-  if(e.target.closest('[data-cxclear]')){ cxClearAll(); }
+  if(e.target.closest('[data-cxclear]')){ cxClearAll(); return; }
+  // Goal bars: clicking a bar (or the "Set goal" affordance) opens the password-gated editor.
+  const gb = e.target.closest('[data-goalkey]');
+  if(gb){ openGoalEditor(gb.dataset.goalkey, gb); return; }
+  // Click outside the editor closes it (ignore clicks on the editor itself or on a goal bar).
+  if($('goalEditor').style.display!=='none' && !e.target.closest('#goalEditor')){ closeGoalEditor(); }
 });
+$('geSave').addEventListener('click', saveGoal);
+$('geCancel').addEventListener('click', closeGoalEditor);
+$('geVal').addEventListener('keydown', e=>{ if(e.key==='Enter') saveGoal(); });
+$('gePass').addEventListener('keydown', e=>{ if(e.key==='Enter') saveGoal(); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape' && $('goalEditor').style.display!=='none') closeGoalEditor(); });
 
 setInterval(()=>{ if(data){ renderChrome(); renderActive(); } loadVersion(); }, 30000);
 

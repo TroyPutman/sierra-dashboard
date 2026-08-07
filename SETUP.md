@@ -221,6 +221,64 @@ The workflow file has a full comment block explaining the cadence right above th
 
 ---
 
+## Goal editing (Cloudflare Worker + KV)
+
+The dashboard can show **editable goal progress bars** on four metrics: **Plumbing revenue (MTD)**,
+**HVAC Sales sold (MTD)**, **Calls booked (today)**, and **SILO flip rate (MTD)**. Everyone can see the
+bars; changing a goal number requires a shared **edit password** that is checked on a small server
+(a free Cloudflare Worker), so the password never lives inside the public web page.
+
+**This whole feature is optional.** If you skip it, the dashboard works exactly as before with **no goal
+bars and no errors**. You only need it if you want on-screen goals people can edit.
+
+You do this once. It needs a **free** Cloudflare account (the free tier is far more than enough here).
+
+### 1. Create / sign in to Cloudflare
+Go to https://dash.cloudflare.com and sign up (or log in). Free plan is fine.
+
+### 2. Create the KV namespace (where goals are stored)
+In the dashboard: **Storage & Databases → KV → Create a namespace**. Name it e.g. `sierra-goals`.
+Copy the **namespace ID** it shows you — you'll need it in a moment.
+
+### 3. Deploy the Worker — pick ONE path
+
+**Path A — all in the browser (no installs):**
+1. **Workers & Pages → Create → Create Worker**. Give it a name, e.g. `sierra-goals`. Click **Deploy**.
+2. Click **Edit code**, delete the sample, and paste the full contents of `goals-worker/worker.js`
+   from this project. Click **Deploy** again.
+3. **Settings → Bindings → Add → KV namespace.** Set **Variable name** to exactly `GOALS` and pick the
+   namespace you made in step 2. Save.
+4. **Settings → Variables and Secrets → Add** a secret named exactly `EDIT_PASSWORD`, type your chosen
+   password, mark it **Encrypt**, and save. (This is the shared password people will type to edit a goal.)
+
+**Path B — command line (`wrangler`):** from the `goals-worker/` folder:
+```
+wrangler login
+wrangler kv namespace create GOALS      # copy the printed id...
+# ...paste that id into goals-worker/wrangler.toml (the id = "..." line)
+wrangler deploy
+wrangler secret put EDIT_PASSWORD        # type the shared edit password when prompted
+```
+
+### 4. Copy the Worker URL into the dashboard
+After deploy, Cloudflare shows your Worker URL, e.g. `https://sierra-goals.<your-subdomain>.workers.dev`.
+Open `dashboard.html`, find the line near the top of the `<script>`:
+```
+const GOALS_API = '';   // <-- paste your Cloudflare Worker URL here
+```
+and paste your URL between the quotes:
+```
+const GOALS_API = 'https://sierra-goals.<your-subdomain>.workers.dev';
+```
+Commit + push (or re-run the deploy). The goal bars now appear for everyone; clicking a bar asks for the
+edit password before saving. A correct password saves to Cloudflare KV and is visible to everyone on the
+next load; a wrong password is rejected and nothing changes.
+
+**Goal keys** (stored in KV; only relevant if you inspect the data): `plumbing-rev-mtd`, `hvac-sales-mtd`,
+`calls-booked-today`, `silo-flip-mtd`.
+
+---
+
 ## Troubleshooting
 
 - **Actions run failed on "Reconstruct secrets.json":** one of `ST_CLIENT_ID`,
