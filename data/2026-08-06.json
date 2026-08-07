@@ -1,89 +1,86 @@
 {
-  "date": "2026-08-06",
-  "generatedAt": "2026-08-06T08:08:36.5683290Z",
-  "isToday": true,
+  "final": true,
+  "generatedAt": "2026-08-07T16:21:16.8164945Z",
+  "isToday": false,
   "metrics": [
     {
+      "title": "Call Count - new opportunities",
+      "status": "ok",
       "id": "call-counts",
       "tables": [
         {
-          "subtitle": "",
+          "rows": [
+            [
+              "HVAC - Service",
+              73,
+              68
+            ],
+            [
+              "HVAC - Install - AOR",
+              30,
+              28
+            ],
+            [
+              "HVAC - Maintenance",
+              30,
+              29
+            ],
+            [
+              "HVAC - Sales (NR)",
+              20,
+              19
+            ],
+            [
+              "HVAC - Sales Costco (NR)",
+              4,
+              4
+            ],
+            [
+              "Plumbing - Service",
+              22,
+              18
+            ],
+            [
+              "Plumbing - Maintenance",
+              17,
+              16
+            ],
+            [
+              "Plumbing - Install",
+              7,
+              4
+            ],
+            [
+              "Plumbing - Drains",
+              2,
+              2
+            ]
+          ],
           "columns": [
             "Business Unit",
             "Booked",
             "Completed"
           ],
-          "rows": [
-            [
-              "HVAC - Service",
-              33,
-              1
-            ],
-            [
-              "HVAC - Install - AOR",
-              28,
-              0
-            ],
-            [
-              "HVAC - Maintenance",
-              31,
-              0
-            ],
-            [
-              "HVAC - Sales (NR)",
-              13,
-              0
-            ],
-            [
-              "HVAC - Sales Costco (NR)",
-              2,
-              0
-            ],
-            [
-              "Plumbing - Service",
-              9,
-              0
-            ],
-            [
-              "Plumbing - Maintenance",
-              21,
-              0
-            ],
-            [
-              "Plumbing - Install",
-              3,
-              0
-            ],
-            [
-              "Plumbing - Drains",
-              1,
-              0
-            ]
-          ],
-          "footer": "TOTAL   Booked 141    Completed 1"
+          "subtitle": "",
+          "footer": "TOTAL   Booked 205    Completed 188"
         }
       ],
-      "pulledAt": "2026-08-06T08:06:47.8467952Z",
+      "error": null,
+      "pulledAt": "2026-08-07T16:17:01.7730524Z",
       "notes": [
         "Booked = calls SCHEDULED FOR the day. Completed = calls finished that day. Different jobs; not expected to match."
-      ],
-      "status": "ok",
-      "error": null,
-      "title": "Call Count - new opportunities"
+      ]
     },
     {
+      "title": "Cancellations - cancel tray",
+      "status": "ok",
       "id": "cancellations",
       "tables": [
         {
-          "subtitle": "By business unit",
-          "columns": [
-            "Business Unit",
-            "Canceled"
-          ],
           "rows": [
             [
               "HVAC - Service",
-              8
+              18
             ],
             [
               "HVAC - Install - AOR",
@@ -95,15 +92,15 @@
             ],
             [
               "HVAC - Sales (NR)",
-              3
+              4
             ],
             [
               "HVAC - Sales Costco (NR)",
-              0
+              1
             ],
             [
               "Plumbing - Service",
-              0
+              1
             ],
             [
               "Plumbing - Maintenance",
@@ -118,26 +115,22 @@
               0
             ]
           ],
-          "footer": "TOTAL   16"
-        },
-        {
-          "subtitle": "Detail",
           "columns": [
             "Business Unit",
-            "Job Type",
-            "Scheduled",
-            "Cancelled",
-            "Reason",
-            "By"
+            "Canceled"
           ],
+          "subtitle": "By business unit",
+          "footer": "TOTAL   29"
+        },
+        {
           "rows": [
             [
-              "HVAC - Maintenance",
-              "Commercial Cooling/Heating Maintenance",
-              "2026-08-06 08:00",
-              "2026-08-05 09:31",
-              "3 attempts at contact, no response",
-              "Abigail Solano"
+              "HVAC - Service",
+              "Recall/Warranty",
+              "2026-08-06 07:41",
+              "2026-08-06 07:42",
+              "Problem fixed itself (CSR tried to save)",
+              "Nancy Rodriguez"
             ],
             [
               "HVAC - Maintenance",
@@ -148,20 +141,36 @@
               "Shanelle Poti"
             ],
             [
+              "HVAC - Maintenance",
+              "Commercial Cooling/Heating Maintenance",
+              "2026-08-06 08:00",
+              "2026-08-05 09:31",
+              "3 attempts at contact, no response",
+              "Abigail Solano"
+            ],
+            [
+              "HVAC - Sales (NR)",
+              "Estimate AC TGL",
+              "2026-08-06 08:00",
+              "2026-08-06 08:19",
+              "H/O can't today - Lead Follow up",
+              "Ryan Hernlund"
+            ],
+            [
+              "HVAC - Sales Costco (NR)",
+              "Estimate AC Costco",
+              "2026-08-06 08:00",
+              "2026-08-06 06:21",
+              "H/O can't today - Lead Follow up",
+              "Ryan Hernlund"
+            ],
+            [
               "HVAC - Service",
               "Semi Annual Tune-up 1-3 yrs",
               "2026-08-06 08:00",
               "2026-08-05 16:09",
               "Problem fixed itself (CSR tried to save)",
               "Shanelle Poti"
-            ],
-            [
-              "HVAC - Service",
-              "Filter Change 1-7 Yrs",
-              "2026-08-06 08:00",
-              "2026-08-03 09:55",
-              "Problem fixed itself (CSR tried to save)",
-              "Kaylah Deitz"
             ],
             [
               "HVAC - Service",
@@ -188,6 +197,38 @@
               "Shanelle Poti"
             ],
             [
+              "HVAC - Service",
+              "AC Issue 8+ yrs",
+              "2026-08-06 08:00",
+              "2026-08-06 07:52",
+              "Problem fixed itself (CSR tried to save)",
+              "Nancy Rodriguez"
+            ],
+            [
+              "HVAC - Service",
+              "AC Issue 8+ yrs",
+              "2026-08-06 08:00",
+              "2026-08-06 12:47",
+              "Problem fixed itself (CSR tried to save)",
+              "Aileen Chavez"
+            ],
+            [
+              "HVAC - Service",
+              "Filter Change 1-7 Yrs",
+              "2026-08-06 08:00",
+              "2026-08-03 09:55",
+              "Problem fixed itself (CSR tried to save)",
+              "Kaylah Deitz"
+            ],
+            [
+              "HVAC - Service",
+              "Filter Change 8+",
+              "2026-08-06 09:00",
+              "2026-08-06 08:04",
+              "3 attempts at contact, no response",
+              "Abigail Solano"
+            ],
+            [
               "HVAC - Sales (NR)",
               "Estimate AC TGL",
               "2026-08-06 10:00",
@@ -202,6 +243,14 @@
               "2026-08-05 10:59",
               "Problem fixed itself (CSR tried to save)",
               "Ciara Stoner"
+            ],
+            [
+              "HVAC - Sales (NR)",
+              "Estimate AC TGL",
+              "2026-08-06 10:00",
+              "2026-08-06 05:56",
+              "Going with Install over Repair",
+              "Ryan Hernlund"
             ],
             [
               "HVAC - Maintenance",
@@ -236,12 +285,28 @@
               "Kaylah Deitz"
             ],
             [
-              "HVAC - Sales (NR)",
-              "Estimate AC TGL",
-              "2026-08-06 16:00",
-              "2026-08-05 18:30",
+              "HVAC - Service",
+              "Semi Annual Tune-up 4-7 yrs",
+              "2026-08-06 12:29",
+              "2026-08-06 12:33",
+              "H/O can't today - Lead Follow up",
+              "Yailin Solano "
+            ],
+            [
+              "HVAC - Service",
+              "AC Issue 1-3 yrs",
+              "2026-08-06 12:30",
+              "2026-08-06 11:54",
               "Problem fixed itself (CSR tried to save)",
-              "Jeremy Von Samson"
+              "Yailin Solano "
+            ],
+            [
+              "Plumbing - Service",
+              "Plumbing Leak Other/Unknown Origin",
+              "2026-08-06 14:45",
+              "2026-08-06 14:50",
+              "Competitor arrived",
+              "Aileen Chavez"
             ],
             [
               "HVAC - Service",
@@ -252,206 +317,530 @@
               "Esteisi Morales"
             ],
             [
+              "HVAC - Service",
+              "AC Issue 1-3 yrs",
+              "2026-08-06 17:43",
+              "2026-08-06 17:05",
+              "Problem fixed itself (CSR tried to save)",
+              "Jeremy Von Samson"
+            ],
+            [
               "HVAC - Maintenance",
               "SAM Cooling Service (1 System) 4-7 Yrs",
               "2026-08-06 18:00",
               "2026-08-05 18:51",
               "Negative experience",
               "Jeremy Von Samson"
+            ],
+            [
+              "HVAC - Service",
+              "AC Issue 4-7 yrs",
+              "2026-08-06 18:00",
+              "2026-08-06 16:12",
+              "Problem fixed itself (CSR tried to save)",
+              "Kayla Mergersen"
+            ],
+            [
+              "HVAC - Service",
+              "AC Issue 4-7 yrs",
+              "2026-08-06 18:00",
+              "2026-08-06 16:04",
+              "Problem fixed itself (CSR tried to save)",
+              "Kayla Mergersen"
+            ],
+            [
+              "HVAC - Service",
+              "Thermostat Issue",
+              "2026-08-06 19:01",
+              "2026-08-06 16:34",
+              "Problem fixed itself (CSR tried to save)",
+              "Shanelle Poti"
             ]
           ],
+          "columns": [
+            "Business Unit",
+            "Job Type",
+            "Scheduled",
+            "Cancelled",
+            "Reason",
+            "By"
+          ],
+          "subtitle": "Detail",
           "footer": ""
         }
       ],
-      "pulledAt": "2026-08-06T08:06:50.1113469Z",
+      "error": null,
+      "pulledAt": "2026-08-07T16:17:06.0922547Z",
       "notes": [
         "Dated to the day the call was scheduled for service (the dispatch-board cancel tray), not the day someone pressed cancel. Detail: job type, when cancelled, reason, who.",
         "One job = one cancellation, counted ONCE on the FIRST Pacific day it ever had a visit booked (a multi-day job cancelled mid-way shows on day 1 only, not later days). Counted whether that day's visit reads Canceled or Done - a job cancelled after its visit was marked Done still counts. A cancelled visit that was only RESCHEDULED does not count; only jobs that are genuinely cancelled do.",
         "NOT FINAL - CAVEAT: this is the count AS OF THIS PULL. Cancellations recorded later still date back onto the day the work was scheduled for, so this number CAN STILL RISE. Do not read yesterday's count as final.",
-        "EXCLUDED as administrative cleanup, not lost work: 6 on this day (Duplicate entry x3, Avoca Duplicate x3). These are duplicate / data-entry records. Excluded reasons: Duplicate entry, Avoca Duplicate, History call clean up (legacy), Reschedule (legacy)."
-      ],
-      "status": "ok",
-      "error": null,
-      "title": "Cancellations - cancel tray"
+        "EXCLUDED as administrative cleanup, not lost work: 12 on this day (Duplicate entry x6, Avoca Duplicate x6). These are duplicate / data-entry records. Excluded reasons: Duplicate entry, Avoca Duplicate, History call clean up (legacy), Reschedule (legacy)."
+      ]
     },
     {
+      "title": "Calls per Tech - Service",
+      "status": "ok",
       "id": "calls-per-tech",
       "tables": [
         {
-          "subtitle": "",
+          "rows": [
+            [
+              "HVAC - Service",
+              68,
+              30,
+              "2.3"
+            ],
+            [
+              "Plumbing - Service",
+              18,
+              12,
+              "1.5"
+            ]
+          ],
           "columns": [
             "Business Unit",
             "Completed Calls",
             "Techs",
             "Calls/Tech"
           ],
-          "rows": [
-            [
-              "HVAC - Service",
-              1,
-              1,
-              "1.0"
-            ],
-            [
-              "Plumbing - Service",
-              0,
-              0,
-              "-"
-            ]
-          ],
+          "subtitle": "",
           "footer": ""
         }
       ],
-      "pulledAt": "2026-08-06T08:06:57.5604828Z",
+      "error": null,
+      "pulledAt": "2026-08-07T16:17:15.1943846Z",
       "notes": [
         "Service units only. Techs = distinct PRIMARY technician per job (earliest-assigned active tech runs the call); helpers/ride-alongs on the same job do not add to the count. Single day only."
-      ],
-      "status": "ok",
-      "error": null,
-      "title": "Calls per Tech - Service"
+      ]
     },
     {
+      "id": "overtime",
       "warnings": [
         {
-          "message": "Overtime workweek still in progress (started Fri 07/31) - totals will keep rising until the week closes.",
-          "day": "2026-08-06",
-          "type": "workweek-in-progress"
-        },
-        {
-          "message": "Payroll for Thursday 08/06 looks incomplete - only 1% of a typical Thursday. Overtime is likely understated.",
           "type": "partial-day-payroll",
-          "ratio": 0.010031048483401002,
+          "itemCount": 984,
+          "ratio": 0.470026271793647,
+          "medianCount": 2093.5,
           "day": "2026-08-06",
-          "itemCount": 21,
-          "pct": 1.0,
-          "medianCount": 2093.5
+          "message": "Payroll for Thursday 08/06 looks incomplete - only 47% of a typical Thursday. Overtime is likely understated.",
+          "pct": 47.0
         }
       ],
-      "title": "Overtime hours - Service, by activity",
-      "id": "overtime",
       "status": "ok",
-      "notes": [
-        "TOTAL overtime CLOCK HOURS - INCLUDES non-job time (Idle, Driving, Training), not just job time.",
-        "Grouped by tech payout unit. Payroll figure for the selected day."
-      ],
+      "pulledAt": "2026-08-07T16:17:23.8987119Z",
       "tables": [
         {
-          "subtitle": "By activity",
+          "rows": [
+            [
+              "Driving",
+              55.4,
+              15.6,
+              71.0
+            ],
+            [
+              "Idle",
+              142.7,
+              87.2,
+              229.9
+            ],
+            [
+              "Mandatory Training - Attendance required",
+              1.3,
+              0.0,
+              1.3
+            ],
+            [
+              "Working",
+              159.1,
+              38.7,
+              197.7
+            ]
+          ],
           "columns": [
             "Activity",
             "HVAC-Service",
             "Plumbing-Service",
             "Total"
           ],
-          "rows": [
-            [
-              "Idle",
-              12.9,
-              0.0,
-              12.9
-            ],
-            [
-              "Mandatory Training - Attendance required",
-              14.0,
-              0.0,
-              14.0
-            ],
-            [
-              "Working",
-              0.5,
-              0.0,
-              0.5
-            ]
-          ],
-          "footer": "TOTAL   HVAC-Service 27.4    Plumbing-Service 0"
+          "subtitle": "By activity",
+          "footer": "TOTAL   HVAC-Service 358.5    Plumbing-Service 141.5"
         },
         {
-          "subtitle": "All hours vs. job-only",
+          "rows": [
+            [
+              "Overtime (all hours)",
+              358.5,
+              141.5,
+              499.9
+            ],
+            [
+              "Overtime (on jobs only)",
+              214.5,
+              54.2,
+              268.7
+            ],
+            [
+              "Overtime (non-job: idle/driving/training)",
+              144.0,
+              87.2,
+              231.2
+            ]
+          ],
           "columns": [
             "",
             "HVAC-Service",
             "Plumbing-Service",
             "Total"
           ],
-          "rows": [
-            [
-              "Overtime (all hours)",
-              27.4,
-              0.0,
-              27.4
-            ],
-            [
-              "Overtime (on jobs only)",
-              0.5,
-              0.0,
-              0.5
-            ],
-            [
-              "Overtime (non-job: idle/driving/training)",
-              26.9,
-              0.0,
-              26.9
-            ]
-          ],
+          "subtitle": "All hours vs. job-only",
           "footer": ""
         }
       ],
-      "pulledAt": "2026-08-06T08:06:57.8380671Z",
-      "error": null
+      "title": "Overtime hours - Service, by activity",
+      "error": null,
+      "notes": [
+        "TOTAL overtime CLOCK HOURS - INCLUDES non-job time (Idle, Driving, Training), not just job time.",
+        "Grouped by tech payout unit. Payroll figure for the selected day."
+      ]
     },
     {
-      "warnings": [
-        {
-          "message": "Selected day still in progress - dispatch/arrival is only meaningful once the day is done.",
-          "day": "2026-08-06",
-          "type": "day-in-progress"
-        }
-      ],
-      "title": "Dispatch & Arrival - Service",
       "id": "dispatch-arrival",
+      "warnings": [],
       "status": "ok",
-      "notes": [
-        "Service units only (HVAC-Service, Plumbing-Service). Pairing: chronological Dispatched/Arrived events per job, LIFO-matched; Dispatch Canceled events are dropped. Times come from the dispatch/arrival events; TECH IDENTITY comes from the job's PRIMARY TECHNICIAN (same rule as Calls per Tech: earliest-assigned active appointment-assignment) - never the dispatch event's employeeId, which is the office dispatcher, not the technician.",
-        "On-time %: for each technician, look only at their FIRST call of the day (earliest dispatch). Denominator = techs whose first-call dispatch was before 8:30 AM Pacific. Numerator = of those, how many arrived before 8:30 AM Pacific.",
-        "Anomalies = a dispatch with no arrival, an arrival with no open dispatch to match, or a matched pair whose job has no resolvable primary technician - never silently dropped; counted above."
-      ],
+      "pulledAt": "2026-08-07T16:17:26.3259572Z",
       "tables": [
         {
-          "subtitle": "Summary",
+          "rows": [
+            [
+              "Average dispatch to arrival (minutes)",
+              "38.7"
+            ],
+            [
+              "Matched dispatch/arrival pairs",
+              120
+            ],
+            [
+              "Anomalies (unmatched dispatch/arrival, or unattributed to a primary tech)",
+              6
+            ],
+            [
+              "Techs dispatched before 8:30 (of all techs with a matched call)",
+              "23 of 42"
+            ],
+            [
+              "On-time % (first call, arrival also before 8:30)",
+              "13.0%"
+            ],
+            [
+              "On-time count",
+              "3 of 23"
+            ]
+          ],
           "columns": [
             "Metric",
             "Value"
           ],
-          "rows": [
-            [
-              "Average dispatch to arrival (minutes)",
-              "34.3"
-            ],
-            [
-              "Matched dispatch/arrival pairs",
-              1
-            ],
-            [
-              "Anomalies (unmatched dispatch/arrival, or unattributed to a primary tech)",
-              0
-            ],
-            [
-              "Techs dispatched before 8:30 (of all techs with a matched call)",
-              "0 of 1"
-            ],
-            [
-              "On-time % (first call, arrival also before 8:30)",
-              "-"
-            ],
-            [
-              "On-time count",
-              "0 of 0"
-            ]
-          ],
+          "subtitle": "Summary",
           "footer": ""
         },
         {
-          "subtitle": "By technician (first call of the day)",
+          "rows": [
+            [
+              "Amar Collado",
+              "17:37",
+              "18:00",
+              "no",
+              "-"
+            ],
+            [
+              "Bradley Espinoza",
+              "12:29",
+              "13:25",
+              "no",
+              "-"
+            ],
+            [
+              "Abel Torres",
+              "18:17",
+              "18:25",
+              "no",
+              "-"
+            ],
+            [
+              "Robert Silinzy",
+              "21:50",
+              "22:25",
+              "no",
+              "-"
+            ],
+            [
+              "Josue Arciga",
+              "07:13",
+              "08:09",
+              "yes",
+              "yes"
+            ],
+            [
+              "Juan Bernal",
+              "07:19",
+              "08:14",
+              "yes",
+              "yes"
+            ],
+            [
+              "Michael Washington",
+              "07:28",
+              "08:31",
+              "yes",
+              "no"
+            ],
+            [
+              "Joe Mendoza",
+              "07:36",
+              "08:34",
+              "yes",
+              "no"
+            ],
+            [
+              "Andrew Alonso",
+              "07:39",
+              "08:46",
+              "yes",
+              "no"
+            ],
+            [
+              "Cole Pantol",
+              "07:40",
+              "08:26",
+              "yes",
+              "yes"
+            ],
+            [
+              "Francisco Valencia",
+              "07:42",
+              "08:45",
+              "yes",
+              "no"
+            ],
+            [
+              "Mike (Jiangtao) Li",
+              "07:45",
+              "09:43",
+              "yes",
+              "no"
+            ],
+            [
+              "Pedro Manzanares",
+              "07:45",
+              "08:30",
+              "yes",
+              "no"
+            ],
+            [
+              "Benjamin Wyllie",
+              "07:51",
+              "08:33",
+              "yes",
+              "no"
+            ],
+            [
+              "Carlos Camacho",
+              "07:57",
+              "08:48",
+              "yes",
+              "no"
+            ],
+            [
+              "Justin Hill",
+              "07:58",
+              "09:00",
+              "yes",
+              "no"
+            ],
+            [
+              "Xavier Paredes",
+              "07:58",
+              "08:58",
+              "yes",
+              "no"
+            ],
+            [
+              "Steven Chavarria",
+              "07:59",
+              "08:41",
+              "yes",
+              "no"
+            ],
+            [
+              "Christopher Moreno",
+              "07:59",
+              "09:06",
+              "yes",
+              "no"
+            ],
+            [
+              "Kevin Rodriguez",
+              "08:03",
+              "09:44",
+              "yes",
+              "no"
+            ],
+            [
+              "David Canales",
+              "08:07",
+              "08:39",
+              "yes",
+              "no"
+            ],
+            [
+              "Matthew Graves",
+              "08:10",
+              "09:06",
+              "yes",
+              "no"
+            ],
+            [
+              "Christian Goree",
+              "08:10",
+              "08:47",
+              "yes",
+              "no"
+            ],
+            [
+              "Joseph Byrd",
+              "08:13",
+              "08:59",
+              "yes",
+              "no"
+            ],
+            [
+              "Brandon Moreno",
+              "08:13",
+              "08:48",
+              "yes",
+              "no"
+            ],
+            [
+              "Stanley Kim",
+              "08:13",
+              "09:05",
+              "yes",
+              "no"
+            ],
+            [
+              "Soren Maxwell",
+              "08:23",
+              "09:11",
+              "yes",
+              "no"
+            ],
+            [
+              "Fabian Pantoja",
+              "08:47",
+              "09:54",
+              "no",
+              "-"
+            ],
+            [
+              "Tyler Battershell ",
+              "09:05",
+              "09:55",
+              "no",
+              "-"
+            ],
+            [
+              "Noah Weng",
+              "09:06",
+              "09:40",
+              "no",
+              "-"
+            ],
+            [
+              "Jack Jonathon Vanos",
+              "09:08",
+              "10:11",
+              "no",
+              "-"
+            ],
+            [
+              "Adrian Muniz",
+              "09:08",
+              "09:28",
+              "no",
+              "-"
+            ],
+            [
+              "Corey Reding",
+              "09:29",
+              "10:31",
+              "no",
+              "-"
+            ],
+            [
+              "Juan Tlatenchi",
+              "10:20",
+              "10:55",
+              "no",
+              "-"
+            ],
+            [
+              "Christian Arellano",
+              "10:36",
+              "11:37",
+              "no",
+              "-"
+            ],
+            [
+              "Aaron Davis",
+              "11:53",
+              "12:02",
+              "no",
+              "-"
+            ],
+            [
+              "Heather Vautrin",
+              "12:58",
+              "14:15",
+              "no",
+              "-"
+            ],
+            [
+              "Luis Garcia",
+              "14:52",
+              "15:17",
+              "no",
+              "-"
+            ],
+            [
+              "Nikko April",
+              "15:14",
+              "16:03",
+              "no",
+              "-"
+            ],
+            [
+              "AJ Munoz",
+              "15:41",
+              "15:54",
+              "no",
+              "-"
+            ],
+            [
+              "Warwick Varaday",
+              "15:42",
+              "16:38",
+              "no",
+              "-"
+            ],
+            [
+              "Alex (Efrain) Martinez",
+              "16:17",
+              "17:12",
+              "no",
+              "-"
+            ]
+          ],
           "columns": [
             "Technician",
             "First Dispatch (Pac)",
@@ -459,34 +848,29 @@
             "Qualified (<8:30)",
             "On-time"
           ],
-          "rows": [
-            [
-              "Robert Silinzy",
-              "21:50",
-              "22:25",
-              "no",
-              "-"
-            ]
-          ],
+          "subtitle": "By technician (first call of the day)",
           "footer": ""
         }
       ],
-      "pulledAt": "2026-08-06T08:07:00.8867427Z",
-      "error": null
+      "title": "Dispatch & Arrival - Service",
+      "error": null,
+      "notes": [
+        "Service units only (HVAC-Service, Plumbing-Service). Pairing: chronological Dispatched/Arrived events per job, LIFO-matched; Dispatch Canceled events are dropped. Times come from the dispatch/arrival events; TECH IDENTITY comes from the job's PRIMARY TECHNICIAN (same rule as Calls per Tech: earliest-assigned active appointment-assignment) - never the dispatch event's employeeId, which is the office dispatcher, not the technician.",
+        "On-time %: for each technician, look only at their FIRST call of the day (earliest dispatch). Denominator = techs whose first-call dispatch was before 8:30 AM Pacific. Numerator = of those, how many arrived before 8:30 AM Pacific.",
+        "Anomalies = a dispatch with no arrival, an arrival with no open dispatch to match, or a matched pair whose job has no resolvable primary technician - never silently dropped; counted above.",
+        "Anomaly detail: job 670705134: 1 dispatch(es) with no matching arrival; job 672712046: 1 dispatch(es) with no matching arrival; job 672713786: 1 dispatch(es) with no matching arrival; job 672750055: 1 dispatch(es) with no matching arrival; job 672821318: 1 dispatch(es) with no matching arrival; job 672903230: 1 dispatch(es) with no matching arrival"
+      ]
     },
     {
+      "title": "Maintenances booked - next 14 days (starting tomorrow)",
+      "status": "ok",
       "id": "maint-14d",
       "tables": [
         {
-          "subtitle": "By section (14-day totals)",
-          "columns": [
-            "Section",
-            "Visits"
-          ],
           "rows": [
             [
               "SAM Cooling (HVAC)",
-              197
+              176
             ],
             [
               "SAM Heating (HVAC)",
@@ -502,34 +886,26 @@
             ],
             [
               "Plumbing WH Maintenance (SAM)",
-              143
+              131
             ],
             [
               "Plumbing WH Tune-ups",
-              3
+              6
             ],
             [
               "Commercial Maintenance",
-              2
+              3
             ]
           ],
-          "footer": "GRAND TOTAL   370"
+          "columns": [
+            "Section",
+            "Visits"
+          ],
+          "subtitle": "By section (14-day totals)",
+          "footer": "GRAND TOTAL   341"
         },
         {
-          "subtitle": "By day (dead space)",
-          "columns": [
-            "Date",
-            "HVAC",
-            "Plumbing",
-            "Total"
-          ],
           "rows": [
-            [
-              "2026-08-07",
-              56,
-              40,
-              96
-            ],
             [
               "2026-08-08",
               1,
@@ -544,33 +920,33 @@
             ],
             [
               "2026-08-10",
-              30,
-              21,
-              51
+              42,
+              24,
+              66
             ],
             [
               "2026-08-11",
-              41,
-              23,
-              64
+              45,
+              29,
+              74
             ],
             [
               "2026-08-12",
-              30,
-              6,
-              36
+              32,
+              14,
+              46
             ],
             [
               "2026-08-13",
-              14,
-              7,
-              21
+              17,
+              10,
+              27
             ],
             [
               "2026-08-14",
-              16,
-              16,
-              32
+              20,
+              18,
+              38
             ],
             [
               "2026-08-15",
@@ -586,221 +962,678 @@
             ],
             [
               "2026-08-17",
-              16,
-              12,
-              28
+              17,
+              13,
+              30
             ],
             [
               "2026-08-18",
               8,
-              5,
-              13
+              6,
+              14
             ],
             [
               "2026-08-19",
               8,
-              5,
-              13
+              6,
+              14
             ],
             [
               "2026-08-20",
               3,
               8,
               11
+            ],
+            [
+              "2026-08-21",
+              10,
+              6,
+              16
             ]
           ],
+          "columns": [
+            "Date",
+            "HVAC",
+            "Plumbing",
+            "Total"
+          ],
+          "subtitle": "By day (dead space)",
           "footer": ""
         }
       ],
-      "pulledAt": "2026-08-06T08:07:09.4006615Z",
+      "error": null,
+      "pulledAt": "2026-08-07T16:17:54.0446138Z",
       "notes": [
         "Window starts TOMORROW (Pacific), not today, and runs 14 days from there. Today is excluded. As of the pull time (forward-looking; not tied to the selected day). Booked appointments. Sections are provisional."
-      ],
-      "status": "ok",
-      "error": null,
-      "title": "Maintenances booked - next 14 days (starting tomorrow)"
+      ]
     },
     {
+      "title": "Club Members Left to Run - Cooling (HVAC)",
+      "status": "ok",
       "id": "club-members",
       "tables": [
         {
-          "subtitle": "",
+          "rows": [
+            [
+              "Active HVAC club members",
+              9747
+            ],
+            [
+              "Ran Cooling in last 16 mo",
+              7711
+            ],
+            [
+              "LEFT TO RUN",
+              "2036  (20.9%)"
+            ]
+          ],
           "columns": [
             "Metric",
             "Value"
           ],
-          "rows": [
-            [
-              "Active HVAC club members",
-              9735
-            ],
-            [
-              "Ran Cooling in last 16 mo",
-              7708
-            ],
-            [
-              "LEFT TO RUN",
-              "2027  (20.8%)"
-            ]
-          ],
+          "subtitle": "",
           "footer": ""
         }
       ],
-      "pulledAt": "2026-08-06T08:07:13.0239087Z",
+      "error": null,
+      "pulledAt": "2026-08-07T16:17:57.3908178Z",
       "notes": [
         "As of pull time. Active residential SAM members with no completed Cooling maintenance in last 16 months. Customer-level."
-      ],
-      "status": "ok",
-      "error": null,
-      "title": "Club Members Left to Run - Cooling (HVAC)"
+      ]
     },
     {
+      "title": "Call Board - calls scheduled, next 14 days",
+      "status": "ok",
       "id": "call-board",
       "tables": [
         {
-          "subtitle": "14-day total booked: 98",
-          "columns": [
-            "Date",
-            "HVAC-Service",
-            "Plumbing-Service",
-            "Total",
-            "Techs"
-          ],
           "rows": [
             [
-              "2026-08-06",
-              33,
-              9,
-              42,
-              67
-            ],
-            [
               "2026-08-07",
-              12,
-              3,
-              15,
-              67
+              108,
+              39,
+              62,
+              209,
+              70
             ],
             [
               "2026-08-08",
-              1,
-              1,
-              2,
-              13
+              4,
+              6,
+              6,
+              16,
+              21
             ],
             [
               "2026-08-09",
               0,
-              0,
-              0,
-              13
+              2,
+              1,
+              3,
+              20
             ],
             [
               "2026-08-10",
-              11,
-              3,
-              14,
-              67
+              56,
+              18,
+              31,
+              105,
+              70
             ],
             [
               "2026-08-11",
-              4,
-              0,
-              4,
-              67
+              51,
+              25,
+              29,
+              105,
+              70
             ],
             [
               "2026-08-12",
-              3,
-              1,
-              4,
-              67
+              40,
+              18,
+              14,
+              72,
+              70
             ],
             [
               "2026-08-13",
-              2,
-              1,
-              3,
-              67
+              28,
+              7,
+              10,
+              45,
+              70
             ],
             [
               "2026-08-14",
+              33,
               5,
-              2,
-              7,
-              67
+              16,
+              54,
+              70
             ],
             [
               "2026-08-15",
-              2,
+              3,
               0,
-              2,
-              9
+              1,
+              4,
+              10
             ],
             [
               "2026-08-16",
               0,
               0,
               0,
-              9
+              0,
+              10
             ],
             [
               "2026-08-17",
-              1,
-              0,
-              1,
-              67
+              21,
+              10,
+              12,
+              43,
+              70
             ],
             [
               "2026-08-18",
-              2,
-              0,
-              2,
-              67
+              17,
+              5,
+              10,
+              32,
+              70
             ],
             [
               "2026-08-19",
+              15,
+              7,
+              7,
+              29,
+              70
+            ],
+            [
+              "2026-08-20",
+              10,
               2,
-              0,
-              2,
-              67
+              10,
+              22,
+              70
             ]
           ],
+          "columns": [
+            "Date",
+            "HVAC",
+            "ROPPS",
+            "Plumbing",
+            "Total",
+            "Techs"
+          ],
+          "subtitle": "14-day total scheduled: 739",
+          "footer": ""
+        },
+        {
+          "rows": [
+            [
+              "2026-08-07",
+              "HVAC",
+              108,
+              36,
+              39,
+              25,
+              8,
+              0
+            ],
+            [
+              "2026-08-07",
+              "ROPPS",
+              39,
+              7,
+              18,
+              8,
+              6,
+              0
+            ],
+            [
+              "2026-08-07",
+              "Plumbing",
+              62,
+              13,
+              42,
+              4,
+              0,
+              3
+            ],
+            [
+              "2026-08-08",
+              "HVAC",
+              4,
+              1,
+              0,
+              1,
+              2,
+              0
+            ],
+            [
+              "2026-08-08",
+              "ROPPS",
+              6,
+              1,
+              1,
+              1,
+              3,
+              0
+            ],
+            [
+              "2026-08-08",
+              "Plumbing",
+              6,
+              1,
+              2,
+              3,
+              0,
+              0
+            ],
+            [
+              "2026-08-09",
+              "HVAC",
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-08-09",
+              "ROPPS",
+              2,
+              0,
+              0,
+              0,
+              2,
+              0
+            ],
+            [
+              "2026-08-09",
+              "Plumbing",
+              1,
+              0,
+              0,
+              1,
+              0,
+              0
+            ],
+            [
+              "2026-08-10",
+              "HVAC",
+              56,
+              15,
+              24,
+              16,
+              1,
+              0
+            ],
+            [
+              "2026-08-10",
+              "ROPPS",
+              18,
+              2,
+              12,
+              1,
+              3,
+              0
+            ],
+            [
+              "2026-08-10",
+              "Plumbing",
+              31,
+              5,
+              22,
+              3,
+              0,
+              1
+            ],
+            [
+              "2026-08-11",
+              "HVAC",
+              51,
+              5,
+              31,
+              14,
+              1,
+              0
+            ],
+            [
+              "2026-08-11",
+              "ROPPS",
+              25,
+              3,
+              14,
+              6,
+              2,
+              0
+            ],
+            [
+              "2026-08-11",
+              "Plumbing",
+              29,
+              0,
+              26,
+              3,
+              0,
+              0
+            ],
+            [
+              "2026-08-12",
+              "HVAC",
+              40,
+              3,
+              19,
+              18,
+              0,
+              0
+            ],
+            [
+              "2026-08-12",
+              "ROPPS",
+              18,
+              0,
+              14,
+              4,
+              0,
+              0
+            ],
+            [
+              "2026-08-12",
+              "Plumbing",
+              14,
+              3,
+              11,
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-08-13",
+              "HVAC",
+              28,
+              2,
+              12,
+              14,
+              0,
+              0
+            ],
+            [
+              "2026-08-13",
+              "ROPPS",
+              7,
+              0,
+              3,
+              4,
+              0,
+              0
+            ],
+            [
+              "2026-08-13",
+              "Plumbing",
+              10,
+              1,
+              9,
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-08-14",
+              "HVAC",
+              33,
+              4,
+              17,
+              12,
+              0,
+              0
+            ],
+            [
+              "2026-08-14",
+              "ROPPS",
+              5,
+              3,
+              2,
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-08-14",
+              "Plumbing",
+              16,
+              1,
+              15,
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-08-15",
+              "HVAC",
+              3,
+              2,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-08-15",
+              "ROPPS",
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-08-15",
+              "Plumbing",
+              1,
+              0,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-08-16",
+              "HVAC",
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-08-16",
+              "ROPPS",
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-08-16",
+              "Plumbing",
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-08-17",
+              "HVAC",
+              21,
+              1,
+              11,
+              9,
+              0,
+              0
+            ],
+            [
+              "2026-08-17",
+              "ROPPS",
+              10,
+              1,
+              6,
+              3,
+              0,
+              0
+            ],
+            [
+              "2026-08-17",
+              "Plumbing",
+              12,
+              0,
+              11,
+              1,
+              0,
+              0
+            ],
+            [
+              "2026-08-18",
+              "HVAC",
+              17,
+              1,
+              4,
+              12,
+              0,
+              0
+            ],
+            [
+              "2026-08-18",
+              "ROPPS",
+              5,
+              1,
+              3,
+              1,
+              0,
+              0
+            ],
+            [
+              "2026-08-18",
+              "Plumbing",
+              10,
+              1,
+              6,
+              3,
+              0,
+              0
+            ],
+            [
+              "2026-08-19",
+              "HVAC",
+              15,
+              2,
+              3,
+              10,
+              0,
+              0
+            ],
+            [
+              "2026-08-19",
+              "ROPPS",
+              7,
+              0,
+              3,
+              4,
+              0,
+              0
+            ],
+            [
+              "2026-08-19",
+              "Plumbing",
+              7,
+              0,
+              6,
+              1,
+              0,
+              0
+            ],
+            [
+              "2026-08-20",
+              "HVAC",
+              10,
+              1,
+              1,
+              7,
+              1,
+              0
+            ],
+            [
+              "2026-08-20",
+              "ROPPS",
+              2,
+              0,
+              1,
+              1,
+              0,
+              0
+            ],
+            [
+              "2026-08-20",
+              "Plumbing",
+              10,
+              0,
+              8,
+              2,
+              0,
+              0
+            ]
+          ],
+          "columns": [
+            "Date",
+            "Bucket",
+            "Total",
+            "Service",
+            "Maintenance",
+            "Install",
+            "Sales",
+            "Drains"
+          ],
+          "subtitle": "Call-type breakdown per bucket (Service / Maintenance / Install / Sales / Drains)",
           "footer": ""
         }
       ],
-      "pulledAt": "2026-08-06T08:08:01.2592582Z",
-      "notes": [
-        "Booked = new-opportunity calls SCHEDULED for that day (HVAC-Service + Plumbing-Service). Light days show as thin cells - that is open room on the board.",
-        "Techs = service technicians scheduled that day (secondary context). As of the pull time, forward-looking."
-      ],
-      "status": "ok",
       "error": null,
-      "title": "Call Board - booked calls, next 14 days"
+      "pulledAt": "2026-08-07T16:18:50.8104112Z",
+      "notes": [
+        "Count = calls SCHEDULED on the board for that day (distinct jobs with a visit that day), minus cancellations. Completing a call does NOT change the count - only a cancellation removes one. HVAC / ROPPS / Plumbing are mutually exclusive: ROPPS = the ROPP-tagged book (any trade); HVAC / Plumbing = their business-unit calls that are NOT ROPP-tagged.",
+        "Call TYPE = the job's business-unit category (Service / Maintenance / Install / Sales / Drains). Within each bucket the type counts sum to the bucket total. ROPPS is split by the same categories (it is mostly HVAC Service/Maintenance).",
+        "Techs = HVAC + Plumbing technicians scheduled that day (secondary context). As of the pull time, forward-looking; light/weekend days are expected to be thin."
+      ]
     },
     {
+      "title": "Booking Rate by Source - last 30 days",
+      "status": "ok",
       "id": "booking-source",
       "tables": [
         {
-          "subtitle": "",
-          "columns": [
-            "Source",
-            "Leads",
-            "Booked",
-            "Rate",
-            "Converted"
-          ],
           "rows": [
             [
               "Angi",
-              104,
-              104,
+              105,
+              105,
               "100%",
-              8
+              9
             ],
             [
               "Avoca",
-              17,
+              14,
               0,
               "0%",
               0
@@ -814,7 +1647,7 @@
             ],
             [
               "LSA",
-              39,
+              38,
               0,
               "0%",
               5
@@ -829,29 +1662,29 @@
             [
               "Costco",
               137,
-              123,
-              "90%",
-              52
+              124,
+              "91%",
+              51
             ],
             [
               "SEO",
-              122,
+              115,
               41,
-              "34%",
-              13
+              "36%",
+              11
             ],
             [
               "Main Line Number",
-              27,
+              26,
               1,
               "4%",
               2
             ],
             [
               "Google PPC",
-              58,
-              7,
-              "12%",
+              60,
+              8,
+              "13%",
               3
             ],
             [
@@ -863,122 +1696,182 @@
             ],
             [
               "Outbound",
-              9,
+              10,
               0,
               "0%",
               2
             ],
             [
               "Google Business Profile",
-              23,
+              22,
               2,
               "9%",
               1
             ],
             [
               "Other",
-              41,
-              14,
-              "34%",
+              43,
+              15,
+              "35%",
               3
             ]
           ],
+          "columns": [
+            "Source",
+            "Leads",
+            "Booked",
+            "Rate",
+            "Converted"
+          ],
+          "subtitle": "",
           "footer": ""
         }
       ],
-      "pulledAt": "2026-08-06T08:08:12.3115756Z",
+      "error": null,
+      "pulledAt": "2026-08-07T16:18:58.0921099Z",
       "notes": [
         "Booked = lead has a booking (bookingId). Converted (last column) = lead became a job. Period: last 30 days.",
         "AVOCA CAVEAT: this row is leads ATTRIBUTED TO AVOCA CAMPAIGNS in ServiceTitan and their booked rate. It is NOT Avoca's call-handling booking rate (answered vs booked) - that lives in Avoca and is not reachable here. Different metric; do not confuse.",
         "Source = marketing campaign category/name. Schedule Pro is largely self-serve online booking, so its rate reads high by nature. Other = leads not mapped to a named source."
-      ],
-      "status": "ok",
-      "error": null,
-      "title": "Booking Rate by Source - last 30 days"
+      ]
     },
     {
+      "title": "Revenue - Plumbing (billed, pre-tax)",
+      "status": "ok",
       "id": "revenue",
       "tables": [
         {
-          "subtitle": "Plumbing revenue",
+          "rows": [
+            [
+              "Today (Aug 6)",
+              "$22,000.45"
+            ],
+            [
+              "Month to date (Aug 1 - Aug 6)",
+              "$189,795.95"
+            ],
+            [
+              "Year to date (Jan 1 - Aug 6)",
+              "$7,541,275.31"
+            ]
+          ],
           "columns": [
             "Period",
             "Revenue"
           ],
-          "rows": [
-            [
-              "Today (Aug 6)",
-              "$0.00"
-            ],
-            [
-              "Month to date (Aug 1 - Aug 6)",
-              "$154,018.50"
-            ],
-            [
-              "Year to date (Jan 1 - Aug 6)",
-              "$7,505,513.86"
-            ]
-          ],
+          "subtitle": "Plumbing revenue",
           "footer": ""
         },
         {
-          "subtitle": "By business unit",
+          "rows": [
+            [
+              "Service",
+              "$111.00",
+              "$7,314.40",
+              "$410,898.15"
+            ],
+            [
+              "Maintenance",
+              "$216.00",
+              "$5,369.00",
+              "$138,392.47"
+            ],
+            [
+              "Drains",
+              "$3,300.00",
+              "$9,749.00",
+              "$212,048.41"
+            ],
+            [
+              "Install",
+              "$18,373.45",
+              "$167,363.55",
+              "$6,779,936.28"
+            ]
+          ],
           "columns": [
             "Business Unit",
             "Today",
             "MTD",
             "YTD"
           ],
-          "rows": [
-            [
-              "Service",
-              "$0.00",
-              "$7,203.40",
-              "$410,787.15"
-            ],
-            [
-              "Maintenance",
-              "$0.00",
-              "$5,153.00",
-              "$138,192.47"
-            ],
-            [
-              "Drains",
-              "$0.00",
-              "$6,449.00",
-              "$208,748.41"
-            ],
-            [
-              "Install",
-              "$0.00",
-              "$135,213.10",
-              "$6,747,785.83"
-            ]
-          ],
-          "footer": "PLUMBING TOTAL   Today $0.00    MTD $154,018.50    YTD $7,505,513.86"
+          "subtitle": "By business unit",
+          "footer": "PLUMBING TOTAL   Today $22,000.45    MTD $189,795.95    YTD $7,541,275.31"
         }
       ],
-      "pulledAt": "2026-08-06T08:08:13.4508892Z",
+      "error": null,
+      "pulledAt": "2026-08-07T16:18:58.7864262Z",
       "notes": [
         "Revenue = each invoice's pre-tax subTotal, summed by the invoice date. BILLED / invoiced, NOT collected. Tax excluded.",
         "Discounts, refunds and credits are included as-is - they appear naturally as negative-dollar invoices; nothing is stripped out.",
         "Plumbing = Service + Maintenance + Drains + Install. Day boundaries are plain UTC calendar dates (the invoice date), not Pacific.",
         "This month and last month are fully recomputed on every refresh (so backdated corrections update them); any older month is frozen after its first computation.",
         "CAVEAT - NOT FINAL: Today, this month's MTD, and YTD are PARTIAL. Invoices keep posting, so these figures will keep rising through the day and month."
-      ],
-      "status": "ok",
-      "error": null,
-      "title": "Revenue - Plumbing (billed, pre-tax)"
+      ]
     },
     {
+      "title": "Revenue - SILO (sold/signed, pre-tax)",
+      "status": "ok",
       "id": "silo-revenue",
-      "tables": [],
-      "pulledAt": "2026-08-06T08:08:36.5682849Z",
-      "notes": [],
-      "status": "error",
-      "error": "Get-SiloReportPacDay: CreatedDate '01/02/2026 08:00:00' has no explicit UTC offset (Z or +/-HH:MM) - refusing to guess the host timezone.",
-      "title": "Revenue - SILO"
+      "tables": [
+        {
+          "rows": [
+            [
+              "Today (Aug 6)",
+              "$144,032.51"
+            ],
+            [
+              "Month to date (Aug 1 - Aug 6)",
+              "$962,641.93"
+            ],
+            [
+              "Year to date (Jan 1 - Aug 6)",
+              "$21,264,935.49"
+            ]
+          ],
+          "columns": [
+            "Period",
+            "Revenue"
+          ],
+          "subtitle": "SILO revenue",
+          "footer": ""
+        },
+        {
+          "rows": [
+            [
+              "Today (Aug 6)",
+              "37.5%",
+              "6 of 16"
+            ],
+            [
+              "Month to date (Aug 1 - Aug 6)",
+              "38.6%",
+              "44 of 114"
+            ],
+            [
+              "Year to date (Jan 1 - Aug 6)",
+              "38.4%",
+              "883 of 2298"
+            ]
+          ],
+          "columns": [
+            "Period",
+            "Flip Rate",
+            "Turnovers sold"
+          ],
+          "subtitle": "Flip rate",
+          "footer": ""
+        }
+      ],
+      "error": null,
+      "pulledAt": "2026-08-07T16:19:13.7556025Z",
+      "notes": [
+        "SILO revenue = the SOLD / signed estimate subtotal (PRE-TAX) on turnover (TGL) jobs, credited to the TURNOVER-CALL DAY (the day the TGL job was created). Sold-only: a turnover with nothing sold contributes $0.",
+        "Flip rate = turnover jobs that sold an estimate / total turnover jobs created, per period. The count behind each % is shown as \"N of M turnovers sold\".",
+        "Turnover (TGL) jobs only. Day boundaries are Pacific - the ServiceTitan report filters each period by the tenant's (Pacific) calendar day server-side.",
+        "NOT FINAL / RETROACTIVE BY DESIGN: an estimate sold later adds to its earlier turnover day, so Today, MTD and YTD can still rise. The full year is recomputed every refresh; this block is never frozen."
+      ]
     }
   ],
-  "final": false
+  "date": "2026-08-06"
 }
