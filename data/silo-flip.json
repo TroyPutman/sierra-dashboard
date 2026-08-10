@@ -1,0 +1,79 @@
+{
+  "final": false,
+  "asOf": "2026-08-10",
+  "generatedAt": "2026-08-10T23:43:40.6508894Z",
+  "block": {
+    "tables": [
+      {
+        "subtitle": "Flip rate",
+        "rows": [
+          [
+            "Month to date (Aug 1 - Aug 10)",
+            "69.6%",
+            "174 / 250"
+          ],
+          [
+            "Year to date (Jan 1 - Aug 10)",
+            "48.5%",
+            "2367 / 4876"
+          ]
+        ],
+        "columns": [
+          "Period",
+          "Flip Rate",
+          "TGLs / calls ran"
+        ],
+        "footer": "As of Aug 10, 2026 - partial and still settling (TGLs are scheduled retroactively)."
+      }
+    ],
+    "error": null,
+    "notes": [
+      "Flip rate = TGLs created / ROPP calls ran, per period - the SILO manager's own definition. The counts behind each % are shown as \"TGLs / calls ran\". This REPLACED the older flip figure (turnovers that sold an estimate / total turnovers), which was a different measurement roughly 10 points lower.",
+      "Rollups are COUNT-WEIGHTED: the period rate is total TGLs / total calls ran. Percentages are never averaged together (not per tech, not per day) - averaging percentages would weight a 3-call day the same as a 300-call day.",
+      "The calls-ran count counts invoice ROWS, not distinct jobs, so the ~25 jobs a year carrying more than one invoice are counted more than once. That inflates calls ran by about 0.5% and is deliberate: it is what makes this figure match the SILO manager's number instead of drifting ~24 calls below it.",
+      "The two sides are dated on different fields - TGLs by the job's scheduled date, calls ran by the invoice's completion date - so a short period can show MORE TGLs than calls ran and read above 100%. That is faithful to the source reports, not a bug, and is shown as-is rather than capped at 100%.",
+      "NOT FINAL / RETROACTIVE BY DESIGN: TGLs keep getting scheduled onto days already counted, so both figures keep settling upward after the fact. Nothing here is ever frozen; every recompute replaces the whole figure."
+    ],
+    "periods": {
+      "mtd": {
+        "rate": 69.6,
+        "den": 250,
+        "num": 174
+      },
+      "ytd": {
+        "rate": 48.54388843314192,
+        "den": 4876,
+        "num": 2367
+      }
+    },
+    "status": "ok",
+    "title": "SILO flip rate (TGLs created / ROPP calls ran)",
+    "diagnostics": {
+      "mtd": {
+        "droppedNotCompletedNotTglSource": 0,
+        "unparsedDateRows": 424,
+        "droppedNotRopp": 0,
+        "rawDenominatorRows": 250,
+        "droppedManagementRemoved": 0,
+        "rawNumeratorRows": 174,
+        "distinctJobNumbers": 250,
+        "failedOpen": 0,
+        "jobsPulled": 41732,
+        "outOfWindowRows": 0
+      },
+      "ytd": {
+        "droppedNotCompletedNotTglSource": 0,
+        "unparsedDateRows": 7243,
+        "droppedNotRopp": 0,
+        "rawDenominatorRows": 4876,
+        "droppedManagementRemoved": 0,
+        "rawNumeratorRows": 2367,
+        "distinctJobNumbers": 4851,
+        "failedOpen": 0,
+        "jobsPulled": 41732,
+        "outOfWindowRows": 0
+      }
+    },
+    "id": "silo-flip"
+  }
+}
