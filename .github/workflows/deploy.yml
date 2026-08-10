@@ -43,18 +43,21 @@ on:
   # runs/month figures still describe how often the dashboard refreshes.
   # GitHub cron is ALWAYS in UTC and does NOT observe daylight saving.
   #
-  # Default below = "0,15,30,45 13-23 * * 1-6":
+  # Default below = "0,15,30,45 * * * *":
   #   * minutes 0,15,30,45 -> every 15 minutes
-  #   * hours 13-23 UTC  -> ~06:00-16:30 Pacific in summer (PDT, UTC-7),
-  #                          ~05:00-15:30 Pacific in winter (PST, UTC-8)  [1-hr seasonal drift]
-  #   * days 1-6         -> Monday through Saturday (no Sundays)
+  #   * hours *           -> every hour, 24/7 (no overnight gap)
+  #   * days  *           -> every day, incl. Sundays
+  #   Goal: the dashboard is never more than ~15 min stale, at any hour, any day
+  #   (GitHub cron can still add a few minutes of scheduling jitter under load).
   #
-  #   Runs/day  = 4 x 11 hours            = ~44
-  #   Runs/month= 44 x 6 days x ~4.345 wk = ~1,147
+  #   Runs/day  = 4 x 24 hours            = ~96
+  #   Runs/month= 96 x ~30.44 days        = ~2,922
   #   Cost/run  ~= 2-3 min (checkout + auth + ~100-200 API calls for today, occasional
   #               +1 day for yesterday, + build + Pages deploy)
-  #   => roughly 2,300-3,400 min/month from the schedule alone. On a PUBLIC repo these
+  #   => roughly 5,800-8,800 min/month from the schedule alone. On a PUBLIC repo these
   #      minutes are free and unlimited; push- and manual-triggered runs add on top.
+  #   (Overnight/Sunday runs poll the API when little changes -- harmless idempotent
+  #   reads; narrow the window again if you'd rather not poll off-hours.)
   #
   # HOW TO CHANGE THE FREQUENCY (pick one, edit the cron line below):
   #   * Halve the runs  -> hourly: change "0,30" to "0"        (~285 runs/mo)
@@ -63,7 +66,7 @@ on:
   #   * More frequent   -> add minute marks e.g. "0,15,30,45"  (doubles the runs)
   # -------------------------------------------------------------------------
   schedule:
-    - cron: "0,15,30,45 13-23 * * 1-6"
+    - cron: "0,15,30,45 * * * *"
 
 # contents:write  -> commit the heartbeat + snapshots back on every run.
 # pages:write + id-token:write -> publish to GitHub Pages via the official actions.
