@@ -18,7 +18,7 @@ compatibility_date = "2024-11-01"
 # └──────────────────────────────────────────────────────────────────────────────────┘
 [[kv_namespaces]]
 binding = "GOALS"
-id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"   # <-- paste your KV namespace id here
+id = "ae7c678cf491413d982e037891db57b1"
 
 # EDIT_PASSWORD is a SECRET — never put it in this file.
 # Set it once with:   wrangler secret put EDIT_PASSWORD
