@@ -229,7 +229,32 @@ jobs:
           else
             # [skip ci] + GITHUB_TOKEN pushes don't re-trigger this workflow (no loop).
             git commit -m "Refresh: heartbeat + frozen snapshots [skip ci]"
-            git push
+
+            # Push with rebase-and-retry. A manual code push (e.g. dashboard.html) can land
+            # on main between our checkout and our push, rejecting ours with "fetch first".
+            # Our commit only ever contains data/last-refresh.txt + newly-FROZEN data/*.json
+            # -- files disjoint from any code commit -- so `git pull --rebase` replays OUR one
+            # commit on top of whatever landed, cleanly and WITHOUT discarding it. No --force.
+            # --autostash tucks aside today's still-unstaged live snapshot (rebuilt every run)
+            # so the rebase isn't blocked by unstaged changes.
+            pushed=false
+            for attempt in 1 2 3; do
+              if git push; then pushed=true; break; fi
+              if [ "$attempt" -lt 3 ]; then
+                echo "Push attempt $attempt of 3 rejected (remote advanced); rebasing our data commit and retrying..."
+                if ! git pull --rebase --autostash origin main; then
+                  git rebase --abort 2>/dev/null || true
+                  echo "::error::Heartbeat push: rebase hit an unexpected conflict (robot edits only data files). Aborted without clobbering other commits."
+                  exit 1
+                fi
+                sleep 5
+              fi
+            done
+
+            if [ "$pushed" != true ]; then
+              echo "::error::Heartbeat push still rejected after 3 rebase+retry attempts -- this refresh cycle was lost. Investigate repeated push collisions on main."
+              exit 1
+            fi
           fi
 
       - name: Configure GitHub Pages
