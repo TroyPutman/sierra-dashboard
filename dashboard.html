@@ -505,19 +505,19 @@ function shortBU(s){ return String(s).replace(' - ',' '); }
    and can be edited (password-gated server-side) via {GOALS_API}/goals POST.
 
    Goal keys (documented) and the period each bar measures:
-     plumbing-rev-mtd    Plumbing revenue, Month-To-Date (billed, pre-tax)      -> currency
-     hvac-sales-mtd      HVAC Sales sold, Month-To-Date (sold/signed, pre-tax)  -> currency
+     plumbing-rev-ytd    Plumbing revenue, Year-To-Date (billed, pre-tax)       -> currency
+     hvac-sales-ytd      HVAC Sales sold, Year-To-Date (sold/signed, pre-tax)   -> currency
      calls-booked-today  Calls booked, TODAY (all business units)               -> count
-     silo-flip-mtd       SILO flip rate, Month-To-Date (turnovers sold / total) -> percent
+     silo-flip-ytd       SILO flip rate, Year-To-Date (turnovers sold / total)  -> percent
 */
 const GOALS_API = 'https://sierra-goals.troy-18a.workers.dev';   // <-- paste your Cloudflare Worker URL here (see comment above)
 let GOALS = {};         // key -> goal number (fetched from the Worker; empty when unconfigured)
 
 const GOAL_META = {
-  'plumbing-rev-mtd':  {label:'Plumbing revenue goal (MTD)', kind:'money'},
-  'hvac-sales-mtd':    {label:'HVAC Sales sold goal (MTD)',  kind:'money'},
+  'plumbing-rev-ytd':  {label:'Plumbing revenue goal (YTD)', kind:'money',   period:'YTD'},
+  'hvac-sales-ytd':    {label:'HVAC Sales sold goal (YTD)',  kind:'money',   period:'YTD'},
   'calls-booked-today':{label:'Calls booked goal (today)',   kind:'count'},
-  'silo-flip-mtd':     {label:'SILO flip rate goal (MTD)',   kind:'percent'},
+  'silo-flip-ytd':     {label:'SILO flip rate goal (YTD)',   kind:'percent', period:'YTD'},
 };
 function goalFmt(kind, n){
   if(!isFinite(n)) return String(n);
@@ -565,7 +565,7 @@ function goalBar(key, actual, opt){
     <div class="gtrack"><div class="gfill${over?' over':''}" style="width:${fill}%"></div></div>
     <div class="gmeta">
       <span class="gpct${over?' over':''}">${pctText}<span class="gedit">edit</span></span>
-      <span class="ggoal">${esc(actText)} / goal ${esc(goalFmt(meta.kind, goal))}</span>
+      <span class="ggoal">${esc(actText)} / ${meta.period?esc(meta.period)+' ':''}goal ${esc(goalFmt(meta.kind, goal))}</span>
     </div>
   </div>`;
 }
@@ -1170,7 +1170,7 @@ function renderRevenue(){
     const hero = sr.map((r,i)=>`<div class="revhero ${heroCls[i]||''}"><div class="rl">${esc(r[0])}</div><div class="rv">${esc(noCents(r[1]))}</div></div>`).join('');
     plumb += `<div class="revcav"><span class="nf">Not final</span>Today, this month (MTD) and YTD are partial; invoices keep posting so these will keep rising.</div>`;
     plumb += `<div class="revgrid">${hero}</div>`;
-    plumb += goalBar('plumbing-rev-mtd', (sr[1]||[])[1]);   // MTD row (Period|Revenue)
+    plumb += goalBar('plumbing-rev-ytd', (sr[2]||[])[1]);   // YTD row (Period|Revenue)
     plumb += `<h3>By business unit</h3><div class="big">${currencyTable(bu)}</div>`;
     plumb += collapsibleNotes('revenue', b);
   }
@@ -1196,7 +1196,7 @@ function renderHvacSalesSection(){
     const hero = sr.map((r,i)=>`<div class="revhero ${i===0?'today':''}"><div class="rl">${esc(r[0])}</div><div class="rv">${esc(noCents(r[1]))}</div></div>`).join('');
     h += `<div class="revcav"><span class="nf">Not final</span>sold value; keeps rising as more estimates are signed (invoiced later under Install).</div>`;
     h += `<div class="revgrid">${hero}</div>`;
-    h += goalBar('hvac-sales-mtd', (sr[1]||[])[1]);   // MTD row (Period|Sold)
+    h += goalBar('hvac-sales-ytd', (sr[2]||[])[1]);   // YTD row (Period|Sold)
     h += `<h3>By business unit</h3><div class="big">${currencyTable(bu)}</div>`;
     h += collapsibleNotes('hvac-sales-sold', b);
     return h;
@@ -1226,7 +1226,7 @@ function renderSiloRevenueSection(){
     h += `<h3>Flip rate &mdash; turnovers sold</h3>`;
     const fr = asArray(flip.rows).map(r=>asArray(r));
     h += '<div class="fliprow">' + fr.map((r,i)=>`<div class="flipcard ${i===0?'today':''}"><div class="rl">${esc(r[0])}</div><div class="fv">${esc(r[1])}</div><div class="fs">${esc(r[2])} turnovers sold</div></div>`).join('') + '</div>';
-    h += goalBar('silo-flip-mtd', (fr[1]||[])[1]);   // MTD row (Period|Flip Rate|Turnovers sold)
+    h += goalBar('silo-flip-ytd', (fr[2]||[])[1]);   // YTD row (Period|Flip Rate|Turnovers sold)
     h += collapsibleNotes('silo-revenue', b);
     return h;
   } catch (e) {
