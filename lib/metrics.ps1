@@ -1072,7 +1072,17 @@ function Get-Metric-Revenue($Ctx, [datetime]$Date) {
 }
 
 # ============================================================================
-#  M-SiloRevenue: SILO revenue + flip rate (on the same Revenue tab as Plumbing)
+#  M-SiloRevenue: SILO revenue (on the same Revenue tab as Plumbing)
+#  FLIP RATE HAS MOVED OUT OF THIS BLOCK (2026-08-10). This metric used to also publish a "Flip
+#    rate" table computed as (TGL jobs with a sold estimate) / (total TGL jobs created) off this
+#    same report, which read 38.5% YTD. That is NOT the SILO manager's definition: theirs is
+#    (TGLs created) / (ROPP calls ran) off two entirely different reports, and read 48.4% YTD -
+#    a ~10-point gap on the same-named number. The business owner's decision was to match the
+#    manager, so the flip rate now lives in its own metric (`silo-flip`, Build-SiloFlipSnapshot
+#    below) and the old table was REMOVED rather than kept alongside - two different numbers both
+#    labelled "SILO flip rate" on one dashboard is worse than either number alone. The sold/total
+#    counts are still accumulated by Get-SiloReportPeriod (cheap, and they are the natural output
+#    of the same row loop) - they are simply no longer rendered here.
 #  DEFINITION (verified via live investigation of saved report 648754648, category 'technician'):
 #    * SILO revenue = the SOLD/SIGNED pre-tax estimate subtotal on TURNOVER (TGL) jobs, credited
 #      to the TURNOVER-CALL DAY. A row is a turnover job when JobType CONTAINS "TGL" (observed:
@@ -1080,8 +1090,6 @@ function Get-Metric-Revenue($Ctx, [datetime]$Date) {
 #      (0 when nothing was sold on the job), pre-tax. Summed as [decimal].
 #    * Turnover-call day = the TGL job's CREATION day (DateType=2 = Job Creation Date). Verified:
 #      the estimate-TGL job and its source turnover call are created the same Pacific day.
-#    * Flip rate = (TGL jobs with a sold estimate) / (total TGL jobs created), per period.
-#      Shown as '-' when the period has zero TGL jobs.
 #  SOURCE: ServiceTitan Reporting API, saved report 648754648, category 'technician'. Run via
 #    Invoke-StReport (POST + hasMore paging + 429 retry). From/To are PLAIN Pacific calendar dates
 #    "yyyy-MM-dd" - the report windows internally; they are NOT UTC-converted.
@@ -1162,17 +1170,14 @@ function Get-Metric-SiloRevenue($Ctx, [datetime]$Date) {
         mtd   = "Month to date ($($monthStart.ToString('MMM 1')) - $($Date.ToString('MMM d')))"
         ytd   = "Year to date ($($yearStart.ToString('MMM 1')) - $($Date.ToString('MMM d')))"
     }
-    $revRows=@(); $flipRows=@()
+    $revRows=@()
     foreach ($p in 'today','mtd','ytd') {
         $x = $per[$p]
         $revRows  += ,@($lbls[$p], (Format-Money $x.rev))
-        $flip = if ($x.total -gt 0) { "{0:N1}%" -f (100.0*$x.sold/$x.total) } else { '-' }
-        $flipRows += ,@($lbls[$p], $flip, "$($x.sold) of $($x.total)")
     }
 
     $notes = @(
         'SILO revenue = the SOLD / signed estimate subtotal (PRE-TAX) on turnover (TGL) jobs, credited to the TURNOVER-CALL DAY (the day the TGL job was created). Sold-only: a turnover with nothing sold contributes $0.',
-        'Flip rate = turnover jobs that sold an estimate / total turnover jobs created, per period. The count behind each % is shown as "N of M turnovers sold".',
         'Turnover (TGL) jobs only. Day boundaries are Pacific - the ServiceTitan report filters each period by the tenant''s (Pacific) calendar day server-side.',
         'NOT FINAL / RETROACTIVE BY DESIGN: an estimate sold later adds to its earlier turnover day, so Today, MTD and YTD can still rise. The full year is recomputed every refresh; this block is never frozen.'
     )
@@ -1180,8 +1185,7 @@ function Get-Metric-SiloRevenue($Ctx, [datetime]$Date) {
     @{ id='silo-revenue'; title='Revenue - SILO (sold/signed, pre-tax)'; status='ok'; error=$null;
        notes=$notes;
        tables=@(
-         @{ subtitle='SILO revenue'; columns=@('Period','Revenue'); rows=$revRows; footer='' },
-         @{ subtitle='Flip rate'; columns=@('Period','Flip Rate','Turnovers sold'); rows=$flipRows; footer='' }
+         @{ subtitle='SILO revenue'; columns=@('Period','Revenue'); rows=$revRows; footer='' }
        ) }
 }
 
@@ -1291,7 +1295,401 @@ function Get-Metric-HvacSalesSold($Ctx, [datetime]$Date) {
        ) }
 }
 
+# ============================================================================
+#  M-SiloFlip: SILO flip rate = (TGLs created) / (ROPP calls ran), MTD + YTD only
+#  DEFINITION (the SILO manager's own definition, verified against live ServiceTitan 2026-08-10 -
+#  see SILO-FLIP-HANDOFF.md, which is the spec this block implements):
+#    flip rate = (TGLs created) / (ROPP calls ran)
+#    * Numerator "TGLs created" = the ROW COUNT of saved report 642925621 (category 'technician',
+#      "ROPP TGLS CREATED (JOHN)") for the period, run with DateType=3 so the report's own From/To
+#      window applies to ScheduledDate server-side.
+#    * Denominator "ROPP calls ran" = the ROW COUNT of saved report 379143819 (category
+#      'accounting', "Johns Copy of Ericka's Revenue by Job Type") for the period, run with
+#      DateType=1 so From/To applies to CompletionDate, AFTER the cleaning rules below drop
+#      whole JobNumbers.
+#    * Rollups are COUNT-WEIGHTED: sum(numerators) / sum(denominators). Percentages are NEVER
+#      averaged (not per tech, not per BU, not per day).
+#  WHY THIS REPLACED THE OLD 38.5% FLIP: the flip that used to live in M-SiloRevenue was
+#    sold-estimate turnovers / total turnovers off report 648754648 - a different numerator AND a
+#    different denominator, reading ~10 points below the manager's 48.4%. The owner's decision was
+#    to match the manager exactly, so that table was DELETED (see the M-SiloRevenue header) and
+#    this metric is now the single SILO flip figure. Two differently-defined numbers sharing one
+#    name is worse than either alone.
+#  CLEANING RULES (denominator ONLY), applied per DISTINCT JobNumber in EXACTLY this order, then
+#  the ROWS belonging to kept JobNumbers are counted (handoff SS3):
+#    1. JobNumber not in the jobs map at all -> KEEP (FAILS OPEN, counted as failedOpen)
+#    2. else carries the Management Removed tag -> DROP
+#    3. else does NOT carry the ROPP tag -> DROP
+#    4. else jobStatus != 'Completed' AND the JobNumber is not in that period's TGL-source set
+#       (i.e. it never appears in the numerator report) -> DROP
+#    5. else KEEP
+#    Job facts come from the JOBS API, never from the denominator report's own JobTags / Status
+#    columns - substituting those would deviate from the manager's method (handoff SS8.8).
+#    Fail loud ONLY if the lookup MECHANISM breaks (jobs API unreachable / shape changed); an
+#    individual unresolvable JobNumber fails open by rule 1 and is counted, never thrown on.
+#  ACCEPTED QUIRKS (knowingly copied from the manager, NOT bugs - do not "fix" them):
+#    * ROW counting, not distinct jobs. YTD: 4873 rows vs 4848 distinct jobs (25 jobs carry more
+#      than one invoice). Counting rows hits the manager's 4872; deduping misses it by ~24 and
+#      recreates the divergence this metric exists to eliminate (handoff SS5.2 / SS8.2).
+#    * The two sides key on DIFFERENT date fields (ScheduledDate vs CompletionDate). That is what
+#      makes >100% reachable in small samples. Rates above 100% are LEGITIMATE and are neither
+#      clamped nor hidden here - the manager's own dashboard renders 111.1% (handoff SS8.4).
+#    * The cleaning rules are currently NO-OPS on live data (every denominator job resolved, all
+#      ROPP-tagged, none Management-Removed, all Completed) because report 379143819 is already
+#      pre-filtered. They are implemented faithfully anyway: if that report is ever edited the
+#      DROP paths start mattering, and refresh-silo-flip.ps1 prints the per-rule drop counts every
+#      recompute so such a change shows up instead of shifting the number silently (handoff SS5.1).
+#  NO CLIENT-SIDE DATE PARSING ANYWHERE. Each period gets its OWN server-side windowed pull and we
+#    count the rows the server returns. MTD is NEVER derived by filtering the YTD pull in code.
+#    Client-side date parsing of report rows broke this project twice cross-platform (PS5.1 keeps
+#    the report's offset, pwsh7-on-Linux normalizes to UTC) - handoff SS7.2, SS8.5.
+#  FAIL LOUD: a report id that no longer resolves surfaces as an HTTP error; a changed column
+#    layout is caught by the STRICT ORDERED column check (count + name at every index) against
+#    config's expectedColumns. Both reports are one person's personal copies, so a silent edit is
+#    the likeliest failure mode and it must error on screen, never fall back to a stale number.
+#  NOT IN $METRIC_DEFS ON PURPOSE, AND NOT COMPUTED IN serve.ps1: a full compute is 4 report POSTs
+#    spaced ~65s apart (this tenant 429-throttles rapid report runs) = ~5-6 minutes, far too slow
+#    for a per-day snapshot or an on-demand request. It is a current-state MTD/YTD figure served
+#    from its own cache file, exactly like Build-SiloSnapshot -> data/silo-<month>.json. The cache
+#    is written by refresh-silo-flip.ps1, which TTL-gates the recompute (handoff SS6.2 / SS7.3).
+#  NEVER FINAL: the figure is retroactive (TGLs keep being scheduled onto earlier days), so it
+#    keeps settling upward and is never frozen.
+# ============================================================================
+
+# Read + fully validate config.json -> siloFlip. Returns a plain hashtable with everything the
+# metric needs, all strings normalized. NOTHING here has a default: every report id, category,
+# DateType, column list and tag id must be present, or this throws a message naming the exact
+# missing key. Get-DashConfig returns $null when config.json is absent OR unparseable, which is
+# also a hard error - a flip rate computed off a guessed report id would be a fabricated number.
+function Get-SiloFlipConfig {
+    $cfg = Get-DashConfig
+    if ($null -eq $cfg) { throw "config.json is missing or unparseable - the SILO flip metric reads its report ids, tag ids and timings from config.json siloFlip and has no defaults" }
+    if ($null -eq $cfg.PSObject.Properties['siloFlip']) { throw "config.json is missing the siloFlip block" }
+    $sf  = $cfg.siloFlip
+    $out = @{}
+
+    foreach ($side in 'numerator','denominator') {
+        if ($null -eq $sf.PSObject.Properties[$side]) { throw "config.json is missing siloFlip.$side" }
+        $spec = $sf.$side
+        $o = @{}
+        foreach ($k in 'reportId','category','dateColumn','jobNumberColumn') {
+            if (($null -eq $spec.PSObject.Properties[$k]) -or [string]::IsNullOrWhiteSpace("$($spec.$k)")) { throw "config.json is missing siloFlip.$side.$k" }
+            $o[$k] = "$($spec.$k)"
+        }
+        # dateType is a number and 0 could in principle be a valid enum value, so it is checked for
+        # PRESENCE + integer-ness rather than truthiness (Is-EmptyVal would call 0 empty).
+        if ($null -eq $spec.PSObject.Properties['dateType']) { throw "config.json is missing siloFlip.$side.dateType" }
+        $dtRaw = "$($spec.dateType)"
+        if ([string]::IsNullOrWhiteSpace($dtRaw)) { throw "config.json is missing siloFlip.$side.dateType" }
+        $dtVal = 0
+        if (-not [int]::TryParse($dtRaw, [ref]$dtVal)) { throw "config.json siloFlip.$side.dateType must be a whole number (got '$dtRaw')" }
+        $o['dateType'] = $dtVal
+        # expectedColumns is the columns-changed tripwire; an empty list would disable it silently.
+        if ($null -eq $spec.PSObject.Properties['expectedColumns']) { throw "config.json is missing siloFlip.$side.expectedColumns" }
+        $cols = @($spec.expectedColumns | ForEach-Object { "$_" })
+        if ($cols.Count -eq 0) { throw "config.json has an empty siloFlip.$side.expectedColumns" }
+        for ($i = 0; $i -lt $cols.Count; $i++) {
+            if ([string]::IsNullOrWhiteSpace($cols[$i])) { throw "config.json siloFlip.$side.expectedColumns[$i] is empty" }
+        }
+        $o['expectedColumns'] = $cols
+        # The two columns we index by name MUST be part of the declared layout, otherwise the two
+        # config settings contradict each other and the mismatch would only show up mid-run.
+        if ($cols -notcontains $o['dateColumn'])      { throw "config.json siloFlip.$side.dateColumn '$($o['dateColumn'])' is not listed in siloFlip.$side.expectedColumns" }
+        if ($cols -notcontains $o['jobNumberColumn']) { throw "config.json siloFlip.$side.jobNumberColumn '$($o['jobNumberColumn'])' is not listed in siloFlip.$side.expectedColumns" }
+        $out[$side] = $o
+    }
+
+    # Tag ids are kept as STRINGS because a job's tagTypeIds come back as numbers and every id in
+    # this project is compared as a string (see Get-JobTypeMap et al).
+    if ($null -eq $sf.PSObject.Properties['tags']) { throw "config.json is missing siloFlip.tags" }
+    $tags = @{}
+    foreach ($t in 'managementRemoved','ropp') {
+        if (($null -eq $sf.tags.PSObject.Properties[$t]) -or [string]::IsNullOrWhiteSpace("$($sf.tags.$t)")) { throw "config.json is missing siloFlip.tags.$t" }
+        $tags[$t] = "$($sf.tags.$t)"
+    }
+    $out['tags'] = $tags
+
+    # postSpacingSeconds: the deliberate gap between report POSTs (tenant 429 cooldown is ~60s).
+    # cacheTtlSeconds: how long data/silo-flip.json counts as fresh (used by refresh-silo-flip.ps1).
+    foreach ($k in 'postSpacingSeconds','cacheTtlSeconds') {
+        if ($null -eq $sf.PSObject.Properties[$k]) { throw "config.json is missing siloFlip.$k" }
+        $raw = "$($sf.$k)"
+        if ([string]::IsNullOrWhiteSpace($raw)) { throw "config.json is missing siloFlip.$k" }
+        $v = 0
+        if (-not [int]::TryParse($raw, [ref]$v)) { throw "config.json siloFlip.$k must be a whole number of seconds (got '$raw')" }
+        if ($v -le 0) { throw "config.json siloFlip.$k must be greater than 0 (got $v)" }
+        $out[$k] = $v
+    }
+    $out
+}
+
+# Run ONE of the two reports for ONE period window [FromStr, ToStr] (plain Pacific "yyyy-MM-dd"
+# strings; the report windows internally). Reuses the shared Invoke-StReport POST helper - which
+# already does hasMore paging and the 429 retry/backoff - so no POST helper is duplicated here.
+# FAIL LOUD, twice over:
+#   * a deleted / renamed / no-longer-shared report surfaces as an HTTP error from the POST and is
+#     rethrown WITH the report id + category, so the on-screen error says which report broke;
+#   * STRICT ORDERED COLUMN VALIDATION: the returned field count must equal expectedColumns.Length
+#     and the field NAME at every index must match expectedColumns[i] exactly (case-sensitive).
+#     This is the tripwire for "John edited his report": adding, removing, renaming or REORDERING a
+#     column all error here instead of silently shifting the number. Field objects expose .name
+#     (same property Get-ReportColMap reads).
+function Invoke-SiloFlipReport($Ctx, $Spec, [string]$FromStr, [string]$ToStr) {
+    $body = @{ parameters = @(
+        @{ name='DateType'; value=$Spec.dateType },   # per-report enum (3 = numerator, 1 = denominator); see config
+        @{ name='From';     value=$FromStr },         # PLAIN Pacific calendar date; the report windows server-side
+        @{ name='To';       value=$ToStr }
+    ) }
+    $rep = $null
+    try { $rep = Invoke-StReport $Ctx $Spec.category $Spec.reportId $body }
+    catch { throw "SILO flip: report $($Spec.reportId) (category $($Spec.category)) failed to run - $($_.Exception.Message)" }
+
+    $fields = @($rep.fields)
+    $exp    = @($Spec.expectedColumns)
+    if ($fields.Count -ne $exp.Count) {
+        throw "SILO flip: report $($Spec.reportId) (category $($Spec.category)) returned $($fields.Count) columns but config.json expects $($exp.Count) - the saved report was edited; update siloFlip expectedColumns after re-verifying the metric"
+    }
+    for ($i = 0; $i -lt $exp.Count; $i++) {
+        $actual = "$($fields[$i].name)"
+        if ($actual -cne $exp[$i]) {
+            throw "SILO flip: report $($Spec.reportId) (category $($Spec.category)) column at index $i is '$actual' but config.json expects '$($exp[$i])' - the saved report was edited; update siloFlip expectedColumns after re-verifying the metric"
+        }
+    }
+    $rep
+}
+
+# Window tripwire for ONE pull. Counts rows whose date-key cell falls outside the requested
+# [From, To] window (inclusive on both ends, matching how the reports treat From/To).
+# DELIBERATELY NOT [datetime]::Parse: that is the exact construct that broke this metric before -
+# PS 5.1 preserves the offset the report emits while pwsh7-on-Linux normalizes the same string to
+# UTC, so a Parse-based guard reaches DIFFERENT verdicts on the dev box and the CI runner and can
+# false-positive at a period edge. Instead we regex a leading ISO yyyy-MM-dd out of the cell and
+# compare those 10 characters as STRINGS with an ORDINAL comparison: ISO dates sort
+# lexicographically, and an ordinal compare has no culture or host-timezone input at all.
+# A cell with no ISO prefix (blank / an unexpected format) is counted as unparsed and is explicitly
+# NOT treated as a violation - the guard must never be able to false-positive.
+# Returns @{ outOfWindow=[int]; unparsed=[int] }.
+function Measure-SiloFlipWindow($Rep, $Spec, [string]$FromStr, [string]$ToStr) {
+    $col   = Get-ReportColMap $Rep.fields @($Spec.dateColumn)
+    $iDate = $col[$Spec.dateColumn]
+    $bad = 0; $unparsed = 0
+    foreach ($row in $Rep.rows) {
+        $m = [regex]::Match("$($row[$iDate])", '^(\d{4}-\d{2}-\d{2})')
+        if (-not $m.Success) { $unparsed++; continue }
+        $key = $m.Groups[1].Value
+        if (([string]::CompareOrdinal($key, $FromStr) -lt 0) -or ([string]::CompareOrdinal($key, $ToStr) -gt 0)) { $bad++ }
+    }
+    @{ outOfWindow = $bad; unparsed = $unparsed }
+}
+
+# The expensive part: 4 report POSTs + one bulk jobs pull, then the cleaning rules.
+# Returns @{ periods = [ordered]@{ mtd=@{from;to;numerator;denominator;rate}; ytd=@{...} };
+#            diagnostics = @{ mtd=@{...}; ytd=@{...} } }
+function Compute-SiloFlip($Ctx, [datetime]$Date) {
+    $cfg = Get-SiloFlipConfig
+
+    # Both windows are built from $Date's CALENDAR COMPONENTS only - no timezone conversion of
+    # $Date, no client-side parsing anywhere. Same zero-padded, culture-independent idiom as
+    # Get-Metric-SiloRevenue.
+    $y = $Date.Year; $m = $Date.Month; $d = $Date.Day
+    $fmt  = { param($yy,$mm,$dd) '{0:D4}-{1:D2}-{2:D2}' -f [int]$yy,[int]$mm,[int]$dd }
+    $dStr = & $fmt $y $m $d                                   # D = the 'To' of both periods
+    $windows = [ordered]@{
+        mtd = @{ from = (& $fmt $y $m 1); to = $dStr }         # 1st of D's month .. D
+        ytd = @{ from = (& $fmt $y 1 1);  to = $dStr }         # Jan 1 of D's year .. D
+    }
+
+    # FOUR POSTs, in this order, each its OWN server-side windowed pull. MTD is NOT derived by
+    # filtering the YTD pull client-side (that would require parsing row dates - forbidden).
+    # Start-Sleep BETWEEN pulls only: 3 sleeps, none before the first, none after the last. The
+    # tenant 429-throttles rapid report runs with a ~60s backoff; this spacing is what avoids them,
+    # and Invoke-StReportPost's Retry-After retry remains the backstop.
+    $pulls = @(
+        @{ period='ytd'; side='numerator' },
+        @{ period='ytd'; side='denominator' },
+        @{ period='mtd'; side='numerator' },
+        @{ period='mtd'; side='denominator' }
+    )
+    $reps = @{}
+    $oow  = @{ mtd=0; ytd=0 }      # out-of-window rows, summed over that period's two pulls
+    $unp  = @{ mtd=0; ytd=0 }      # rows whose date cell had no ISO prefix (informational only)
+    for ($i = 0; $i -lt $pulls.Count; $i++) {
+        if ($i -gt 0) { Start-Sleep -Seconds $cfg.postSpacingSeconds }
+        $p    = $pulls[$i]
+        $spec = $cfg[$p.side]
+        $w    = $windows[$p.period]
+        $rep  = Invoke-SiloFlipReport $Ctx $spec $w.from $w.to
+        $chk  = Measure-SiloFlipWindow $rep $spec $w.from $w.to
+        $oow[$p.period] += $chk.outOfWindow
+        $unp[$p.period] += $chk.unparsed
+        if ($chk.outOfWindow -gt 0) {
+            throw "SILO flip: report $($spec.reportId) returned $($chk.outOfWindow) row(s) whose $($spec.dateColumn) falls outside the requested window $($w.from)..$($w.to) ($($p.period)) - the report's server-side From/To no longer matches the counted column, so the count cannot be trusted"
+        }
+        $reps["$($p.period)/$($p.side)"] = $rep
+    }
+
+    # ---- numerator: the row count IS "TGLs created". Also collect the period's TGL-source set
+    # (the JobNumbers that produced a TGL) - cleaning rule 4 needs it. Column located BY NAME.
+    $numRows = @{}; $tglSets = @{}
+    foreach ($p in 'mtd','ytd') {
+        $rep  = $reps["$p/numerator"]
+        $iJob = (Get-ReportColMap $rep.fields @($cfg.numerator.jobNumberColumn))[$cfg.numerator.jobNumberColumn]
+        $set  = New-Object 'System.Collections.Generic.HashSet[string]'
+        foreach ($row in $rep.rows) { [void]$set.Add("$($row[$iJob])") }
+        $numRows[$p] = @($rep.rows).Count
+        $tglSets[$p] = $set
+    }
+
+    # ---- jobs map: ONE bulk pull covering the YTD span, reused for BOTH periods (the MTD
+    # JobNumbers are a subset of the YTD span, so a second pull would buy nothing but 429 risk).
+    # Two windows are needed:
+    #   A) completedOnOrAfter/completedBefore - the population the denominator report reports on
+    #   B) createdOnOrAfter/createdBefore     - catches NON-completed TGL-source calls, which
+    #                                           window A cannot return but rule 4 must see
+    # Bounds are built the project-correct way: a Pacific day converted to a UTC range ONCE via
+    # Get-PacDayWindow (Jan 1 for the start, D for the end, so D is fully included). Paged at
+    # Invoke-StPaged's DEFAULT pageSize of 200 - NEVER 300 on this tenant (duplicate rows).
+    $yearStart = [datetime]::new($y, 1, 1)
+    $startIso  = (Get-PacDayWindow $Ctx $yearStart).StartIso
+    $endIso    = (Get-PacDayWindow $Ctx $Date).EndIso
+    $jobs = @{}                       # jobNumber (string) -> @{ jobStatus; tagTypeIds }
+    foreach ($q in @(
+        @{ completedOnOrAfter=$startIso; completedBefore=$endIso },
+        @{ createdOnOrAfter=$startIso;   createdBefore=$endIso }
+    )) {
+        foreach ($j in (Invoke-StPaged $Ctx "/jpm/v2/tenant/$($Ctx.Tenant)/jobs" $q)) {
+            # A missing field here is a MECHANISM break (the jobs API shape changed) -> fail loud.
+            # An individual job we never see is a different thing entirely and fails open (rule 1).
+            foreach ($f in 'jobNumber','jobStatus','tagTypeIds') {
+                if ($null -eq $j.PSObject.Properties[$f]) { throw "SILO flip: job $($j.id) is missing field '$f' - the jobs API shape changed" }
+            }
+            $key = "$($j.jobNumber)"
+            if ([string]::IsNullOrWhiteSpace($key)) { $key = "$($j.id)" }   # this tenant has jobNumber == id
+            if ($jobs.ContainsKey($key)) { continue }                       # the two windows overlap; first wins
+            $tagIds = @()
+            if ($j.tagTypeIds) { $tagIds = @($j.tagTypeIds | ForEach-Object { "$_" }) }
+            $jobs[$key] = @{ jobStatus = "$($j.jobStatus)"; tagTypeIds = $tagIds }
+        }
+    }
+    $jobsPulled = $jobs.Count
+
+    # ---- denominator: cleaning rules per DISTINCT JobNumber, then count ROWS.
+    $periods = [ordered]@{}; $diag = @{}
+    foreach ($p in 'mtd','ytd') {
+        $rep   = $reps["$p/denominator"]
+        $iJob  = (Get-ReportColMap $rep.fields @($cfg.denominator.jobNumberColumn))[$cfg.denominator.jobNumberColumn]
+        $rows  = @($rep.rows)
+        $keep  = @{}                  # JobNumber -> $true/$false, decided ONCE per distinct number
+        $dropMgmt = 0; $dropNotRopp = 0; $dropNotCompletedNotTgl = 0; $failedOpen = 0
+        foreach ($row in $rows) {
+            $jn = "$($row[$iJob])"
+            if ($keep.ContainsKey($jn)) { continue }
+            # RULES 1-5 IN EXACTLY THIS ORDER (handoff SS3). Order matters: a Management-Removed job
+            # is dropped before the ROPP test, and both run before the not-completed test.
+            if (-not $jobs.ContainsKey($jn)) {
+                $keep[$jn] = $true; $failedOpen++                                   # 1. unresolvable -> KEEP (fails open)
+            } elseif ($jobs[$jn].tagTypeIds -contains $cfg.tags.managementRemoved) {
+                $keep[$jn] = $false; $dropMgmt++                                    # 2. Management Removed -> DROP
+            } elseif ($jobs[$jn].tagTypeIds -notcontains $cfg.tags.ropp) {
+                $keep[$jn] = $false; $dropNotRopp++                                 # 3. not ROPP-tagged -> DROP
+            } elseif (($jobs[$jn].jobStatus -ne 'Completed') -and (-not $tglSets[$p].Contains($jn))) {
+                $keep[$jn] = $false; $dropNotCompletedNotTgl++                      # 4. not Completed and never made a TGL -> DROP
+            } else {
+                $keep[$jn] = $true                                                  # 5. KEEP
+            }
+        }
+        # DENOMINATOR = COUNT OF ROWS whose JobNumber was kept - deliberately NOT deduped to
+        # distinct jobs. 25 jobs carry more than one invoice YTD, so row counting reads ~0.5%
+        # higher; that inflation is exactly what makes this match the SILO manager's calls-ran
+        # (4873 vs their 4872, where deduping gives 4848 and misses by ~24). Handoff SS5.2 / SS8.2.
+        $den = 0
+        foreach ($row in $rows) { if ($keep["$($row[$iJob])"]) { $den++ } }
+        $num = $numRows[$p]
+
+        # rate is an UNROUNDED [double] and is NOT clamped: >100% is legitimate here because the
+        # two sides key on different date fields, and the manager renders such readings too.
+        # A zero denominator yields $null (rendered '-'), never a divide-by-zero or a fake 0%.
+        $rate = $null
+        if ($den -gt 0) { $rate = [double](100.0 * $num / $den) }
+
+        $periods[$p] = @{ from = $windows[$p].from; to = $windows[$p].to; numerator = [int]$num; denominator = [int]$den; rate = $rate }
+        $diag[$p] = @{
+            rawNumeratorRows                = [int]$num
+            rawDenominatorRows              = [int]$rows.Count
+            distinctJobNumbers              = [int]$keep.Count
+            droppedManagementRemoved        = [int]$dropMgmt
+            droppedNotRopp                  = [int]$dropNotRopp
+            droppedNotCompletedNotTglSource = [int]$dropNotCompletedNotTgl
+            failedOpen                      = [int]$failedOpen
+            outOfWindowRows                 = [int]$oow[$p]
+            unparsedDateRows                = [int]$unp[$p]
+            jobsPulled                      = [int]$jobsPulled
+        }
+    }
+    @{ periods = $periods; diagnostics = $diag }
+}
+
+# Build the presentation block. Same shape every other Get-Metric-* returns (id/title/status/
+# error/notes/tables) plus `periods` + `diagnostics`, which the SILO-flip renderer reads directly.
+function Get-Metric-SiloFlip($Ctx, [datetime]$Date) {
+    $res = Compute-SiloFlip $Ctx $Date
+    $per = $res.periods
+
+    # Verbose period labels, same style as the revenue blocks: "Month to date (Aug 1 - Aug 10)".
+    $monthStart = [datetime]::new($Date.Year, $Date.Month, 1)
+    $yearStart  = [datetime]::new($Date.Year, 1, 1)
+    $lbls = @{
+        mtd = "Month to date ($($monthStart.ToString('MMM 1')) - $($Date.ToString('MMM d')))"
+        ytd = "Year to date ($($yearStart.ToString('MMM 1')) - $($Date.ToString('MMM d')))"
+    }
+    # ALWAYS exactly two rows, MTD then YTD.
+    $rows = @()
+    foreach ($p in 'mtd','ytd') {
+        $x = $per[$p]
+        $pct = '-'
+        if ($null -ne $x.rate) { $pct = "{0:N1}%" -f $x.rate }
+        $rows += ,@($lbls[$p], $pct, "$($x.numerator) / $($x.denominator)")
+    }
+
+    $notes = @(
+        'Flip rate = TGLs created / ROPP calls ran, per period - the SILO manager''s own definition. The counts behind each % are shown as "TGLs / calls ran". This REPLACED the older flip figure (turnovers that sold an estimate / total turnovers), which was a different measurement roughly 10 points lower.',
+        'Rollups are COUNT-WEIGHTED: the period rate is total TGLs / total calls ran. Percentages are never averaged together (not per tech, not per day) - averaging percentages would weight a 3-call day the same as a 300-call day.',
+        'The calls-ran count counts invoice ROWS, not distinct jobs, so the ~25 jobs a year carrying more than one invoice are counted more than once. That inflates calls ran by about 0.5% and is deliberate: it is what makes this figure match the SILO manager''s number instead of drifting ~24 calls below it.',
+        'The two sides are dated on different fields - TGLs by the job''s scheduled date, calls ran by the invoice''s completion date - so a short period can show MORE TGLs than calls ran and read above 100%. That is faithful to the source reports, not a bug, and is shown as-is rather than capped at 100%.',
+        'NOT FINAL / RETROACTIVE BY DESIGN: TGLs keep getting scheduled onto days already counted, so both figures keep settling upward after the fact. Nothing here is ever frozen; every recompute replaces the whole figure.'
+    )
+
+    @{ id='silo-flip'; title='SILO flip rate (TGLs created / ROPP calls ran)'; status='ok'; error=$null;
+       notes=$notes;
+       periods=@{
+         mtd=@{ num=[int]$per['mtd'].numerator; den=[int]$per['mtd'].denominator; rate=$per['mtd'].rate }
+         ytd=@{ num=[int]$per['ytd'].numerator; den=[int]$per['ytd'].denominator; rate=$per['ytd'].rate }
+       };
+       tables=@(
+         @{ subtitle='Flip rate'; columns=@('Period','Flip Rate','TGLs / calls ran'); rows=$rows;
+            footer=("As of $($Date.ToString('MMM d, yyyy')) - partial and still settling (TGLs are scheduled retroactively).") }
+       );
+       diagnostics=$res.diagnostics }
+}
+
+# Cache-file wrapper, mirroring Build-SiloSnapshot: build the block, and on ANY failure store a
+# status='error' block instead of a number (fail loud on screen, never a stale figure).
+# `final` is ALWAYS $false - this metric is retroactive, so it is never frozen.
+function Build-SiloFlipSnapshot {
+    param($Ctx, [datetime]$Date)
+    try { $b = Get-Metric-SiloFlip $Ctx $Date }
+    catch {
+        $b = New-ErrorBlock 'silo-flip' 'SILO flip rate (TGLs created / ROPP calls ran)' ("$($_.Exception.Message)")
+        # Keep the key set stable across ok/error so a renderer can index these without a guard.
+        $b.periods = @{}; $b.diagnostics = @{}
+    }
+    @{ asOf=$Date.ToString('yyyy-MM-dd'); final=$false; generatedAt=(Get-UtcNow); block=$b }
+}
+
 # ---------- registry + snapshot assembler ----------
+# NOTE: silo-flip is deliberately ABSENT from $METRIC_DEFS. It is not a per-day snapshot metric -
+# it is a current-state MTD/YTD figure that costs ~5-6 minutes of throttled report POSTs, so it is
+# built by refresh-silo-flip.ps1 into its own cache file (same pattern as Build-SiloSnapshot).
 $script:METRIC_DEFS = @(
     @{ id='call-counts';    title='Call Count';               act={ param($c,$d) Get-Metric-CallCounts   $c $d } },
     @{ id='cancellations';  title='Cancellations';            act={ param($c,$d) Get-Metric-Cancellations $c $d } },

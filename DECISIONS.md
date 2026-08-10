@@ -445,6 +445,32 @@ about the basis. This should also close most of the ~290-call gap over six month
 **Current verified baseline (old definition):** June 2026 — 831 calls, 400 TGLs, 48.1% conversion.
 Expect this to move once M9.1 and M9.2 are built.
 
+### M9.4 The Revenue-tab flip rate is TGLs created / ROPP calls ran — BUILT 2026-08-10
+**Decided:** business owner, 2026-08-10 — the dashboard must **match the SILO manager's number**, and the
+new figure **replaces** the old one. Both are never shown together.
+**What changed:** the flip rate on the Revenue tab used to be *turnover jobs that sold an estimate / total
+turnover jobs created* (one report, 648754648), reading **38.5%** YTD. It is now *TGLs created / ROPP calls
+ran* across two of the manager's own saved reports, reading **48.5%** YTD. Different numerator **and**
+different denominator — the ~10-point move is a change of definition, not a bug fix.
+**Why:** ours disagreed with the manager's dashboard, and the owner wants one number, not two.
+
+Three quirks are copied **deliberately** because they are what make the number match; do not "clean" them up:
+- **Count rows, not distinct jobs.** 25 jobs a year carry more than one invoice, so calls-ran reads ~0.5%
+  high. Deduping gives 4848 against the manager's 4872 and misses by ~24.
+- **Roll up count-weighted** (`sum(num)/sum(den)`), never by averaging percentages.
+- **The two sides key on different date fields** (TGL scheduled date vs invoice completion date), so a short
+  period can read **above 100%**. That is faithful to the source and is never clamped or hidden — the
+  manager's own non-SILO MTD reads 111.1%.
+
+**Cost and cadence:** a full recompute is 4 throttled report POSTs (~65s apart) plus a ~42k-job pull ≈ 5–6
+minutes, against a CI job that refreshes every 15 minutes and normally finishes in 2–3. So it is computed in
+the refresh layer into `data/silo-flip.json` behind a TTL (`config.json` → `siloFlip.cacheTtlSeconds`, 6h)
+and only ever **read** at display time. It is never computed on request and never frozen (`final:false`) —
+TGLs keep getting scheduled onto days already counted, so the figure keeps settling upward.
+
+**Goal bar:** `silo-flip-ytd` still tracks the YTD flip, but it now measures the new definition, so its
+target needs re-stating — the owner is setting it himself.
+
 ---
 
 ## Dispatch and arrival times — DECIDED — NOT BUILT

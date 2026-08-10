@@ -450,6 +450,10 @@ let STATIC_MANIFEST = null;   // { dates:[...], siloMonths:[...] } from manifest
 let STATIC_TODAY = null;      // latest available date in STATIC_MODE, stands in for todayStr()
 function metricsUrl(dateStr){ return STATIC_MODE ? ('data/'+dateStr+'.json') : ('/api/metrics?date='+encodeURIComponent(dateStr)); }
 function siloUrl(month){ return STATIC_MODE ? ('data/silo-'+month+'.json') : ('/api/silo?month='+encodeURIComponent(month)); }
+/* SILO flip-rate cache. Precomputed by refresh-silo-flip.ps1 (never computed on request) and read
+   as a plain file; build-static.ps1 copies every data/*.json into site/data/, so the static path
+   resolves with no manifest change. */
+function flipUrl(){ return STATIC_MODE ? 'data/silo-flip.json' : '/api/silo-flip'; }
 function effectiveToday(){ return STATIC_MODE ? STATIC_TODAY : todayStr(); }
 
 const TABS = [
@@ -467,6 +471,7 @@ let active = 'overview';
 let data = null;
 let pollTimer = null;
 let siloData = null, siloLoading = false, siloErr = null;   // SILO tab (monthly, separate endpoint)
+let FLIP = null;   // SILO flip-rate cache envelope {asOf, final, generatedAt, block} - see loadFlip()
 let cbSelDay = null;   // Call Board: day selected for the call-type breakdown (defaults to today)
 
 const $ = id => document.getElementById(id);
@@ -508,7 +513,7 @@ function shortBU(s){ return String(s).replace(' - ',' '); }
      plumbing-rev-ytd    Plumbing revenue, Year-To-Date (billed, pre-tax)       -> currency
      hvac-sales-ytd      HVAC Sales sold, Year-To-Date (sold/signed, pre-tax)   -> currency
      calls-booked-today  Calls booked, TODAY (all business units)               -> count
-     silo-flip-ytd       SILO flip rate, Year-To-Date (turnovers sold / total)  -> percent
+     silo-flip-ytd       SILO flip rate, YTD (TGLs created / ROPP calls ran)    -> percent
 */
 const GOALS_API = 'https://sierra-goals.troy-18a.workers.dev';   // <-- paste your Cloudflare Worker URL here (see comment above)
 let GOALS = {};         // key -> goal number (fetched from the Worker; empty when unconfigured)
@@ -517,7 +522,8 @@ const GOAL_META = {
   'plumbing-rev-ytd':  {label:'Plumbing revenue goal (YTD)', kind:'money',   period:'YTD'},
   'hvac-sales-ytd':    {label:'HVAC Sales sold goal (YTD)',  kind:'money',   period:'YTD'},
   'calls-booked-today':{label:'Calls booked goal (today)',   kind:'count'},
-  'silo-flip-ytd':     {label:'SILO flip rate goal (YTD)',   kind:'percent', period:'YTD'},
+  // Definition changed 2026-08: TGLs created / ROPP calls ran (was turnovers sold / total turnovers).
+  'silo-flip-ytd':     {label:'SILO flip rate goal (YTD) - TGLs / ROPP calls ran', kind:'percent', period:'YTD'},
 };
 function goalFmt(kind, n){
   if(!isFinite(n)) return String(n);
@@ -707,12 +713,15 @@ function notesHtml(b){ return asArray(b&&b.notes).map(n=>{ const w=/AVOCA|CAVEAT
    Open state is tracked in OPEN_NOTES (keyed by block id) so it SURVIVES the 30s auto-re-render
    (renderActive rebuilds the HTML each tick and reads this set to restore the open panels). */
 const OPEN_NOTES = new Set();
-function collapsibleNotes(id, b){
+function collapsibleNotes(id, b, label){
   const inner = notesHtml(b);
   if(!inner) return '';                        // no notes -> render nothing (stay graceful)
   const open = OPEN_NOTES.has(id);
+  // `label` is optional and defaults to the original text. It exists because the SILO column now
+  // stacks TWO of these (revenue + flip, separate blocks with separate notes) and two identically
+  // labelled toggles side by side give the reader no way to tell which is which.
   return `<div class="revnotes${open?' open':''}" data-notekey="${esc(id)}">`
-       +   `<button type="button" class="revnotes-toggle" aria-expanded="${open?'true':'false'}">How this is calculated</button>`
+       +   `<button type="button" class="revnotes-toggle" aria-expanded="${open?'true':'false'}">${esc(label || 'How this is calculated')}</button>`
        +   `<div class="revnotes-body">${inner}</div>`
        + `</div>`;
 }
@@ -1074,6 +1083,28 @@ async function loadSilo(month){
   }catch(e){ siloLoading=false; siloErr=e.message; if(active==='silo'){ renderActive(); } }
   finally{ endFetchActivity(); }
 }
+
+/* ---------- SILO flip rate (precomputed cache; Revenue tab) ----------
+   Reads data/silo-flip.json (static) or /api/silo-flip (live). The figure is NEVER computed on
+   request - it is ~5-6 min of throttled Reporting API POSTs, so refresh-silo-flip.ps1 produces the
+   cache and this just reads it (SILO-FLIP-HANDOFF.md 7.3).
+   A failure here must NOT break the rest of the page: we swallow the throw and leave FLIP holding
+   an error-shaped block, so renderSiloRevenueSection() fails loud in place of the cards only
+   (CLAUDE.md rule 1 - never a stale or invented number, and a real 0% must look different). */
+async function loadFlip(){
+  try{
+    const r = await fetch(flipUrl(), {cache:'no-store'});
+    if(!r.ok){ let m='HTTP '+r.status; try{const j=await r.json(); if(j&&j.error)m=j.error;}catch(e){} throw new Error(m); }
+    const j = await r.json();
+    if(!j || !j.block) throw new Error('the flip cache returned no block - run refresh-silo-flip.ps1');
+    FLIP = j;
+  }catch(e){
+    FLIP = {asOf:null, final:false, generatedAt:null, block:{
+      id:'silo-flip', title:'SILO flip rate (TGLs created / ROPP calls ran)', status:'error',
+      error:'Could not load the SILO flip cache ('+flipUrl()+'): '+((e&&e.message)||String(e))+'. Run refresh-silo-flip.ps1 to rebuild it.',
+      notes:[], tables:[]}};
+  }
+}
 function updateSiloChrome(){
   if(!siloData){ $('siloWhen').innerHTML='&nbsp;'; $('siloPill').textContent=''; $('siloPill').className='pill'; return; }
   const fin = siloData.final;
@@ -1205,6 +1236,40 @@ function renderHvacSalesSection(){
          + errBlock({status:'error', error:(e && e.message) || String(e)}, 'HVAC Sales revenue');
   }
 }
+/* Flip-rate cards, read from the PRECOMPUTED cache (FLIP) - not from the metrics snapshot, whose
+   old "turnovers sold / total turnovers" flip table has been removed. Contract: FLIP.block.tables[0]
+   has exactly two rows, MTD then YTD (Period | Flip Rate | TGLs / calls ran), plus a footer with the
+   as-of text; FLIP.block.periods.ytd.rate is the raw unrounded number (or null).
+   The .today accent goes on the YTD card - it is the goal-tracked headline figure, and Today is gone.
+   Rates ABOVE 100% are legitimate for this metric and are never clamped or hidden (handoff 8.4);
+   the card prints the cache's string verbatim. */
+function renderSiloFlipCards(){
+  const fb = FLIP && FLIP.block;
+  // Fail loud: no cache, or the refresh script recorded an error -> project-standard error banner
+  // in place of the cards, so a genuine 0% can never be confused with a failure.
+  if(!fb || fb.status!=='ok'){ return errBlock(fb, 'SILO flip rate'); }
+  const t  = asArray(fb.tables)[0];
+  const fr = asArray(t && t.rows).map(r=>asArray(r));
+  if(!fr.length){ return errBlock({status:'error', error:'the flip cache has no rows - run refresh-silo-flip.ps1'}, 'SILO flip rate'); }
+  const last = fr.length - 1;   // YTD is the last row (contract: [MTD, YTD])
+  let h = '<div class="fliprow">' + fr.map((r,i)=>`<div class="flipcard ${i===last?'today':''}"><div class="rl">${esc(r[0])}</div><div class="fv">${esc(r[1])}</div><div class="fs">${esc(r[2])} TGLs / calls ran</div></div>`).join('') + '</div>';
+  // As-of: this figure comes from a cache, so always say how current it is (handoff 7.3).
+  const stamp = [ (t && t.footer) ? String(t.footer) : '', FLIP.generatedAt ? ('cache pulled '+agoText(FLIP.generatedAt)) : '' ].filter(x=>x);
+  // Escape each part, then join with an HTML ENTITY. A literal U+00B7 byte here renders as
+  // mojibake (U+00C2 followed by the dot): serve.ps1 reads this file with PS 5.1 Get-Content -Raw,
+  // which decodes a BOM-less UTF-8 file as ANSI and turns every multi-byte char into two.
+  // That is why this file is ASCII + HTML entities throughout - keep it that way.
+  if(stamp.length){ h += `<div class="cav">${stamp.map(esc).join(' &middot; ')}</div>`; }
+  // Goal bar off the machine-readable rate, NOT a row index or a formatted string.
+  const ytd = fb.periods && fb.periods.ytd;
+  const rate = (ytd && typeof ytd.rate === 'number' && isFinite(ytd.rate)) ? ytd.rate : null;   // parseNum() passes numbers through
+  h += goalBar('silo-flip-ytd', rate);
+  // The flip block carries its OWN notes (count-weighting, row-vs-distinct counting, why >100% is
+  // real). They live on FLIP.block, not on silo-revenue, so they need their own panel or they would
+  // never be shown. Separate OPEN_NOTES key -> no collision with the silo-revenue panel.
+  h += collapsibleNotes('silo-flip', fb, 'How the flip rate is calculated');
+  return h;
+}
 /* SILO revenue + flip rate - same Revenue tab, below the Plumbing section. SOLD/signed pre-tax,
    credited to the turnover-call day; distinct from the Plumbing "billed" figure above. */
 function renderSiloRevenueSection(){
@@ -1215,18 +1280,22 @@ function renderSiloRevenueSection(){
     let h = '<div class="head" style="margin-top:12px; border-top:1px solid var(--hair); padding-top:10px"><h2>Revenue &mdash; SILO</h2>'
           + '<div class="kpi">sold/signed, pre-tax &middot; turnovers</div></div>';
     const b = block('silo-revenue');
-    if(!b||b.status==='error'){ return h + errBlock(b,'SILO revenue'); }
-    const rev  = asArray(b.tables)[0];   // Period | Revenue
-    const flip = asArray(b.tables)[1];   // Period | Flip Rate | Turnovers sold
+    if(!b||b.status==='error'){
+      // SILO revenue and the flip rate are now INDEPENDENT data sources (the per-day metrics
+      // snapshot vs. the precomputed silo-flip cache), so a revenue failure must NOT also hide a
+      // perfectly healthy flip figure - it is the goal-tracked headline. Each fails loud on its own.
+      return h + errBlock(b,'SILO revenue')
+               + `<h3>Flip rate &mdash; TGLs / ROPP calls ran</h3>`
+               + renderSiloFlipCards();
+    }
+    const rev  = asArray(b.tables)[0];   // Period | Revenue  (this block no longer carries a flip table)
     const rr = asArray(rev.rows).map(r=>asArray(r));
     const heroCls = ['today','',''];
     const hero = rr.map((r,i)=>`<div class="revhero ${heroCls[i]||''}"><div class="rl">${esc(r[0])}</div><div class="rv">${esc(noCents(r[1]))}</div></div>`).join('');
     h += `<div class="revcav"><span class="nf">Not final</span>sold estimates keep landing on their turnover day, so Today, MTD and YTD will keep rising (retroactive by design).</div>`;
     h += `<div class="revgrid">${hero}</div>`;
-    h += `<h3>Flip rate &mdash; turnovers sold</h3>`;
-    const fr = asArray(flip.rows).map(r=>asArray(r));
-    h += '<div class="fliprow">' + fr.map((r,i)=>`<div class="flipcard ${i===0?'today':''}"><div class="rl">${esc(r[0])}</div><div class="fv">${esc(r[1])}</div><div class="fs">${esc(r[2])} turnovers sold</div></div>`).join('') + '</div>';
-    h += goalBar('silo-flip-ytd', (fr[2]||[])[1]);   // YTD row (Period|Flip Rate|Turnovers sold)
+    h += `<h3>Flip rate &mdash; TGLs / ROPP calls ran</h3>`;
+    h += renderSiloFlipCards();          // separate precomputed cache (FLIP), incl. its own goal bar + as-of
     h += collapsibleNotes('silo-revenue', b);
     return h;
   } catch (e) {
@@ -1304,9 +1373,11 @@ async function load(dateStr){
     if(!resp.ok){ let m='HTTP '+resp.status; try{const j=await resp.json(); if(j.error)m=j.error;}catch(e){} throw new Error(m); }
     data = await resp.json();
     await loadGoals();                     // refresh goal values (no-op + no error when GOALS_API is unset)
+    await loadFlip();                      // SILO flip-rate cache (own file; never throws - see loadFlip)
     renderChrome(); renderActive(); loadVersion();
     if(pollTimer){clearInterval(pollTimer);pollTimer=null;}
-    if(!STATIC_MODE && dateStr===todayStr()){ pollTimer=setInterval(async()=>{ beginFetchActivity(); try{const r=await fetch(metricsUrl(dateStr)); if(r.ok){data=await r.json(); renderChrome(); renderActive(); loadVersion();}}catch(e){}finally{ endFetchActivity(); } },180000); }
+    // 3-min poll: refetch the metrics snapshot AND the flip cache so the wall display stays current.
+    if(!STATIC_MODE && dateStr===todayStr()){ pollTimer=setInterval(async()=>{ beginFetchActivity(); try{const r=await fetch(metricsUrl(dateStr)); if(r.ok){data=await r.json();} await loadFlip(); renderChrome(); renderActive(); loadVersion();}catch(e){}finally{ endFetchActivity(); } },180000); }
   }catch(e){
     const hint = STATIC_MODE ? '  (is the static file present in data/?)' : '  (is serve.ps1 running? are the credentials valid?)';
     $('banner').textContent='COULD NOT LOAD DATA: '+e.message+hint;

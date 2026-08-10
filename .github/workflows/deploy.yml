@@ -4,6 +4,9 @@ name: Deploy dashboard to GitHub Pages
 # What this does, each run:
 #   1. Checks out the repo.
 #   2. Rebuilds secrets.json from GitHub Actions secrets (gitignored; never committed).
+#   2b. Refreshes the SILO flip-rate cache (data/silo-flip.json) via refresh-silo-flip.ps1.
+#      Runs FIRST, before anything that reads it: the dashboard only ever READS this cache
+#      (~5-6 min of throttled POSTs to build, never computed on request).
 #   3. Refreshes TODAY's snapshot (data/<today>.json) via refresh.ps1.
 #   4. If YESTERDAY's snapshot is missing or not yet marked "final", refreshes it once
 #      so the day gets frozen. Past frozen days are already committed and are NOT re-pulled.
@@ -16,7 +19,9 @@ name: Deploy dashboard to GitHub Pages
 #      scheduled workflow after 60 days of inactivity. Today's live snapshot and the
 #      current/previous-month revenue caches (final:false, change every run) are
 #      intentionally NOT committed -- they're rebuilt fresh from the API every run, and
-#      committing them constantly caused merge conflicts with manual commits. The message
+#      committing them constantly caused merge conflicts with manual commits. The ONE
+#      final:false exception is data/silo-flip.json, staged by name so its TTL gate survives
+#      the fresh checkout (see that step's comment). The message
 #      carries [skip ci] so the push does not re-trigger this workflow. secrets.json and
 #      site/ are NEVER committed.
 #   8. Publishes site/ to GitHub Pages via the official Pages actions
@@ -120,6 +125,18 @@ jobs:
           $s | ConvertTo-Json | Set-Content -Path secrets.json -Encoding utf8
           Write-Host "secrets.json reconstructed (gitignored; will not be committed)."
 
+      - name: Refresh SILO flip-rate cache (TGLs created / ROPP calls ran)
+        shell: pwsh
+        run: |
+          # PLACEMENT IS DELIBERATE: this must run BEFORE every step that reads the cache --
+          # "Refresh today's snapshot" below, and especially "Build static site", since
+          # build-static.ps1 copies data/*.json into site/data/ at build time. The cache has to
+          # exist before anything reads or copies it, otherwise the dashboard ships a fail-loud
+          # "cache missing" banner for the whole 15-minute cycle.
+          # The figure is NEVER computed on request (~5-6 min of 429-throttled Reporting API
+          # POSTs); serve.ps1 only reads data/silo-flip.json. See SILO-FLIP-HANDOFF.md 7.3/9.
+          ./refresh-silo-flip.ps1   # $ErrorActionPreference=Stop -> hard failures fail the job
+
       - name: Refresh today's snapshot
         shell: pwsh
         run: ./refresh.ps1   # $ErrorActionPreference=Stop under pwsh -> hard failures fail the job
@@ -209,6 +226,17 @@ jobs:
           # secrets.json lives at repo root (not data/) AND is gitignored, so it can never
           # be staged here. site/ is gitignored and never committed.
           git add data/last-refresh.txt
+
+          # data/silo-flip.json is staged EXPLICITLY BY NAME, exactly like the heartbeat above,
+          # because the final:true filter below would never pick it up. That cache is deliberately
+          # written final:false (the metric is retroactive -- a TGL scheduled later lands on an
+          # earlier day -- so it is never frozen). Every CI run is a fresh checkout, so if we did
+          # not commit it, the refresh script's TTL gate would never find an existing cache and
+          # would redo the full ~5-6 min throttled pull EVERY 15 minutes. Committing it keeps the
+          # TTL gate meaningful and keeps the figure on screen if a later refresh fails.
+          # Guarded on existence so the whole deploy can't be lost to a missing file here; the
+          # refresh step above already fails the job loudly if it cannot produce the cache.
+          if [ -f data/silo-flip.json ]; then git add data/silo-flip.json; fi
 
           while IFS= read -r line; do
             [ -z "$line" ] && continue

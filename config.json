@@ -4,5 +4,21 @@
   "payrollCompletenessLookbackWeeks": 4,
   "_payrollCompleteness_README": "M4 overtime: a day's payroll is flagged incomplete when its total gross-pay-item count is below this fraction of the median same-weekday count over the prior N weeks (N = payrollCompletenessLookbackWeeks).",
   "callBoard": { "nonOpportunityJobTypeIds": [401822440, 315559748, 318759150, 340293530, 400245562, 344, 624370411, 624528972, 624531017, 565520562] },
-  "_callBoard_README": "Call Board: any HVAC/ROPPS/Plumbing call whose jobTypeId is in nonOpportunityJobTypeIds is shown but EXCLUDED from the headline opportunity count. Edit this list (ServiceTitan job-type IDs) to change what counts as a non-opportunity - no code change needed. The Call Board fails loud (on-screen error) if any ID here is not a real job type. Current 10: Recall/Warranty, Install HVAC Part 1-2 HRS, Install HVAC Part 4-5 HRS, Plumbing Part Install 3-5 HRS, Filter Change 1-7 Yrs, Filter Change 8+, Commercial Cooling/Heating Issue, Commercial Cooling/Heating Maintenance, Commercial Install HVAC Part, Drive By."
+  "_callBoard_README": "Call Board: any HVAC/ROPPS/Plumbing call whose jobTypeId is in nonOpportunityJobTypeIds is shown but EXCLUDED from the headline opportunity count. Edit this list (ServiceTitan job-type IDs) to change what counts as a non-opportunity - no code change needed. The Call Board fails loud (on-screen error) if any ID here is not a real job type. Current 10: Recall/Warranty, Install HVAC Part 1-2 HRS, Install HVAC Part 4-5 HRS, Plumbing Part Install 3-5 HRS, Filter Change 1-7 Yrs, Filter Change 8+, Commercial Cooling/Heating Issue, Commercial Cooling/Heating Maintenance, Commercial Install HVAC Part, Drive By.",
+  "siloFlip": {
+    "numerator": {
+      "reportId": "642925621", "category": "technician", "dateType": 3,
+      "dateColumn": "ScheduledDate", "jobNumberColumn": "JobNumber",
+      "expectedColumns": ["JobNumber","JobType","AssignedTechnicians","JobBusinessUnit","ScheduledDate","LeadCreated","LeadCreatedBy","SalesFromLeadsCreated","Tags"]
+    },
+    "denominator": {
+      "reportId": "379143819", "category": "accounting", "dateType": 1,
+      "dateColumn": "CompletionDate", "jobNumberColumn": "JobNumber",
+      "expectedColumns": ["JobType","Number","JobNumber","CompletionDate","InvoiceDate","Status","AssignedTechnicians","JobTags","Opportunity","InvoiceBusinessUnit"]
+    },
+    "tags": { "managementRemoved": 545867780, "ropp": 962027 },
+    "postSpacingSeconds": 65,
+    "cacheTtlSeconds": 21600
+  },
+  "_siloFlip_README": "SILO flip rate = (TGLs created) / (ROPP calls ran), the SILO manager's own definition. It is built from two ServiceTitan saved reports, and NOTHING about them is hard-coded in code - if a report is renamed, re-saved under a new id, or has a column added/removed/reordered, you fix it HERE. numerator = report 642925621 'ROPP TGLS CREATED (JOHN)' (category technician, DateType 3 = the window applies to ScheduledDate); the TGL count is simply how many rows it returns for the period. denominator = report 379143819 'Johns Copy of Ericka's Revenue by Job Type' (category accounting, DateType 1 = the window applies to CompletionDate); the calls-ran count is how many of its rows survive cleaning. expectedColumns is the tripwire: the metric asserts the report returns EXACTLY these column names in EXACTLY this order and errors on screen if not, because both reports are one person's personal copies and an edit to either would otherwise shift our number silently. dateColumn / jobNumberColumn name (never index) the two columns the math needs. tags.managementRemoved (545867780) and tags.ropp (962027) are the ServiceTitan job tags the denominator cleaning rules test: a Management-Removed job is dropped, and a job without the ROPP tag is dropped. postSpacingSeconds is how long to wait between the 4 report POSTs - this tenant 429-throttles rapid report runs with a ~60s cooldown, so 65 is deliberate; lowering it just makes the run slower via retries. cacheTtlSeconds (21600 = 6 hours) is how long data/silo-flip.json is considered fresh: refresh-silo-flip.ps1 skips the ~5-6 minute recompute until the cache is older than this, which is what keeps the every-15-minutes CI refresh fast. Every key above is REQUIRED - a missing one is a loud error, never a default."
 }
