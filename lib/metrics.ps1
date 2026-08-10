@@ -679,6 +679,28 @@ function Get-Metric-CallBoard($Ctx, [datetime]$Date) {
     $techBU = Get-TechBUMap $Ctx
     $ROPP_TAG = 962027                                   # ServiceTitan job tag "ROPP"
     $tradeBUs = @($script:HVAC_BUS + $script:PLMB_BUS)   # every HVAC + Plumbing business unit
+
+    # Non-opportunity job types: configurable (config.json -> callBoard.nonOpportunityJobTypeIds),
+    # never hard-coded. A call whose jobTypeId is in this set is shown but NOT counted as an
+    # opportunity. FAIL LOUD: if any configured id is not a real job type, surface an on-screen
+    # error rather than silently miscounting.
+    $cfg = Get-DashConfig
+    $nonOppIds = @()
+    if ($cfg -and $cfg.PSObject.Properties['callBoard'] -and $cfg.callBoard.PSObject.Properties['nonOpportunityJobTypeIds']) {
+        $nonOppIds = @($cfg.callBoard.nonOpportunityJobTypeIds | ForEach-Object { "$_" })
+    }
+    if ($nonOppIds.Count -gt 0) {
+        $validJt = @{}
+        foreach ($jt in (Invoke-StPaged $Ctx "/jpm/v2/tenant/$($Ctx.Tenant)/job-types" @{ active='Any' })) { $validJt["$($jt.id)"] = $true }
+        $badIds = @($nonOppIds | Where-Object { -not $validJt.ContainsKey($_) })
+        if ($badIds.Count -gt 0) {
+            return @{ id='call-board'; title='Call Board - calls scheduled, next 14 days'; status='error';
+                error=("config error: callBoard.nonOpportunityJobTypeIds contains job type id(s) not found in the ServiceTitan job-type catalog: " + ($badIds -join ', ') + ". Fix config.json."); tables=@() }
+        }
+    }
+    $nonOppSet = New-Object 'System.Collections.Generic.HashSet[string]'
+    foreach ($x in $nonOppIds) { [void]$nonOppSet.Add($x) }
+
     $today = Get-TodayPac $Ctx.Pac; $endDay = $today.AddDays(14)
     $sUtc = [TimeZoneInfo]::ConvertTimeToUtc([DateTime]::SpecifyKind($today,'Unspecified'),$Ctx.Pac)
     $eUtc = [TimeZoneInfo]::ConvertTimeToUtc([DateTime]::SpecifyKind($endDay,'Unspecified'),$Ctx.Pac)
@@ -699,17 +721,13 @@ function Get-Metric-CallBoard($Ctx, [datetime]$Date) {
         if (-not $byJob.ContainsKey($jid)) { $byJob[$jid]=New-Object System.Collections.ArrayList }
         [void]$byJob[$jid].Add($pd)
     }
-    # BU id -> call-TYPE category, derived from the BU catalog so it never drifts from st-common.
-    # e.g. 'HVAC - Install - AOR' -> 'Install', 'HVAC - Sales Costco (NR)' -> 'Sales'. Same 5 category
-    # labels span both trades; a bucket's per-type counts sum back to that bucket's total.
-    $catOrder = @('Service','Maintenance','Install','Sales','Drains')
-    $buCat = @{}
-    foreach ($bk in $script:BU_NAMES.Keys) { $buCat["$bk"] = ((("$($script:BU_NAMES[$bk])" -split ' - ')[1]) -split ' ')[0] }
-
-    $hv=@{}; $rp=@{}; $pl=@{}; $brk=@{}
+    # Per Pacific day, split each mutually-exclusive bucket (HVAC / ROPPS / Plumbing) into
+    # opportunities vs non-opportunities, and additionally break the HVAC bucket out per business unit.
+    $hvOpp=@{}; $hvNon=@{}; $rpOpp=@{}; $rpNon=@{}; $plOpp=@{}; $plNon=@{}; $buOpp=@{}; $buNon=@{}
     foreach ($k in $dayKeys) {
-        $hv[$k]=0; $rp[$k]=0; $pl[$k]=0; $brk[$k]=@{}
-        foreach ($bkt in @('HVAC','ROPPS','Plumbing')) { $brk[$k][$bkt]=@{}; foreach ($c in $catOrder) { $brk[$k][$bkt][$c]=0 } }
+        $hvOpp[$k]=0; $hvNon[$k]=0; $rpOpp[$k]=0; $rpNon[$k]=0; $plOpp[$k]=0; $plNon[$k]=0
+        $buOpp[$k]=@{}; $buNon[$k]=@{}
+        foreach ($bu in $script:HVAC_BUS) { $buOpp[$k]["$bu"]=0; $buNon[$k]["$bu"]=0 }
     }
     if ($byJob.Count -gt 0) {
         $jm = Get-JobsByIds $Ctx ($byJob.Keys)
@@ -718,14 +736,14 @@ function Get-Metric-CallBoard($Ctx, [datetime]$Date) {
             if ($job.jobStatus -eq 'Canceled') { continue }          # cancelled job = off the board (completion is NOT excluded)
             if ($tradeBUs -notcontains $bu) { continue }             # non-trade unit (e.g. Inventory)
             $isRopp = (@($job.tagTypeIds) -contains $ROPP_TAG)
-            $cat = $buCat[$bu]; if (-not $cat -or -not ($catOrder -contains $cat)) { $cat='Service' }
+            $isNon  = $nonOppSet.Contains("$($job.jobTypeId)")       # non-opportunity job type (config-driven)
             $seen=@{}
             foreach ($pd in $byJob[$jid]) {
-                if (-not $hv.ContainsKey($pd) -or $seen.ContainsKey($pd)) { continue }
+                if (-not $hvOpp.ContainsKey($pd) -or $seen.ContainsKey($pd)) { continue }
                 $seen[$pd]=$true
-                if     ($isRopp)                        { $rp[$pd]++; $brk[$pd]['ROPPS'][$cat]++ }    # ROPPS (mutually exclusive)
-                elseif ($script:HVAC_BUS -contains $bu) { $hv[$pd]++; $brk[$pd]['HVAC'][$cat]++ }
-                elseif ($script:PLMB_BUS -contains $bu) { $pl[$pd]++; $brk[$pd]['Plumbing'][$cat]++ }
+                if     ($isRopp)                        { if ($isNon) { $rpNon[$pd]++ } else { $rpOpp[$pd]++ } }   # ROPPS (mutually exclusive)
+                elseif ($script:HVAC_BUS -contains $bu) { if ($isNon) { $hvNon[$pd]++; $buNon[$pd]["$bu"]++ } else { $hvOpp[$pd]++; $buOpp[$pd]["$bu"]++ } }
+                elseif ($script:PLMB_BUS -contains $bu) { if ($isNon) { $plNon[$pd]++ } else { $plOpp[$pd]++ } }
             }
         }
     }
@@ -742,29 +760,34 @@ function Get-Metric-CallBoard($Ctx, [datetime]$Date) {
         if ($techByDay.ContainsKey($pd)) { [void]$techByDay[$pd].Add($tid) }
     }
 
-    # one calendar-source table: Date, HVAC, ROPPS, Plumbing, Total, Techs (secondary)
-    $rows=@(); $grand=0
-    foreach ($dd in $days) {
-        $k=$dd.ToString('yyyy-MM-dd'); $h=$hv[$k]; $r=$rp[$k]; $p=$pl[$k]; $tot=$h+$r+$p; $tc=$techByDay[$k].Count
-        $rows += ,@($k, $h, $r, $p, $tot, $tc); $grand += $tot
-    }
-    # per-bucket call-TYPE breakdown, one row per (day, bucket). The 5 category counts sum to the
-    # bucket total, and the 3 bucket totals sum to that day's grand total (buckets are exclusive).
-    $brkRows=@()
+    # Calendar table: per day, opportunities + non-opportunities for each bucket, plus techs.
+    # Headline board number = opportunities; non-opportunities are carried alongside, not summed in.
+    $rows=@(); $oppGrand=0; $nonGrand=0
     foreach ($dd in $days) {
         $k=$dd.ToString('yyyy-MM-dd')
-        foreach ($bkt in @('HVAC','ROPPS','Plumbing')) {
-            $b=$brk[$k][$bkt]; $bt=$b['Service']+$b['Maintenance']+$b['Install']+$b['Sales']+$b['Drains']
-            $brkRows += ,@($k, $bkt, [int]$bt, [int]$b['Service'], [int]$b['Maintenance'], [int]$b['Install'], [int]$b['Sales'], [int]$b['Drains'])
+        $rows += ,@($k, [int]$hvOpp[$k], [int]$hvNon[$k], [int]$rpOpp[$k], [int]$rpNon[$k], [int]$plOpp[$k], [int]$plNon[$k], [int]$techByDay[$k].Count)
+        $oppGrand += $hvOpp[$k]+$rpOpp[$k]+$plOpp[$k]; $nonGrand += $hvNon[$k]+$rpNon[$k]+$plNon[$k]
+    }
+    # Per-line breakdown, one row per (day, line): the 5 HVAC business units, then ROPPS, then Plumbing.
+    # Each line carries opportunity / non-opportunity / total; the 5 HVAC lines sum to the HVAC bucket.
+    $lineRows=@()
+    foreach ($dd in $days) {
+        $k=$dd.ToString('yyyy-MM-dd')
+        foreach ($bu in $script:HVAC_BUS) {
+            $b="$bu"; $o=[int]$buOpp[$k][$b]; $n=[int]$buNon[$k][$b]
+            $lineRows += ,@($k, "HVAC:$b", "$($script:BU_NAMES[$b])", $o, $n, ($o+$n))
         }
+        $lineRows += ,@($k, 'ROPPS', 'SILO / ROPPS', [int]$rpOpp[$k], [int]$rpNon[$k], [int]($rpOpp[$k]+$rpNon[$k]))
+        $lineRows += ,@($k, 'PLMB',  'Plumbing',     [int]$plOpp[$k], [int]$plNon[$k], [int]($plOpp[$k]+$plNon[$k]))
     }
     @{ id='call-board'; title='Call Board - calls scheduled, next 14 days'; status='ok'; error=$null;
-       notes=@('Count = calls SCHEDULED on the board for that day (distinct jobs with a visit that day), minus cancellations. Completing a call does NOT change the count - only a cancellation removes one. HVAC / ROPPS / Plumbing are mutually exclusive: ROPPS = the ROPP-tagged book (any trade); HVAC / Plumbing = their business-unit calls that are NOT ROPP-tagged.',
-               'Call TYPE = the job''s business-unit category (Service / Maintenance / Install / Sales / Drains). Within each bucket the type counts sum to the bucket total. ROPPS is split by the same categories (it is mostly HVAC Service/Maintenance).',
+       notes=@('Count = calls SCHEDULED on the board that day (distinct jobs with a visit that day), minus cancellations. Completing a call does NOT change the count - only a cancellation removes one. HVAC / SILO-ROPPS / Plumbing are mutually exclusive: ROPPS = the ROPP-tagged book (any trade); HVAC / Plumbing = their business-unit calls that are NOT ROPP-tagged.',
+               'Opportunities vs non-opportunities: a call is a NON-opportunity when its job type is one of the configured non-opportunity job types (edit the list in config.json -> callBoard.nonOpportunityJobTypeIds). Non-opportunities are shown but are NOT included in the headline opportunity count.',
+               'HVAC is broken out by business unit: HVAC - Service (333), HVAC - Install - AOR (337), HVAC - Maintenance (342817560), HVAC - Sales NR (370), HVAC - Sales Costco NR (340802904).',
                'Techs = HVAC + Plumbing technicians scheduled that day (secondary context). As of the pull time, forward-looking; light/weekend days are expected to be thin.');
        tables=@(
-         @{ subtitle=("14-day total scheduled: $grand"); columns=@('Date','HVAC','ROPPS','Plumbing','Total','Techs'); rows=$rows; footer='' },
-         @{ subtitle='Call-type breakdown per bucket (Service / Maintenance / Install / Sales / Drains)'; columns=@('Date','Bucket','Total','Service','Maintenance','Install','Sales','Drains'); rows=$brkRows; footer='' }
+         @{ subtitle=("14-day total: $oppGrand opportunities + $nonGrand non-opportunities"); columns=@('Date','HVAC_opp','HVAC_non','ROPPS_opp','ROPPS_non','PLMB_opp','PLMB_non','Techs'); rows=$rows; footer='' },
+         @{ subtitle='Per-business-unit breakdown (opportunities vs non-opportunities)'; columns=@('Date','Line','Label','Opp','Non','Total'); rows=$lineRows; footer='' }
        ) }
 }
 

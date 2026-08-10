@@ -217,6 +217,8 @@
   .cal-split.three{gap:9px; font-size:.82rem;}
   .cal-split b{color:var(--text); font-weight:650;}
   .cal-foot{font-size:.72rem; color:var(--dim2); margin-top:4px;}
+  .cal-nonopp{font-size:.72rem; color:var(--dim2); margin-top:3px;}
+  .cal-cell.weekend .cal-nonopp{color:var(--dim2);}
   .cal-wknd-tag{font-size:.66rem; color:var(--dim2); text-transform:uppercase; letter-spacing:.04em;}
   .cal-cell[data-cbday]{cursor:pointer;}
   .cal-cell[data-cbday]:hover{border-color:var(--brand);}
@@ -232,6 +234,11 @@
   table.cbtype td.bk{font-weight:650; color:var(--brand-dark);}
   table.cbtype td.tot{font-weight:700;}
   table.cbtype td.z{color:var(--dim2);}
+  table.cbtype td.opp{font-weight:700; color:var(--text);}
+  table.cbtype td.non{font-weight:500; color:var(--dim);}
+  table.cbtype tr.sub td.bk{font-weight:500; color:var(--dim); padding-left:24px;}
+  table.cbtype tr.grp td.bk{font-weight:700; color:var(--brand-dark);}
+  .cal-legend .nonopp-key{color:var(--dim2); font-weight:600;}
   .cal-legend .swatch{display:inline-block; width:10px; height:10px; border-radius:3px; background:var(--panel2); border:1px solid var(--hair); vertical-align:middle; margin:0 5px 1px 12px;}
 
   /* REVENUE - three hero numbers (Today/MTD/YTD) + per-BU breakdown */
@@ -961,27 +968,69 @@ function renderPipeline(){
     ${cal}</div>`;
 }
 
-function callTypeBreakdown(cb, selDay){
-  // second table: [Date,Bucket,Total,Service,Maintenance,Install,Sales,Drains] - one row per bucket/day
+function callBoardDetail(cb, selDay){
+  // second table: [Date, Line, Label, Opp, Non, Total]. Render the selected day as the HVAC bucket
+  // (broad total + its 5 business-unit sub-rows), then SILO/ROPPS, then Plumbing. Opportunities are
+  // the emphasized column; non-opportunities are shown but muted (they are excluded from the headline).
   const rows = rowsOf(cb,1).filter(r=>String(r[0])===selDay);
   if(rows.length===0) return '';
-  const cats=['Service','Maintenance','Install','Sales','Drains'];
-  const idx={Service:3,Maintenance:4,Install:5,Sales:6,Drains:7};
-  const grand = rows.reduce((s,r)=>s+(typeof r[2]==='number'?r[2]:0),0);
+  const num=v=>(typeof v==='number'?v:0);
   const dt = new Date(selDay+'T00:00:00');
   const lbl = dt.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
-  let body='';
-  rows.forEach(r=>{
-    const bkt=String(r[1]), tot=(typeof r[2]==='number'?r[2]:0);
-    const parts = cats.map(c=>{
-      const n=(typeof r[idx[c]]==='number'?r[idx[c]]:0);
-      return `<td class="r${n===0?' z':''}">${n}</td>`;
-    }).join('');
-    body+=`<tr><td class="bk">${esc(bkt)}</td><td class="r tot">${tot}</td>${parts}</tr>`;
+  const hvac = rows.filter(r=>String(r[1]).startsWith('HVAC:'));
+  const ropps = rows.find(r=>String(r[1])==='ROPPS');
+  const plmb  = rows.find(r=>String(r[1])==='PLMB');
+  const hO = hvac.reduce((s,r)=>s+num(r[3]),0), hN = hvac.reduce((s,r)=>s+num(r[4]),0);
+  const grpRow=(label,o,n)=>`<tr class="grp"><td class="bk">${esc(label)}</td><td class="r opp">${o}</td><td class="r non${n===0?' z':''}">${n}</td><td class="r tot">${o+n}</td></tr>`;
+  let body = grpRow('HVAC (broad)', hO, hN);
+  hvac.forEach(r=>{ const o=num(r[3]), n=num(r[4]);
+    body+=`<tr class="sub"><td class="bk">${esc(String(r[2]))}</td><td class="r opp">${o}</td><td class="r non${n===0?' z':''}">${n}</td><td class="r tot">${o+n}</td></tr>`; });
+  if(ropps) body+=grpRow(String(ropps[2]), num(ropps[3]), num(ropps[4]));
+  if(plmb)  body+=grpRow(String(plmb[2]),  num(plmb[3]),  num(plmb[4]));
+  return `<div class="cbtypes"><h3>Breakdown for ${esc(lbl)} <span style="color:var(--dim);font-weight:500">- opportunities vs non-opportunities. Click any day above to change.</span></h3>`+
+    `<table class="cbtype"><thead><tr><th>Bucket</th><th class="r">Opportunities</th><th class="r">Non-opp</th><th class="r">Total</th></tr></thead><tbody>${body}</tbody></table></div>`;
+}
+// Call Board 14-day calendar. Rows: [Date, HVAC_opp, HVAC_non, ROPPS_opp, ROPPS_non, PLMB_opp, PLMB_non, Techs].
+// Each cell shows the three bucket OPPORTUNITY counts big, a muted "+N non-opp" tag under HVAC, and techs.
+function callBoardGrid(rows, selDay){
+  const cells = rows.map(r=>({
+    date:String(r[0]),
+    hvO:(typeof r[1]==='number'?r[1]:0), hvN:(typeof r[2]==='number'?r[2]:0),
+    rpO:(typeof r[3]==='number'?r[3]:0), rpN:(typeof r[4]==='number'?r[4]:0),
+    plO:(typeof r[5]==='number'?r[5]:0), plN:(typeof r[6]==='number'?r[6]:0),
+    techs:(typeof r[7]==='number'?r[7]:0)
+  }));
+  if(cells.length===0) return '<div class="cav">none</div>';
+  const WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const first=new Date(cells[0].date+'T00:00:00'); const lead=first.getDay();
+  let h='<div class="cal">';
+  WD.forEach(d=>h+=`<div class="cal-wd">${d}</div>`);
+  for(let i=0;i<lead;i++) h+='<div class="cal-cell blank"></div>';
+  cells.forEach(c=>{
+    const dt=new Date(c.date+'T00:00:00'); const dow=dt.getDay();
+    const isWeekend=(dow===0||dow===6);
+    const lbl=dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    const oppTot=c.hvO+c.rpO+c.plO;
+    const allTot=oppTot+c.hvN+c.rpN+c.plN;
+    const pk=` data-cbday="${esc(c.date)}"`;
+    const selCls=(c.date===selDay)?' sel':'';
+    const foot=`<div class="cal-foot">techs ${c.techs}</div>`;
+    const split=`<div class="cal-split three"><span>H <b>${c.hvO}</b></span><span>R <b>${c.rpO}</b></span><span>P <b>${c.plO}</b></span></div>`;
+    const nonTag=c.hvN>0 ? `<div class="cal-nonopp">+${c.hvN} non-opp</div>` : '';
+    if(isWeekend){
+      h+=`<div class="cal-cell weekend${selCls}"${pk}><div class="cal-date">${esc(lbl)}</div>`+
+         `<div class="cal-total num">${oppTot}</div>`+split+nonTag+
+         `<div class="cal-wknd-tag">non-budgeted</div>${foot}</div>`;
+    } else if(allTot===0){
+      h+=`<div class="cal-cell hole${selCls}"${pk}><div class="cal-date">${esc(lbl)}</div><div class="cal-hole">-</div>${foot}</div>`;
+    } else {
+      h+=`<div class="cal-cell${selCls}"${pk}><div class="cal-date">${esc(lbl)}</div>`+
+         `<div class="cal-total num">${oppTot}</div>`+split+nonTag+foot+`</div>`;
+    }
   });
-  return `<div class="cbtypes"><h3>Call types for ${esc(lbl)} <span style="color:var(--dim);font-weight:500">- board total ${grand}. Click any day above to change.</span></h3>`+
-    `<table class="cbtype"><thead><tr><th>Bucket</th><th class="r">Total</th>`+
-    cats.map(c=>`<th class="r">${c}</th>`).join('')+`</tr></thead><tbody>${body}</tbody></table></div>`;
+  const trail=(7-((lead+cells.length)%7))%7;
+  for(let i=0;i<trail;i++) h+='<div class="cal-cell blank"></div>';
+  h+='</div>'; return h;
 }
 function renderCallBoard(){
   const cb=block('call-board');
@@ -993,9 +1042,9 @@ function renderCallBoard(){
     const dates = rowsOf(cb,0).map(r=>String(r[0]));
     if(dates.length && (cbSelDay===null || dates.indexOf(cbSelDay)<0)) cbSelDay = dates[0];
     h+=`<h3>${esc(cb.title)}${sub?`  <span style="color:var(--dim);font-weight:500">- ${esc(sub)}</span>`:''}</h3>`;
-    h+=calGrid(rowsOf(cb,0),'techs',true,cbSelDay);
-    h+=`<div class="cal-legend">H = HVAC &nbsp; R = ROPPS &nbsp; P = Plumbing (mutually exclusive; completing a call does not change the count)<span class="swatch"></span>Sat/Sun shaded = non-budgeted (light weekend volume is expected, not a gap)</div>`;
-    h+=callTypeBreakdown(cb, cbSelDay)+notesHtml(cb);
+    h+=callBoardGrid(rowsOf(cb,0),cbSelDay);
+    h+=`<div class="cal-legend">H = HVAC &nbsp; R = SILO/ROPPS &nbsp; P = Plumbing &mdash; big number = opportunities; <span class="nonopp-key">+N non-opp</span> = shown but not counted (buckets mutually exclusive; completing a call does not change the count)<span class="swatch"></span>Sat/Sun shaded = non-budgeted (light weekend volume is expected, not a gap)</div>`;
+    h+=callBoardDetail(cb, cbSelDay)+notesHtml(cb);
   }
   h+='</div>';
   return h;

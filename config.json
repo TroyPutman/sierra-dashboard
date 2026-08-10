@@ -2,5 +2,7 @@
   "_README": "Dashboard config (NOT secrets). This is where targets/goals live, read at runtime by lib/metrics.ps1 - never hard-code a business target in code.",
   "payrollCompletenessThreshold": 0.80,
   "payrollCompletenessLookbackWeeks": 4,
-  "_payrollCompleteness_README": "M4 overtime: a day's payroll is flagged incomplete when its total gross-pay-item count is below this fraction of the median same-weekday count over the prior N weeks (N = payrollCompletenessLookbackWeeks)."
+  "_payrollCompleteness_README": "M4 overtime: a day's payroll is flagged incomplete when its total gross-pay-item count is below this fraction of the median same-weekday count over the prior N weeks (N = payrollCompletenessLookbackWeeks).",
+  "callBoard": { "nonOpportunityJobTypeIds": [401822440, 315559748, 318759150, 340293530, 400245562, 344, 624370411, 624528972, 624531017, 565520562] },
+  "_callBoard_README": "Call Board: any HVAC/ROPPS/Plumbing call whose jobTypeId is in nonOpportunityJobTypeIds is shown but EXCLUDED from the headline opportunity count. Edit this list (ServiceTitan job-type IDs) to change what counts as a non-opportunity - no code change needed. The Call Board fails loud (on-screen error) if any ID here is not a real job type. Current 10: Recall/Warranty, Install HVAC Part 1-2 HRS, Install HVAC Part 4-5 HRS, Plumbing Part Install 3-5 HRS, Filter Change 1-7 Yrs, Filter Change 8+, Commercial Cooling/Heating Issue, Commercial Cooling/Heating Maintenance, Commercial Install HVAC Part, Drive By."
 }
