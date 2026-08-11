@@ -3,6 +3,14 @@ secrets.json
 /secrets.json
 **/secrets.json
 
+# HR source prototypes — never commit these.
+# SierraHRDashboard*.jsx and anything like it carry the COMPENSATION MODEL: PAY_POLICIES
+# (14 roles of commission rates, spiffs, flat rates), the CALCULATORS math, ISR_PAY bands and
+# the merit matrix. Individual employee records are stripped from the current copy, but the pay
+# structure alone is confidential business data and this repo is PUBLIC with permanent history.
+# The rates belong in Cloudflare KV behind the HR password, not in a file here.
+*.jsx
+
 # Wrangler local state — never commit these.
 # Two reasons, the second one matters a great deal:
 #   1. It caches the Cloudflare account id and other machine-local tooling state.

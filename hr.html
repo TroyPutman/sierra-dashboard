@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Sierra HR &amp; Payroll</title>
+<!--
+  Sierra HR & Payroll - CHUNK 1: THE SHELL
+  ========================================
+  This page is DELIBERATELY SEPARATE from dashboard.html. The dashboard runs on a wall screen in
+  the morning meeting, read from across the room; salary data must not be one stray click away
+  from that. Nothing links here - you reach it by typing the URL.
+
+  WHAT THIS FILE MUST NEVER CONTAIN
+  ---------------------------------
+  No employee records. No salaries. No commission rates, spiffs or pay bands. This repo is PUBLIC
+  and its history is permanent. Every one of those values lives in Cloudflare KV and arrives at
+  runtime, after the password check, over the wire. If you are about to paste a number in here,
+  stop: it belongs in KV.
+
+  HOW THE PAGE BOOTS (three stages, in order)
+  -------------------------------------------
+    1. LOCKED    - plain HTML, zero outside dependencies. A stranger who finds this URL gets a
+                   password box and nothing else; the CDN requests below never even fire.
+    2. UNLOCKING - POST /hr/unlock. On success the token goes in sessionStorage (wiped when the
+                   tab closes - deliberate on an always-on machine).
+    3. LOADING   - only now do React/Recharts/Babel/Tailwind get fetched, verified, and booted.
+
+  THE FAILURE DESIGN (the reason this file is bigger than it looks)
+  ----------------------------------------------------------------
+  The error screen is plain HTML and CSS that is ALREADY IN THIS PAGE. It cannot depend on React,
+  because "React did not load" is one of the things it has to be able to report. Three independent
+  checks catch a broken load:
+      1. each <script> reports its own onerror  -> CDN down, blocked, DNS-poisoned
+      2. after load, the expected global is verified -> CDN returned 200 with a broken/partial file
+      3. a watchdog timer -> anything that just hangs
+  The app container stays hidden until EVERY check passes, so a half-rendered page is impossible
+  by construction rather than by luck.
+
+  TESTING THE FAILURE PATH WITHOUT DEVTOOLS
+  -----------------------------------------
+      ?simulate-failure=Recharts   force that library to fail (any name from LIBS below)
+      ?simulate-failure=watchdog   skip rendering entirely, to prove the timer fires
+  The switch can only BREAK things. It cannot bypass the password or reach data.
+
+  ASCII ONLY, please. This page is copied byte-for-byte into the static build so it does not hit
+  the PowerShell read path that mangles non-ASCII in dashboard.html - but keeping it ASCII costs
+  nothing and removes the trap entirely if anyone ever routes it differently.
+-->
+<style>
+  /* Everything here is dependency-free on purpose: the lock screen and the failure screen must
+     both render correctly when NOTHING external has loaded. Do not move these into Tailwind. */
+  :root {
+    --bg: #0f172a; --panel: #1e293b; --line: #334155;
+    --ink: #f1f5f9; --muted: #94a3b8;
+    --accent: #38bdf8; --bad: #f87171; --good: #4ade80;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--bg); color: var(--ink);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+  }
+  body.app-running { display: block; padding: 0; background: #f8fafc; }
+  .card {
+    width: 100%; max-width: 460px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 14px; padding: 28px;
+  }
+  .card.wide { max-width: 680px; }
+  h1 { margin: 0 0 4px; font-size: 20px; letter-spacing: -0.01em; }
+  h2 { margin: 0 0 12px; font-size: 17px; }
+  .sub { margin: 0 0 22px; color: var(--muted); font-size: 13px; }
+  label { display: block; margin-bottom: 7px; font-size: 13px; color: var(--muted); }
+  input[type=password] {
+    width: 100%; padding: 11px 13px; font-size: 15px; color: var(--ink);
+    background: #0b1220; border: 1px solid var(--line); border-radius: 9px;
+  }
+  input[type=password]:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button {
+    margin-top: 14px; width: 100%; padding: 11px 13px; font-size: 15px; font-weight: 600;
+    color: #04121f; background: var(--accent); border: 0; border-radius: 9px; cursor: pointer;
+  }
+  button:disabled { opacity: .55; cursor: default; }
+  .msg { margin-top: 14px; padding: 11px 13px; border-radius: 9px; font-size: 13.5px; display: none; }
+  .msg.show { display: block; }
+  .msg.bad { background: #3f1d1d; border: 1px solid #7f2d2d; color: #fecaca; }
+  .msg.info { background: #10243a; border: 1px solid #1e4976; color: #bae6fd; }
+  .spin {
+    display: inline-block; width: 15px; height: 15px; margin-right: 9px; vertical-align: -3px;
+    border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%;
+    animation: sp .8s linear infinite;
+  }
+  @keyframes sp { to { transform: rotate(360deg); } }
+  ul.libs { margin: 14px 0 0; padding: 0; list-style: none; font-size: 13.5px; }
+  ul.libs li { padding: 7px 0; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 12px; }
+  ul.libs li:first-child { border-top: 0; }
+  .ok { color: var(--good); } .no { color: var(--bad); }
+  .hint { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12.5px; }
+  .hint ul { margin: 8px 0 0; padding-left: 18px; }
+  code { background: #0b1220; padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- ============================ STAGE 1: LOCKED ============================ -->
+<div class="card" id="lockCard">
+  <h1>Sierra HR &amp; Payroll</h1>
+  <p class="sub">This page is password protected and separate from the morning dashboard.</p>
+  <form id="lockForm" autocomplete="off">
+    <label for="pw">HR password</label>
+    <input type="password" id="pw" autocomplete="current-password" autofocus>
+    <button type="submit" id="unlockBtn">Unlock</button>
+  </form>
+  <div class="msg" id="lockMsg"></div>
+</div>
+
+<!-- ============================ STAGE 3a: LOADING ========================== -->
+<div class="card" id="bootCard" hidden>
+  <h1>Loading</h1>
+  <p class="sub"><span class="spin"></span>Fetching the libraries this page needs.</p>
+  <ul class="libs" id="bootList"></ul>
+</div>
+
+<!-- ============================ STAGE 3b: FAILED =========================== -->
+<!-- Plain HTML/CSS. Renders correctly with NOTHING loaded - that is the whole point. -->
+<div class="card wide" id="failCard" hidden>
+  <h1 class="no">This page could not finish loading</h1>
+  <p class="sub" id="failLead"></p>
+  <ul class="libs" id="failList"></ul>
+  <div class="hint">
+    <strong>Nothing is broken with your HR data.</strong> This is about files this page downloads
+    from the internet in order to draw the screens. Your data is untouched.
+    <ul>
+      <li>Try again - a reload fixes most of these.</li>
+      <li>If you are on office Wi-Fi, try a phone hotspot. Some networks block these files.</li>
+      <li>If you use an ad blocker or privacy extension, turn it off for this page.</li>
+      <li>If it keeps failing, send whatever is listed above - that names the exact file.</li>
+    </ul>
+  </div>
+  <button type="button" id="retryBtn">Try again</button>
+</div>
+
+<!-- ============================ STAGE 4: THE APP =========================== -->
+<div id="app" hidden></div>
+
+<script>
+/* ==========================================================================================
+ * CONFIG
+ * ========================================================================================== */
+
+/* Same Worker that serves the goal bars; the /hr/* routes are gated separately from /goals. */
+var HR_API = 'https://sierra-goals.troy-18a.workers.dev';
+
+/* sessionStorage, NOT localStorage: the token dies when the tab closes. On an always-on machine
+ * a persisted HR session would sit there indefinitely. Retyping a password is the cheaper cost. */
+var TOKEN_KEY = 'sierra-hr-token';
+
+/* VERSIONS ARE PINNED ON PURPOSE. A floating "latest" tag means this page can change overnight
+ * with nobody touching the code - which shows up as "the HR page just broke on its own". If you
+ * bump one of these, re-test the whole boot path; that is the entire risk surface of Option A. */
+var LIBS = [
+  { name: 'React',      global: 'React',      url: 'https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js' },
+  { name: 'ReactDOM',   global: 'ReactDOM',   url: 'https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js' },
+  { name: 'PropTypes',  global: 'PropTypes',  url: 'https://cdn.jsdelivr.net/npm/prop-types@15.8.1/prop-types.min.js' },
+  { name: 'Recharts',   global: 'Recharts',   url: 'https://cdn.jsdelivr.net/npm/recharts@2.12.7/umd/Recharts.min.js' },
+  { name: 'Babel',      global: 'Babel',      url: 'https://cdn.jsdelivr.net/npm/@babel/standalone@7.25.6/babel.min.js' },
+  { name: 'Tailwind',   global: null,         url: 'https://cdn.tailwindcss.com/3.4.16' }
+];
+
+/* LOAD ORDER IS NOT COSMETIC - these are loaded strictly in sequence, never in parallel.
+ * Recharts' UMD wrapper ends with:   t.Recharts = e(t.React, t.PropTypes, t.ReactDOM)
+ * so React, PropTypes AND ReactDOM must all already be on the page or it silently defines
+ * nothing at all. PropTypes is easy to miss because it is not something this app uses directly -
+ * it is a dependency of Recharts alone.
+ *
+ * This was NOT theoretical: the first build of this file omitted PropTypes, Recharts returned a
+ * clean HTTP 200, ran, and defined no global. Check 2 below ("loaded but did not initialise") is
+ * what caught it. If you add or bump a library here, keep that check honest - it is the only one
+ * of the three that catches a file which downloads perfectly and still does not work. */
+
+/* If the app has not rendered within this long, show the failure screen regardless of what the
+ * other two checks think. Catches hangs that never fire onerror and never define a global. */
+var WATCHDOG_MS = 10000;
+
+/* ==========================================================================================
+ * ELEMENTS + TINY HELPERS
+ * ========================================================================================== */
+var el = function (id) { return document.getElementById(id); };
+var lockCard = el('lockCard'), bootCard = el('bootCard'), failCard = el('failCard'), appEl = el('app');
+var lockMsg = el('lockMsg'), unlockBtn = el('unlockBtn');
+
+function showOnly(node) {
+  [lockCard, bootCard, failCard, appEl].forEach(function (n) { n.hidden = (n !== node); });
+}
+function say(node, text, kind) {
+  node.textContent = text;
+  node.className = 'msg show ' + (kind || 'info');
+}
+function hide(node) { node.className = 'msg'; }
+
+/* The simulate-failure switch. Can only break the boot - never touches auth or data. */
+var SIMULATE = (function () {
+  try { return new URLSearchParams(window.location.search).get('simulate-failure') || ''; }
+  catch (e) { return ''; }
+})();
+
+/* ==========================================================================================
+ * STAGE 2: UNLOCK
+ * ========================================================================================== */
+el('lockForm').addEventListener('submit', function (ev) {
+  ev.preventDefault();
+  var pw = el('pw').value;
+  if (!pw) { say(lockMsg, 'Enter the HR password.', 'bad'); return; }
+
+  unlockBtn.disabled = true;
+  say(lockMsg, 'Checking...', 'info');
+
+  fetch(HR_API + '/hr/unlock', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: pw }),
+    cache: 'no-store'
+  }).then(function (res) {
+    return res.text().then(function (body) { return { status: res.status, body: body }; });
+  }).then(function (r) {
+    var parsed = null;
+    try { parsed = JSON.parse(r.body); } catch (e) { parsed = null; }
+
+    if (r.status === 200 && parsed && parsed.token) {
+      el('pw').value = '';
+      try {
+        sessionStorage.setItem(TOKEN_KEY, parsed.token);
+      } catch (e) {
+        // Private browsing, or storage disabled. Fail loud - do NOT limp along tokenless.
+        unlockBtn.disabled = false;
+        say(lockMsg, 'Unlocked, but this browser will not let the page remember the session. '
+          + 'Turn off private browsing and try again.', 'bad');
+        return;
+      }
+      boot();
+      return;
+    }
+
+    unlockBtn.disabled = false;
+    if (r.status === 401) {
+      // Deliberately says nothing about why. The Worker does the same.
+      say(lockMsg, 'Password not accepted.', 'bad');
+    } else if (r.status === 429) {
+      say(lockMsg, 'Too many failed attempts from this network. Wait 15 minutes and try again.', 'bad');
+    } else if (r.status >= 500) {
+      // A misconfigured server is OUR bug, not a wrong password - show what it said.
+      say(lockMsg, 'The server reported a problem: '
+        + ((parsed && parsed.error) ? parsed.error : ('HTTP ' + r.status))
+        + '. This is a setup issue, not your password.', 'bad');
+    } else {
+      say(lockMsg, 'Unexpected response from the server (HTTP ' + r.status + ').', 'bad');
+    }
+  }).catch(function (e) {
+    unlockBtn.disabled = false;
+    say(lockMsg, 'Could not reach the server. Check your internet connection and try again. ('
+      + (e && e.message ? e.message : 'network error') + ')', 'bad');
+  });
+});
+
+/* ==========================================================================================
+ * SESSION HELPER - used by chunk 2 for every /hr/data call.
+ * A 401 mid-session means the 8h token expired. Return to the lock screen; NEVER fall through
+ * to an empty state, because "your session ended" and "you have no employees" must never look
+ * the same on screen.
+ * ========================================================================================== */
+function getToken() {
+  try { return sessionStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; }
+}
+function relock(reason) {
+  try { sessionStorage.removeItem(TOKEN_KEY); } catch (e) {}
+  document.body.className = '';
+  showOnly(lockCard);
+  unlockBtn.disabled = false;
+  say(lockMsg, reason || 'Your session ended. Please unlock again.', 'info');
+}
+window.hrFetch = function (path, options) {
+  var opts = options || {};
+  var headers = opts.headers || {};
+  headers['X-HR-Token'] = getToken();
+  opts.headers = headers;
+  opts.cache = 'no-store';
+  return fetch(HR_API + path, opts).then(function (res) {
+    if (res.status === 401) {
+      relock('Your session expired. Please unlock again.');
+      throw new Error('session expired');
+    }
+    return res;
+  });
+};
+
+/* ==========================================================================================
+ * STAGE 3: LOAD + VERIFY
+ * ========================================================================================== */
+var loadState = [];   // one row per library: { name, status: 'pending'|'ok'|'failed', detail }
+var booted = false;
+var watchdogId = null;
+
+/* BOOT GENERATION COUNTER - do not remove.
+ * boot() can legitimately be called more than once (page load with a stored token, the Try again
+ * button, unlocking after a re-lock). Without this, a SUPERSEDED run keeps going: its pending
+ * script loads still resolve, and each one writes into the NEW run's loadState by index, so the
+ * screen ends up showing whichever run happened to finish last. That was observed live - a
+ * completed run rendered the app and a stale run then put the loading screen back over the top.
+ * Every async step now captures the generation it belongs to and returns quietly if superseded. */
+var bootRun = 0;
+
+function renderList(target) {
+  target.innerHTML = '';
+  loadState.forEach(function (s) {
+    var li = document.createElement('li');
+    var left = document.createElement('span');
+    left.textContent = s.name;
+    var right = document.createElement('span');
+    if (s.status === 'ok') { right.className = 'ok'; right.textContent = 'loaded'; }
+    else if (s.status === 'failed') { right.className = 'no'; right.textContent = s.detail || 'FAILED'; }
+    else { right.style.color = 'var(--muted)'; right.textContent = 'waiting'; }
+    li.appendChild(left); li.appendChild(right);
+    target.appendChild(li);
+  });
+}
+
+function fail(lead) {
+  if (booted) return;              // already rendered; ignore a late watchdog
+  booted = true;
+  if (watchdogId) { clearTimeout(watchdogId); watchdogId = null; }
+  el('failLead').textContent = lead;
+  renderList(el('failList'));
+  showOnly(failCard);
+}
+
+/* Load one script tag. Resolves on load, rejects on error. CHECK 1 of 3 is the onerror handler. */
+function loadScript(lib) {
+  return new Promise(function (resolve, reject) {
+    var url = lib.url;
+    // Test switch: point this one library at a URL that is guaranteed to 404, so the real
+    // onerror path is exercised rather than a fake flag being flipped somewhere.
+    if (SIMULATE && SIMULATE.toLowerCase() === lib.name.toLowerCase()) {
+      url = 'https://cdn.jsdelivr.net/npm/this-package-does-not-exist@0.0.0/simulated-failure.js';
+    }
+    var s = document.createElement('script');
+    s.src = url;
+    s.async = false;                                  // preserve execution order
+    s.onload = function () { resolve(); };
+    s.onerror = function () { reject(new Error('could not be downloaded')); };
+    document.head.appendChild(s);
+  });
+}
+
+function boot() {
+  bootRun += 1;
+  var myRun = bootRun;              // everything below belongs to THIS run only
+  booted = false;
+  if (watchdogId) { clearTimeout(watchdogId); watchdogId = null; }
+
+  document.body.className = '';
+  loadState = LIBS.map(function (l) { return { name: l.name, status: 'pending', detail: '' }; });
+  renderList(el('bootList'));
+  showOnly(bootCard);
+
+  // CHECK 3 of 3: the watchdog. Runs no matter what the other two checks do or do not report.
+  watchdogId = setTimeout(function () {
+    if (myRun !== bootRun) return;                    // superseded by a newer boot
+    loadState.forEach(function (s) { if (s.status === 'pending') { s.status = 'failed'; s.detail = 'timed out'; } });
+    fail('Loading took longer than ' + Math.round(WATCHDOG_MS / 1000) + ' seconds and was stopped.');
+  }, WATCHDOG_MS);
+
+  // Sequential load - Recharts needs React, PropTypes and ReactDOM already present.
+  var chain = Promise.resolve();
+  LIBS.forEach(function (lib, i) {
+    chain = chain.then(function () {
+      if (myRun !== bootRun || booted) return;        // superseded, or this run already ended
+      return loadScript(lib).then(function () {
+        if (myRun !== bootRun) return;                // finished after a newer boot started
+        // CHECK 2 of 3: the script said it loaded - but did it actually define what we need?
+        // Catches a CDN returning 200 with a truncated, wrong, or dependency-starved file.
+        // This is the check that caught Recharts loading fine and defining nothing.
+        if (lib.global && typeof window[lib.global] === 'undefined') {
+          throw new Error('loaded but did not initialise');
+        }
+        loadState[i].status = 'ok';
+        renderList(el('bootList'));
+      }).catch(function (e) {
+        if (myRun !== bootRun) return;
+        loadState[i].status = 'failed';
+        loadState[i].detail = (e && e.message) ? e.message : 'FAILED';
+        throw e;                                      // stop the chain
+      });
+    });
+  });
+
+  chain.then(function () {
+    if (myRun !== bootRun || booted) return;
+    // Test switch: prove the watchdog fires by never rendering.
+    if (SIMULATE && SIMULATE.toLowerCase() === 'watchdog') return;
+    render(myRun);
+  }).catch(function () {
+    if (myRun !== bootRun) return;
+    var broken = loadState.filter(function (s) { return s.status === 'failed'; })
+                          .map(function (s) { return s.name; }).join(', ');
+    fail('A required file could not be loaded: ' + (broken || 'unknown') + '.');
+  });
+}
+
+/* ==========================================================================================
+ * STAGE 4: RENDER
+ * ==========================================================================================
+ * CHUNK 1 STOPS HERE. This is the placeholder the HR app replaces in chunk 2. It deliberately
+ * shows which libraries loaded and at what version - that is the proof the boot path worked,
+ * and it is the first thing worth checking if a later chunk misbehaves.
+ * ========================================================================================== */
+function render(myRun) {
+  if (myRun !== undefined && myRun !== bootRun) return;   // a newer boot owns the screen now
+  booted = true;
+  if (watchdogId) { clearTimeout(watchdogId); watchdogId = null; }
+
+  var versions = {
+    React:    (window.React && window.React.version) ? window.React.version : 'loaded',
+    ReactDOM: (window.ReactDOM && window.ReactDOM.version) ? window.ReactDOM.version : 'loaded',
+    Recharts: 'loaded',
+    Babel:    (window.Babel && window.Babel.version) ? window.Babel.version : 'loaded',
+    Tailwind: 'loaded'
+  };
+
+  appEl.innerHTML = '';
+  var card = document.createElement('div');
+  card.className = 'card wide';
+
+  var h = document.createElement('h2');
+  h.className = 'ok';
+  h.textContent = 'Shell is working';
+  card.appendChild(h);
+
+  var p = document.createElement('p');
+  p.className = 'sub';
+  p.textContent = 'Password accepted, every library loaded and verified. The HR app is added here in chunk 2.';
+  card.appendChild(p);
+
+  var ul = document.createElement('ul');
+  ul.className = 'libs';
+  LIBS.forEach(function (l) {
+    var li = document.createElement('li');
+    var a = document.createElement('span'); a.textContent = l.name;
+    var b = document.createElement('span'); b.className = 'ok'; b.textContent = versions[l.name] || 'loaded';
+    li.appendChild(a); li.appendChild(b);
+    ul.appendChild(li);
+  });
+  card.appendChild(ul);
+
+  var hint = document.createElement('div');
+  hint.className = 'hint';
+  hint.innerHTML = 'Test the failure screen without developer tools by adding '
+    + '<code>?simulate-failure=Recharts</code> or <code>?simulate-failure=watchdog</code> to the URL.';
+  card.appendChild(hint);
+
+  var lockBtn = document.createElement('button');
+  lockBtn.type = 'button';
+  lockBtn.textContent = 'Lock this page';
+  lockBtn.onclick = function () { relock('Locked.'); };
+  card.appendChild(lockBtn);
+
+  appEl.appendChild(card);
+  showOnly(appEl);
+}
+
+el('retryBtn').addEventListener('click', function () {
+  // A retry re-runs the whole boot. The token is still valid, so no re-typing unless it expired.
+  // boot() bumps the generation counter itself, which is what strands any still-running chain
+  // from the attempt that just failed.
+  if (getToken()) { boot(); } else { relock('Please unlock again.'); }
+});
+
+/* On load: if a session is already open in this tab, skip straight to loading. */
+if (getToken()) { boot(); } else { showOnly(lockCard); }
+</script>
+</body>
+</html>

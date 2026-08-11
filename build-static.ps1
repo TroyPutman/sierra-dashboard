@@ -60,11 +60,13 @@ function Format-Pac([datetime]$utc, $pac) {
 
 $root        = $PSScriptRoot
 $dashPath    = Join-Path $root 'dashboard.html'
+$hrPath      = Join-Path $root 'hr.html'
 $dataDir     = Join-Path $root 'data'
 $outDirFull  = if ([System.IO.Path]::IsPathRooted($OutDir)) { $OutDir } else { Join-Path $root $OutDir }
 $outDataDir  = Join-Path $outDirFull 'data'
 
 if (-not (Test-Path $dashPath)) { throw "dashboard.html not found at $dashPath" }
+if (-not (Test-Path $hrPath))   { throw "hr.html not found at $hrPath -- refusing to build a site with the HR page silently missing" }
 if (-not (Test-Path $dataDir))  { throw "data/ directory not found at $dataDir" }
 
 $pac    = Get-PacTz
@@ -195,6 +197,20 @@ if (-not $NoGate) {
 
 Set-Content -Path (Join-Path $outDirFull 'index.html') -Value $html -Encoding UTF8
 
+# ---- copy hr.html into the build, BYTE FOR BYTE ----
+# Three deliberate choices here:
+#   1. Copy-Item, NOT Get-Content/Set-Content. Round-tripping HTML through PowerShell 5.1 is what
+#      mangles non-ASCII into mojibake (the trap that bites dashboard.html). Copying the bytes
+#      sidesteps the read path entirely, so hr.html is not subject to the ASCII-only rule.
+#   2. NO password gate is injected. The dashboard's client-side gate is not added to hr.html:
+#      HR is gated SERVER-SIDE by the Worker's /hr/unlock, which is strictly stronger, and the
+#      page itself ships with no employee data, no salaries and no pay rates in it. A third
+#      password would be friction, not security.
+#   3. Missing hr.html THROWS (see the guard at the top). A silent skip would publish a site
+#      where the HR page had simply vanished, with nothing on screen to say so.
+Copy-Item -Path $hrPath -Destination (Join-Path $outDirFull 'hr.html') -Force
+
 Write-Host "Static site built at $outDirFull" -ForegroundColor Green
+Write-Host "  hr.html: copied (HR page; gated server-side by the Worker, not by the site gate)" -ForegroundColor Cyan
 Write-Host ("  dates: {0}  ({1} .. {2})" -f $dates.Count, $dates[0], $latestDate) -ForegroundColor Cyan
 Write-Host ("  silo months: {0}" -f ($siloMonths -join ', ')) -ForegroundColor Cyan
