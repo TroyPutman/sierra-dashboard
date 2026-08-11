@@ -572,8 +572,16 @@ AHEAD / ON PACE / BEHIND pill.
 `pace = goal x (days elapsed in year / days in year)`, from the snapshot's own **Pacific** date
 string (`data.date`), parsed as integers. Deliberately NOT from the browser clock: `todayStr()` reads
 browser-local time, which would drift for any viewer outside Pacific.
-**Applies to cumulative totals only** — Plumbing revenue and HVAC Sales, which grow from zero on
-Jan 1, so elapsed time is a fair yardstick.
+**Applies to cumulative totals only** — Plumbing revenue, HVAC Sales and SILO revenue
+(`silo-rev-ytd`, added 2026-08-11), which grow from zero on Jan 1, so elapsed time is a fair
+yardstick.
+**The SILO section therefore carries TWO bars**, and they must not be confused: `silo-rev-ytd` is
+DOLLARS with a pace tick, sitting under the revenue figures; `silo-flip-ytd` is a PERCENTAGE with a
+badge only, sitting under the flip figures. `silo-rev-ytd` is registered `kind:'money'`, so it
+inherits the DB.5 money range (0–$100M) rather than defining its own. The two are independent data
+sources — the metrics snapshot vs. the precomputed flip cache — and each fails loud on its own: a
+flip failure (error state OR an outright throw, via `safeSiloFlipCards()`) cannot hide the revenue
+figures or their goal bar, and vice versa.
 **Deliberately NOT applied to the SILO flip rate.** A flip rate is a ratio, not a running total: it
 already sits near its level on January 2nd. Elapsed-time pace would call it wildly "ahead" every
 December and "behind" every January. It gets the badge only, comparing the current rate directly to

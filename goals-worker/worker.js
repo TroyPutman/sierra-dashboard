@@ -48,6 +48,7 @@ const KV_KEY = "goals";
 const GOAL_KINDS = {
   "plumbing-rev-ytd": "money",
   "hvac-sales-ytd": "money",
+  "silo-rev-ytd": "money",
   "silo-flip-ytd": "percent",
   "calls-booked-today": "count",
 };

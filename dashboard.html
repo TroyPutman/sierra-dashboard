@@ -563,7 +563,10 @@ function shortBU(s){ return String(s).replace(' - ',' '); }
      plumbing-rev-ytd    Plumbing revenue, Year-To-Date (billed, pre-tax)       -> currency
      hvac-sales-ytd      HVAC Sales sold, Year-To-Date (sold/signed, pre-tax)   -> currency
      calls-booked-today  Calls booked, TODAY (all business units)               -> count
+     silo-rev-ytd        SILO revenue, Year-To-Date (sold/signed, pre-tax)      -> currency
      silo-flip-ytd       SILO flip rate, YTD (TGLs created / ROPP calls ran)    -> percent
+   The SILO section carries TWO bars: silo-rev-ytd (dollars, with a pace tick) sits under the
+   revenue figures, and silo-flip-ytd (a percentage, badge only) sits under the flip figures.
 */
 const GOALS_API = 'https://sierra-goals.troy-18a.workers.dev';   // <-- paste your Cloudflare Worker URL here (see comment above)
 let GOALS = {};         // key -> goal number (fetched from the Worker; empty when unconfigured)
@@ -573,6 +576,10 @@ const GOAL_META = {
   'hvac-sales-ytd':    {label:'HVAC Sales sold goal (YTD)',  kind:'money',   period:'YTD'},
   'calls-booked-today':{label:'Calls booked goal (today)',   kind:'count'},
   // Definition changed 2026-08: TGLs created / ROPP calls ran (was turnovers sold / total turnovers).
+  // The SILO section has TWO goals. These labels are what the editor shows and what
+  // goalShortName() derives the metric name from for validation messages, so they must stay
+  // unmistakable: one is dollars, the other a percentage, and they must never be confused.
+  'silo-rev-ytd':      {label:'SILO revenue goal (YTD)', kind:'money',   period:'YTD'},
   'silo-flip-ytd':     {label:'SILO flip rate goal (YTD) - TGLs / ROPP calls ran', kind:'percent', period:'YTD'},
 };
 /* ONE source of truth for what a goal value may be, keyed by GOAL_META.kind. Used by BOTH the
@@ -1454,6 +1461,16 @@ function renderSiloFlipCards(){
   h += collapsibleNotes('silo-flip', fb, 'How the flip rate is calculated');
   return h;
 }
+/* Flip cards, but a throw inside them can only ever cost the flip area. renderSiloFlipCards()
+   already returns an errBlock for a missing/errored cache, so this guard is for the unexpected
+   case - a malformed cache shape that makes it throw. Without it that throw would reach
+   renderSiloRevenueSection's outer catch and blank the WHOLE section, taking the healthy SILO
+   revenue figures and the silo-rev-ytd goal bar down with a flip-only failure. The flip is in a
+   429 error state as of 2026-08-11, so this separation is load-bearing right now, not theoretical. */
+function safeSiloFlipCards(){
+  try { return renderSiloFlipCards(); }
+  catch(e){ return errBlock({status:'error', error:'flip rate render failed: '+((e&&e.message)||String(e))}, 'SILO flip rate'); }
+}
 /* SILO revenue + flip rate - same Revenue tab, below the Plumbing section. SOLD/signed pre-tax,
    credited to the turnover-call day; distinct from the Plumbing "billed" figure above. */
 function renderSiloRevenueSection(){
@@ -1465,12 +1482,12 @@ function renderSiloRevenueSection(){
           + '<div class="kpi">sold/signed, pre-tax &middot; turnovers</div></div>';
     const b = block('silo-revenue');
     if(!b||b.status==='error'){
-      // SILO revenue and the flip rate are now INDEPENDENT data sources (the per-day metrics
-      // snapshot vs. the precomputed silo-flip cache), so a revenue failure must NOT also hide a
-      // perfectly healthy flip figure - it is the goal-tracked headline. Each fails loud on its own.
+      // SILO revenue and the flip rate are INDEPENDENT data sources (the per-day metrics snapshot
+      // vs. the precomputed silo-flip cache), so a revenue failure must NOT also hide a perfectly
+      // healthy flip figure - it is the goal-tracked headline. Each fails loud on its own.
       return h + errBlock(b,'SILO revenue')
                + `<h3>Flip rate &mdash; TGLs / ROPP calls ran</h3>`
-               + renderSiloFlipCards();
+               + safeSiloFlipCards();
     }
     const rev  = asArray(b.tables)[0];   // Period | Revenue  (this block no longer carries a flip table)
     const rr = asArray(rev.rows).map(r=>asArray(r));
@@ -1478,8 +1495,12 @@ function renderSiloRevenueSection(){
     const hero = rr.map((r,i)=>`<div class="revhero ${heroCls[i]||''}"><div class="rl">${esc(r[0])}</div><div class="rv">${esc(noCents(r[1]))}</div></div>`).join('');
     h += `<div class="revcav"><span class="nf">Not final</span>sold estimates keep landing on their turnover day, so Today, MTD and YTD will keep rising (retroactive by design).</div>`;
     h += `<div class="revgrid">${hero}</div>`;
+    // SILO revenue goal (DOLLARS, with a pace tick - a cumulative YTD total, same as Plumbing and
+    // HVAC Sales). Reads the YTD row of the revenue table, so it is driven by the metrics snapshot
+    // and is completely independent of the flip cache below it.
+    h += goalBar('silo-rev-ytd', (rr[2]||[])[1]);   // YTD row (Period|Revenue)
     h += `<h3>Flip rate &mdash; TGLs / ROPP calls ran</h3>`;
-    h += renderSiloFlipCards();          // separate precomputed cache (FLIP), incl. its own goal bar + as-of
+    h += safeSiloFlipCards();            // separate precomputed cache (FLIP), incl. its own goal bar + as-of
     h += collapsibleNotes('silo-revenue', b);
     return h;
   } catch (e) {
