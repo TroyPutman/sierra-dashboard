@@ -1411,7 +1411,11 @@ function Get-SiloFlipConfig {
 
     # postSpacingSeconds: the deliberate gap between report POSTs (tenant 429 cooldown is ~60s).
     # cacheTtlSeconds: how long data/silo-flip.json counts as fresh (used by refresh-silo-flip.ps1).
-    foreach ($k in 'postSpacingSeconds','cacheTtlSeconds') {
+    # errorRetryCooldownSeconds: how long to leave a FAILED cache alone before retrying it. Without
+    #   this, an errored cache is retried by every 15-minute CI run - 4 throttled report POSTs plus a
+    #   ~42k-job pull each time, on top of the 3 report POSTs refresh.ps1 already makes in the same
+    #   run - which is enough to keep the tenant 429-throttled instead of letting it recover.
+    foreach ($k in 'postSpacingSeconds','cacheTtlSeconds','errorRetryCooldownSeconds') {
         if ($null -eq $sf.PSObject.Properties[$k]) { throw "config.json is missing siloFlip.$k" }
         $raw = "$($sf.$k)"
         if ([string]::IsNullOrWhiteSpace($raw)) { throw "config.json is missing siloFlip.$k" }

@@ -17,13 +17,25 @@
 #  A RECOMPUTE HAPPENS WHEN (any of):
 #    * -Force was passed
 #    * data/silo-flip.json does not exist
-#    * it is unreadable / not valid JSON / missing its asOf|generatedAt|block keys
-#    * its asOf is not TODAY's Pacific date (a new Pacific day always recomputes)
-#    * its generatedAt is older than siloFlip.cacheTtlSeconds
+#    * it is unreadable / not valid JSON / missing its generatedAt|block keys
+#    * the cached build SUCCEEDED and its asOf is not TODAY's Pacific date (a new Pacific day
+#      always recomputes), or its generatedAt is older than siloFlip.cacheTtlSeconds
+#    * the cached build FAILED and its generatedAt is older than
+#      siloFlip.errorRetryCooldownSeconds
 #  Otherwise the script prints why it skipped and exits 0 within a second or two.
 #
-#    .\refresh-silo-flip.ps1          # TTL-gated (what CI runs)
-#    .\refresh-silo-flip.ps1 -Force   # recompute now, ignore the TTL (~5-6 min)
+#  TWO CLOCKS, ON PURPOSE. A successful build is trusted for cacheTtlSeconds (6h). A FAILED build
+#  runs on the shorter errorRetryCooldownSeconds (1h) instead - not on the 6h TTL, and NOT on every
+#  run. Retrying a failure every 15 minutes means 4 throttled report POSTs plus a ~42k-job pull each
+#  time, on top of the 3 report POSTs refresh.ps1 already makes in the same run; on 2026-08-11 that
+#  kept the tenant 429-throttled instead of letting it recover, i.e. the retry was itself the thing
+#  blocking recovery. A failed cache deliberately ignores asOf and the TTL: it holds no usable
+#  figure, so the only question is WHEN to retry - and a failure must not be retried a minute later
+#  merely because the Pacific date rolled over.
+#
+#    .\refresh-silo-flip.ps1             # gated (what CI runs)
+#    .\refresh-silo-flip.ps1 -Force      # recompute now, ignore both clocks (~5-6 min)
+#    .\refresh-silo-flip.ps1 -CheckOnly  # print the skip/recompute decision and exit; NO network
 #
 #  NOT FROZEN: `final` is always false. The figure is retroactive (TGLs keep getting scheduled
 #  onto days already counted), so it keeps settling upward and is never final.
@@ -38,7 +50,7 @@
 #  error on screen instead of a stale number. Passes NO pageSize=300 anywhere.
 # ============================================================================
 [CmdletBinding()]
-param([switch]$Force)
+param([switch]$Force, [switch]$CheckOnly)
 
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib/metrics.ps1')
@@ -51,7 +63,8 @@ $secretsPath = Join-Path $PSScriptRoot 'secrets.json'
 # Validate config.json -> siloFlip FIRST (report ids, tag ids, expected columns, timings). This
 # throws a precise message for anything missing, before a token is fetched or a minute is spent.
 $cfg = Get-SiloFlipConfig
-$ttl = $cfg.cacheTtlSeconds
+$ttl          = $cfg.cacheTtlSeconds
+$errCooldown  = $cfg.errorRetryCooldownSeconds
 
 $pac      = Get-Pac
 $today    = Get-TodayPac $pac
@@ -64,36 +77,51 @@ $todayStr = $today.ToString('yyyy-MM-dd')
 # Comparing those directly would behave differently on the dev box and on the Linux/UTC CI runner -
 # the exact host-typing trap that broke SILO before. The raw bytes are identical on both hosts.
 # generatedAt is then parsed with Parse-Utc, which forces an explicit UTC interpretation.
-function Get-FlipCacheStaleReason([string]$path, [string]$expectAsOf, [int]$ttlSeconds) {
+function Get-FlipCacheStaleReason([string]$path, [string]$expectAsOf, [int]$ttlSeconds, [int]$errorCooldownSeconds) {
     if (-not (Test-Path $path)) { return "no cache file yet ($path)" }
     $raw = $null
     try { $raw = Get-Content $path -Raw } catch { return "cache file could not be read" }
     if ([string]::IsNullOrWhiteSpace($raw)) { return "cache file is empty" }
     $parsed = $null
     try { $parsed = $raw | ConvertFrom-Json } catch { return "cache file is not valid JSON" }
-
-    # A cached ERROR is always stale, no matter how recent. A failed build still writes a
-    # status='error' block (and the workflow commits it), so without this test a single transient
-    # API failure would look "fresh" and pin that error on screen for the whole TTL - 6 hours of a
-    # visibly broken tile that nothing retries. Reading .block.status off the parsed object is safe
-    # here: it is a plain 'ok'/'error' string, not a date, so the PS5.1-vs-pwsh7 coercion trap that
-    # forces the regex reads below does not apply.
     if ($null -eq $parsed.block) { return "cache file has no block" }
-    if ("$($parsed.block.status)" -ne 'ok') { return "cached block is status='$($parsed.block.status)' - retrying rather than leaving an error on screen for the TTL" }
 
     $mAsOf = [regex]::Match($raw, '"asOf"\s*:\s*"([^"]*)"')
     $mGen  = [regex]::Match($raw, '"generatedAt"\s*:\s*"([^"]*)"')
-    if (-not $mAsOf.Success) { return "cache file has no asOf" }
-    if (-not $mGen.Success)  { return "cache file has no generatedAt" }
-    if ($raw -notmatch '"block"') { return "cache file has no block" }
-
-    $asOf = $mAsOf.Groups[1].Value
-    if ($asOf -ne $expectAsOf) { return "cache is as-of $asOf but today (Pacific) is $expectAsOf" }
+    if (-not $mGen.Success) { return "cache file has no generatedAt" }
 
     $gen = $null
     try { $gen = Parse-Utc $mGen.Groups[1].Value } catch { $gen = $null }
     if ($null -eq $gen) { return "cache generatedAt '$($mGen.Groups[1].Value)' is unparseable" }
     $ageSec = ([DateTime]::UtcNow - $gen).TotalSeconds
+
+    # ---- a FAILED build runs on its own, shorter clock -------------------------------------------
+    # A failed build still writes a status='error' block, and the workflow commits it. Two bad
+    # extremes to avoid:
+    #   * treat it as FRESH -> a transient 429 pins a visibly broken tile on the wall for 6 hours
+    #     with nothing retrying it;
+    #   * treat it as ALWAYS STALE -> every 15-minute CI run redoes the whole thing: 4 throttled
+    #     report POSTs plus a ~42k-job pull, on top of the 3 report POSTs refresh.ps1 already makes
+    #     in the same run. That is what happened on 2026-08-11: the tenant stayed 429-throttled
+    #     instead of recovering, so the retry was the thing preventing the recovery.
+    # So: retry a failure on errorRetryCooldownSeconds (~1h), not on the 6h TTL and not every run.
+    # asOf and the TTL are deliberately NOT consulted here - an errored cache holds no usable figure,
+    # so the only question is WHEN to retry. In particular a failure must not be retried immediately
+    # just because the Pacific date rolled over a minute later.
+    $status = "$($parsed.block.status)"
+    if ($status -ne 'ok') {
+        if ($ageSec -ge $errorCooldownSeconds) {
+            return ("last build FAILED {0:N0}s ago (error-retry cooldown {1}s) - retrying now" -f $ageSec, $errorCooldownSeconds)
+        }
+        Write-Host ("SILO flip cache holds a FAILED build from {0:N0}s ago; error-retry cooldown is {1}s ({2:N0}s left) - NOT retrying yet, so the tenant's 429 throttle can clear. The dashboard keeps showing the error meanwhile (never a stale number)." -f $ageSec, $errorCooldownSeconds, ($errorCooldownSeconds - $ageSec)) -ForegroundColor Yellow
+        Write-Host ("   last error: $($parsed.block.error)") -ForegroundColor DarkGray
+        return $null
+    }
+
+    # ---- a GOOD build: the normal as-of + TTL rules ----------------------------------------------
+    if (-not $mAsOf.Success) { return "cache file has no asOf" }
+    $asOf = $mAsOf.Groups[1].Value
+    if ($asOf -ne $expectAsOf) { return "cache is as-of $asOf but today (Pacific) is $expectAsOf" }
     if ($ageSec -ge $ttlSeconds) { return ("cache is {0:N0}s old (TTL {1}s)" -f $ageSec, $ttlSeconds) }
 
     # Fresh: return $null and report the remaining life to the caller for the skip message.
@@ -102,12 +130,22 @@ function Get-FlipCacheStaleReason([string]$path, [string]$expectAsOf, [int]$ttlS
 }
 
 if ($Force) {
-    Write-Host "-Force: recomputing regardless of cache age."
+    $stale = '-Force was passed'
 } else {
-    $stale = Get-FlipCacheStaleReason $file $todayStr $ttl
-    if ($null -eq $stale) { exit 0 }
-    Write-Host "Recomputing SILO flip: $stale"
+    $stale = Get-FlipCacheStaleReason $file $todayStr $ttl $errCooldown
 }
+
+# -CheckOnly reports the decision and stops. It makes NO network calls at all (config validation and
+# file reads only), which is what makes the gate testable without spending 5-6 minutes or any API
+# quota - and it answers "why did/didn't it refresh?" in one second when something looks wrong.
+if ($CheckOnly) {
+    if ($null -eq $stale) { Write-Host "CHECKONLY: would SKIP the recompute." -ForegroundColor Green }
+    else                  { Write-Host "CHECKONLY: would RECOMPUTE - $stale" -ForegroundColor Cyan }
+    exit 0
+}
+
+if ($null -eq $stale) { exit 0 }
+Write-Host "Recomputing SILO flip: $stale"
 
 # ---- recompute ------------------------------------------------------------------------------
 Write-Host ("[{0}] building SILO flip snapshot as of {1} (4 report POSTs {2}s apart - expect ~5-6 min) ..." -f (Get-Date).ToString('HH:mm:ss'), $todayStr, $cfg.postSpacingSeconds)

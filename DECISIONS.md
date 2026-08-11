@@ -468,6 +468,18 @@ the refresh layer into `data/silo-flip.json` behind a TTL (`config.json` → `si
 and only ever **read** at display time. It is never computed on request and never frozen (`final:false`) —
 TGLs keep getting scheduled onto days already counted, so the figure keeps settling upward.
 
+**A FAILED build runs on a second, shorter clock** (`siloFlip.errorRetryCooldownSeconds`, 1h) — added
+2026-08-11 after a real incident. A failed build still writes a `status='error'` block and the workflow
+commits it. Treating that as *fresh* would pin a visibly broken tile on the wall for 6 hours with nothing
+retrying it; treating it as *always stale* (the original choice) made every 15-minute run redo the whole
+thing — 4 throttled POSTs plus a 42k-job pull, on top of the 3 report POSTs `refresh.ps1` already makes in
+the same run. On 2026-08-11 that kept the tenant 429-throttled instead of letting it recover: **the retry
+was itself preventing the recovery.** A failed cache deliberately ignores `asOf` and the TTL — it holds no
+usable figure, so the only question is when to retry, and a failure must not be retried a minute later just
+because the Pacific date rolled over. Raise the cooldown if 429s persist; lower it to recover faster at the
+cost of more API pressure. `refresh-silo-flip.ps1 -CheckOnly` prints the skip/recompute decision with no
+network calls, which is how to answer "why didn't it refresh?".
+
 **Goal bar:** `silo-flip-ytd` still tracks the YTD flip, but it now measures the new definition, so its
 target needs re-stating — the owner is setting it himself.
 
