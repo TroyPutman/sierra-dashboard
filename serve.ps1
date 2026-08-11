@@ -32,7 +32,30 @@ $dataDir = Join-Path $PSScriptRoot 'data'
 if (-not (Test-Path $dataDir)) { New-Item -ItemType Directory -Path $dataDir | Out-Null }
 $secretsPath = Join-Path $PSScriptRoot 'secrets.json'
 $htmlPath    = Join-Path $PSScriptRoot 'dashboard.html'
-$TODAY_TTL   = 300     # seconds; recompute today if the cached file is older than this
+# seconds; recompute today if the cached file is older than this.
+#
+# THIS MUST STAY COMFORTABLY LONGER THAN A FULL BUILD OF TODAY'S SNAPSHOT. It was 300 (5 min)
+# against builds measured at 325s and 441s on 2026-08-11, which meant roughly five usable minutes
+# of cache followed by a seven-minute rebuild, over and over. Because serve.ps1 is single-threaded
+# (it serves one request at a time), every one of those rebuilds also blocked the page from
+# loading at all - so the practical cost of a 5-minute TTL was measured in ten-minute waits.
+#
+# 900 = 15 minutes. Chosen because it is a bit over 2x the longest build actually observed (441s),
+# which leaves room for a slow API day - builds already vary 325-441s, about 35% - and because it
+# matches the every-15-minutes CI refresh cadence, so the locally-served dashboard and the
+# published one go stale at the same rate rather than two different ones.
+#
+# The age is measured from the cache file's LastWriteTimeUtc (see Get-SnapshotJson), which is set
+# when the build FINISHES - so the build itself does not eat into the TTL. 15 minutes here means
+# 15 minutes of instant page loads, then one rebuild.
+#
+# NOT changed on purpose: dashboard.html marks a figure's "pulled X ago" text in warning colour
+# once it passes 10 minutes. With this TTL that styling will now appear routinely for the last
+# few minutes of each cache cycle. That is CORRECT and must not be "fixed" by raising the
+# threshold to match - the number really is that old, and saying so is the point. Suppressing an
+# accurate staleness warning to make it stop appearing is exactly the failure mode rule 1 exists
+# to prevent.
+$TODAY_TTL   = 900
 $SILO_CUR_TTL= 21600   # seconds; the CURRENT month recomputes at most every 6h (a full month is ~2 min)
 
 # A cached past-day file is trusted ONLY if it is final: computed after that Pacific day ended.

@@ -89,11 +89,24 @@ The flip metric is a minor contributor (~24 POSTs/day at the 6h TTL, plus ~64/da
 today clock). **The 288 is the lever.** Note the constraint on any fix: per-period server-side windows
 are required — you cannot collapse the three POSTs into one and bucket rows client-side (see Lessons #2).
 
-### 2. Snapshot build (~7 min) is longer than its cache TTL (5 min)
-`serve.ps1` caches today's snapshot for 5 minutes (`$TODAY_TTL`), but a full build of today's snapshot
-measured **441s and 325s** on 2026-08-11. It is therefore stale the moment it finishes, so **every fresh
-page load triggers a complete rebuild.** Combined with #3 this makes local verification painful. Nobody
-has decided whether to lengthen the TTL, shorten the build, or both.
+### 2. Snapshot cache TTL was shorter than the build — FIXED 2026-08-11 (TTL raised, build unchanged)
+`serve.ps1` cached today's snapshot for 5 minutes (`$TODAY_TTL = 300`) against builds measured at
+**441s and 325s**. That gave roughly five usable minutes of cache followed by a seven-minute rebuild,
+repeatedly — and because of #3 each rebuild also blocked the page from loading at all, so the real
+cost was measured in ten-minute waits.
+
+**`$TODAY_TTL` is now 900 (15 min)** — a bit over 2x the longest observed build, leaving room for a
+slow API day (builds already vary 325–441s, ~35%), and matching the every-15-minutes CI cadence so the
+locally-served and published dashboards go stale at the same rate. Age is measured from the cache
+file's write time, i.e. when the build *finishes*, so the build does not eat into the TTL.
+
+**This reduced the frequency of the problem, not the problem.** The build is still ~7 minutes and #3 is
+untouched, so when you *do* land on an expired cache the server still hangs for the full rebuild. A
+shorter build, or a server that can serve while rebuilding, is still undone and still worth doing.
+
+Note also: `dashboard.html` colours a figure's "pulled X ago" text as a warning past 10 minutes, so
+that styling now appears routinely near the end of each cache cycle. That is correct — the number
+really is that old. Do not "fix" it by raising the threshold to match the TTL.
 
 ### 3. `serve.ps1` is single-threaded and dies on long requests
 The `HttpListener` loop serves one request at a time, so while a snapshot is rebuilding the server
@@ -140,7 +153,9 @@ delete path to `worker.js`.
    `.ps1`, `.json` or `.html`), so no session context survives about which metric it feeds or which
    business units are in question. A fresh session must ask the owner rather than guess.
 3. Whether to move the repo out of OneDrive (#4).
-4. Whether to lengthen the snapshot TTL or shorten the build (#2).
+4. ~~Whether to lengthen the snapshot TTL or shorten the build (#2).~~ **Half-decided 2026-08-11:**
+   the TTL was lengthened to 15 min. Shortening the build is still open and is the better fix —
+   lengthening the TTL only makes the stall rarer.
 5. From `DECISIONS.md` M6.4, still open: which membership types count as HVAC.
 
 ---
