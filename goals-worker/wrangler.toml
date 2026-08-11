@@ -20,6 +20,29 @@ compatibility_date = "2024-11-01"
 binding = "GOALS"
 id = "ae7c678cf491413d982e037891db57b1"
 
+# HR namespace binding. The Worker code refers to this as `env.HR_KV`.
+# Created 2026-08-11 with:  wrangler.cmd kv namespace create HR_KV
+# (Only needed again if this Worker is ever rebuilt in a fresh Cloudflare account.)
+#
+# WHY A SECOND NAMESPACE AND NOT A KEY PREFIX IN `GOALS`:
+# HR holds salary and employee records; goals hold four numbers behind a password several
+# people know. Separate namespaces mean the goals path CANNOT read or write HR keys even if
+# its password check were bypassed entirely — the binding simply is not reachable from that
+# code path. A shared namespace with a "hr-" prefix would make that a matter of discipline
+# rather than a matter of fact.
+#
+# The id below is an identifier, not a credential — it is useless without Cloudflare account
+# access, which is why the GOALS id above is already safely committed to this public repo.
+# The HR *data* and the HR *password* never appear in this repo in any form.
+[[kv_namespaces]]
+binding = "HR_KV"
+id = "f4e2d4d855c14b3cbc3452ddac8ee215"
+
 # EDIT_PASSWORD is a SECRET — never put it in this file.
 # Set it once with:   wrangler secret put EDIT_PASSWORD
 # (Or in the dashboard: Worker → Settings → Variables and Secrets → add EDIT_PASSWORD, encrypted.)
+#
+# HR_PASSWORD is a SECRET too, and must be a DIFFERENT value from EDIT_PASSWORD — the whole point
+# of the split is that knowing the goals password grants nothing in HR.
+# Set it once with:   wrangler.cmd secret put HR_PASSWORD
+# Type it at the prompt. It must never be written into this file, any script, or any commit.
