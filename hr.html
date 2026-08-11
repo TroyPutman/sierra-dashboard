@@ -605,10 +605,26 @@ function compaRatio(emp, midpoints) {
   if (!mid || !emp.salary) return null;
   return emp.salary / mid;
 }
-const CompaChip = ({ ratio }) => {
+/* The below/at/above-market verdict depends on two thresholds that NOBODY HAS DECIDED YET. The
+ * prototype hardcoded 0.85 and 1.10; PAY-POLICY-FINDINGS.md records those as invented defaults with
+ * no Sierra document behind them, and says they are Troy's call - a compensation-philosophy question,
+ * not a lookup. So they are NOT seeded. Until they are set in the Comp policy tab, this shows the
+ * ratio with no verdict rather than inventing one: telling someone they are "below market" on a
+ * threshold we made up is exactly the confident-but-wrong output rule 1 forbids. */
+const CompaChip = ({ ratio, bands }) => {
   if (ratio == null) return null;
-  const tone = ratio < 0.85 ? "bg-red-100 text-red-700" : ratio > 1.1 ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-700";
-  const label = ratio < 0.85 ? "below market" : ratio > 1.1 ? "above market" : "at market";
+  const lo = bands ? Number(bands.low) : NaN;
+  const hi = bands ? Number(bands.high) : NaN;
+  const configured = Number.isFinite(lo) && Number.isFinite(hi) && lo > 0 && hi > lo;
+  if (!configured) {
+    return (
+      <span className="inline-block px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-600">
+        {ratio.toFixed(2)}&times; <span className="opacity-70">no market bands set</span>
+      </span>
+    );
+  }
+  const tone = ratio < lo ? "bg-red-100 text-red-700" : ratio > hi ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-700";
+  const label = ratio < lo ? "below market" : ratio > hi ? "above market" : "at market";
   return <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap ${tone}`}>{ratio.toFixed(2)}× {label}</span>;
 };
 const TierChip = ({ t }) => (t ? <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${t.over ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600"}`}>{t.over ? "⚠ " : ""}{t.label}</span> : null);
@@ -648,6 +664,7 @@ function migrate(st) {
   const s2 = { ...st };
   if (!s2.meritMatrix) s2.meritMatrix = [];
   if (!s2.marketMidpoints) s2.marketMidpoints = {};
+  if (!s2.compaBands) s2.compaBands = {};   // empty, NOT 0.85/1.10 - those were invented defaults
   s2.employees = deriveManagers(s2.employees);
   s2.v = 3;
   return applyPayrollUpdate(s2);
@@ -667,6 +684,7 @@ function seedState() {
     employees: deriveManagers(employees),
     meritMatrix: [],
     marketMidpoints: {},
+    compaBands: {},   // intentionally empty - see CompaChip. Troy sets these, we do not invent them.
     templates: { "Operations Manager": { jd: OPS_JD.replace(/\[ROLE\]/g, "Operations Manager"), plan: OPS_PLAN.replace(/\[ROLE\]/g, "Operations Manager") } },
     lastSaved: null,
   });
@@ -1155,7 +1173,7 @@ function RaiseModal({ emp, matrix, onClose, onSave }) {
 }
 
 /* ============ EMPLOYEE DRAWER ============ */
-function EmployeeDrawer({ emp, templates, matrix, midpoints, onClose, onUpdate, onOpenReview }) {
+function EmployeeDrawer({ emp, templates, matrix, midpoints, bands, onClose, onUpdate, onOpenReview }) {
   const [tab, setTab] = useState("profile");
   const [raiseOpen, setRaiseOpen] = useState(false);
   const [edit, setEdit] = useState(false);
@@ -1232,7 +1250,7 @@ function EmployeeDrawer({ emp, templates, matrix, midpoints, onClose, onUpdate, 
               {compaRatio(emp, midpoints) != null && (
                 <div className="bg-slate-50 rounded-lg p-3 flex items-center justify-between text-sm">
                   <div><div className="text-xs text-slate-500 uppercase">Compa-ratio</div><div className="text-xs text-slate-500 mt-0.5">vs market midpoint {fmt$(Number(midpoints[emp.role]))} for {emp.role}</div></div>
-                  <CompaChip ratio={compaRatio(emp, midpoints)} />
+                  <CompaChip ratio={compaRatio(emp, midpoints)} bands={bands} />
                 </div>
               )}
               {sixMonthDue(emp) && (
@@ -1419,6 +1437,7 @@ function SierraHRDashboard() {
   // It gates the destructive "start fresh" button below: a network or server error leaves this
   // null, so a wifi blip can never offer to overwrite data that is probably perfectly fine.
   const [badBlob, setBadBlob] = useState(null);
+  const [importMsg, setImportMsg] = useState(null);   // { kind: 'ok' | 'bad', text }
   const [tab, setTab] = useState("dashboard");
   const [q, setQ] = useState("");
   const [dept, setDept] = useState("All");
@@ -1509,6 +1528,80 @@ function SierraHRDashboard() {
       setLoadError("Could not replace the stored data: " + (e && e.message ? e.message : "network error")
         + ". NOTHING was changed - what was there before is still there.");
     }
+  };
+
+  /* ---------------------------------------------------------------------------------------
+   * IMPORT
+   * ---------------------------------------------------------------------------------------
+   * Two SEPARATE, EXPLICITLY LABELLED actions rather than one clever one that guesses. Merging
+   * pay policies and restoring a whole backup differ by whether the employee roster is replaced,
+   * and getting that wrong silently destroys records. Sniffing the file's shape to decide would
+   * make the destructive case an accident waiting to happen, so each button validates for the
+   * thing it claims to do and refuses anything else.
+   * Nothing is written unless the file parses AND matches the expected shape.
+   * ------------------------------------------------------------------------------------- */
+  const readJsonFile = (file) => new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onerror = () => reject(new Error("that file could not be read"));
+    fr.onload = () => {
+      try { resolve(JSON.parse(fr.result)); }
+      catch (e) { reject(new Error("that file is not valid JSON")); }
+    };
+    fr.readAsText(file);
+  });
+
+  // MERGE. Keeps every employee, keeps each role's existing JD and 30/60/90 plan, and overlays
+  // only the fields the file actually provides.
+  const importPayPolicies = async (file) => {
+    setImportMsg(null);
+    if (!file) return;
+    let obj;
+    try { obj = await readJsonFile(file); }
+    catch (e) { setImportMsg({ kind: "bad", text: e.message + " — nothing was changed." }); return; }
+    if (!obj || typeof obj !== "object" || !obj.templates || typeof obj.templates !== "object" || Array.isArray(obj.templates)) {
+      setImportMsg({ kind: "bad", text: "That file has no 'templates' section, so it is not a pay-policy file. Nothing was changed." });
+      return;
+    }
+    const roles = Object.keys(obj.templates);
+    if (!roles.length) { setImportMsg({ kind: "bad", text: "That file lists no roles. Nothing was changed." }); return; }
+    if (!window.confirm(
+      "Import pay policies for " + roles.length + " role(s)?\n\n" + roles.join("\n")
+      + "\n\nEmployees are untouched. Existing job descriptions and 30/60/90 plans are kept — only the pay policy text is replaced, and only for these roles."
+    )) return;
+    const merged = { ...(state.templates || {}) };
+    roles.forEach((r) => {
+      const inc = obj.templates[r] || {};
+      const cur = merged[r] || {};
+      merged[r] = {
+        ...cur,
+        ...(inc.jd !== undefined ? { jd: inc.jd } : {}),
+        ...(inc.plan !== undefined ? { plan: inc.plan } : {}),
+        ...(inc.pay !== undefined ? { pay: inc.pay } : {}),
+      };
+    });
+    persist({ ...state, templates: merged });
+    setImportMsg({ kind: "ok", text: "Imported pay policies for " + roles.length + " role(s): " + roles.join(", ")
+      + ". These attach to an employee only when their Role field matches the role name exactly." });
+  };
+
+  // REPLACE EVERYTHING. Requires a real employee list so a pay-policy file cannot be restored here
+  // by mistake and wipe the roster.
+  const restoreBackup = async (file) => {
+    setImportMsg(null);
+    if (!file) return;
+    let obj;
+    try { obj = await readJsonFile(file); }
+    catch (e) { setImportMsg({ kind: "bad", text: e.message + " — nothing was changed." }); return; }
+    if (!obj || typeof obj !== "object" || !Array.isArray(obj.employees)) {
+      setImportMsg({ kind: "bad", text: "That file has no employee list, so it is not a full backup. If you meant to load pay policies, use the other button. Nothing was changed." });
+      return;
+    }
+    if (!window.confirm(
+      "Restore this backup?\n\nIt holds " + obj.employees.length + " employee record(s) and will REPLACE everything stored now, "
+      + "including any raises, reviews or documents logged since the backup was taken.\n\nThis cannot be undone. Export a backup first if you have not."
+    )) return;
+    persist(migrate(obj));
+    setImportMsg({ kind: "ok", text: "Restored " + obj.employees.length + " employee record(s) from the backup." });
   };
 
   useEffect(() => { loadData(); }, []);
@@ -1771,7 +1864,7 @@ function SierraHRDashboard() {
                         <td className="text-slate-600">{e.role || <span className="text-amber-600 text-xs">assign role</span>}</td>
                         <td className="text-slate-500">{e.department || "—"}</td>
                         <td className="text-right tabular-nums">{e.salary ? fmt$(e.salary) : <span className="text-amber-600 text-xs">missing</span>}</td>
-                        <td className="pl-3">{compaRatio(e, state.marketMidpoints) != null ? <CompaChip ratio={compaRatio(e, state.marketMidpoints)} /> : <span className="text-slate-300 text-xs">—</span>}</td>
+                        <td className="pl-3">{compaRatio(e, state.marketMidpoints) != null ? <CompaChip ratio={compaRatio(e, state.marketMidpoints)} bands={state.compaBands} /> : <span className="text-slate-300 text-xs">—</span>}</td>
                         <td>{e.status === "active" ? dueBadge(nextAnnual(e)) : <Badge tone="slate">inactive</Badge>}</td>
                         <td className="pr-3 text-right"><Icon d={ICONS.ChevronRight} className="w-3.5 h-3.5 text-slate-300 inline" /></td>
                       </tr>
@@ -1973,7 +2066,33 @@ function SierraHRDashboard() {
               </div>
               <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
                 <h2 className="font-semibold text-sm">Market midpoints — compa-ratio by role</h2>
-                <p className="text-sm text-slate-500">Enter the annual market midpoint for each role (from salary surveys, local job postings, or your own judgment). Everyone in that role instantly gets a compa-ratio: below 0.85× shows red (retention risk), 0.85–1.10× green, above 1.10× amber. Team average is a reference point — it is not the market rate.</p>
+                <p className="text-sm text-slate-500">Enter the annual market midpoint for each role (from salary surveys, local job postings, or your own judgment). Everyone in that role instantly gets a compa-ratio. Team average is a reference point — it is not the market rate.</p>
+                {/* These two thresholds decide who reads as "below market" / "above market". They are
+                    deliberately NOT pre-filled: the prototype's 0.85 and 1.10 were invented, with no
+                    Sierra document behind them. Until they are set here, the app shows the ratio and
+                    no verdict, rather than judging someone's pay against a number we made up. */}
+                <div className="border border-slate-200 rounded-lg p-3 bg-slate-50">
+                  <div className="text-xs font-semibold text-slate-700 mb-1">Market bands — when a ratio counts as below or above market</div>
+                  <p className="text-xs text-slate-500 mb-2">
+                    Not set yet, and not guessed. Until both are filled in, every compa-ratio shows as a
+                    plain number with <em>no market bands set</em> beside it. This is a policy decision, not a lookup.
+                  </p>
+                  <div className="flex flex-wrap items-end gap-4">
+                    <Field label="Below market under (e.g. 0.85)">
+                      <input type="number" step="0.01" className={inp + " max-w-[10rem]"} placeholder="not set"
+                        value={(state.compaBands && state.compaBands.low) || ""}
+                        onChange={(e) => { const b = { ...(state.compaBands || {}) }; if (e.target.value) b.low = Number(e.target.value); else delete b.low; persist({ ...state, compaBands: b }); }} />
+                    </Field>
+                    <Field label="Above market over (e.g. 1.10)">
+                      <input type="number" step="0.01" className={inp + " max-w-[10rem]"} placeholder="not set"
+                        value={(state.compaBands && state.compaBands.high) || ""}
+                        onChange={(e) => { const b = { ...(state.compaBands || {}) }; if (e.target.value) b.high = Number(e.target.value); else delete b.high; persist({ ...state, compaBands: b }); }} />
+                    </Field>
+                    {state.compaBands && Number(state.compaBands.low) > 0 && Number(state.compaBands.high) > 0 && !(Number(state.compaBands.high) > Number(state.compaBands.low)) && (
+                      <div className="text-xs text-red-600 font-medium">The upper band must be higher than the lower band — bands ignored until fixed.</div>
+                    )}
+                  </div>
+                </div>
                 <table className="w-full text-sm">
                   <thead className="bg-slate-50 text-xs text-slate-500 uppercase text-left"><tr><th className="px-2 py-2">Role</th><th className="text-right">Heads</th><th className="text-right">Team avg (known pay)</th><th className="w-40 pl-4">Market midpoint $</th></tr></thead>
                   <tbody>
@@ -2005,19 +2124,51 @@ function SierraHRDashboard() {
                 <button className="bg-slate-800 text-white px-3 py-2 rounded text-sm flex items-center gap-1" onClick={() => download("sierra-reviews.ics", buildICS(state.employees), "text/calendar")}><Icon d={ICONS.Download} className="w-4 h-4" /> Download review calendar (.ics)</button>
               </div>
               <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2">
-                <h2 className="font-semibold text-sm">Backup & restore</h2>
-                <p className="text-sm text-slate-500">Everything is saved automatically in this app's storage. Export a JSON backup any time (recommended after big updates) — you can also send that file to Claude to re-import or analyze.</p>
-                <div className="flex gap-2">
+                <h2 className="font-semibold text-sm">Backup &amp; restore</h2>
+                <p className="text-sm text-slate-500">Everything is saved automatically. Export a JSON backup any time — recommended before importing anything or after a big update.</p>
+                <div className="flex flex-wrap gap-2">
                   <button className="border border-slate-300 px-3 py-2 rounded text-sm" onClick={() => download(`sierra-hr-backup-${todayISO()}.json`, JSON.stringify(state, null, 1), "application/json")}><Icon d={ICONS.Download} className="w-4 h-4 inline mr-1" />Export backup</button>
-                  <button className="border border-red-300 text-red-600 px-3 py-2 rounded text-sm" onClick={() => { if (window.confirm("Reset ALL data back to the original salary sheet? Your logged raises, reviews, and documents will be lost.")) persist(seedState()); }}>Reset to original data</button>
+                  <label className="border border-slate-300 px-3 py-2 rounded text-sm cursor-pointer inline-flex items-center gap-1">
+                    <Icon d={ICONS.FileText} className="w-4 h-4" /> Restore a backup
+                    <input type="file" accept="application/json,.json" className="hidden" onChange={(e) => { restoreBackup(e.target.files && e.target.files[0]); e.target.value = ""; }} />
+                  </label>
+                  <button className="border border-red-300 text-red-600 px-3 py-2 rounded text-sm" onClick={() => { if (window.confirm("Clear ALL HR data and start from an empty setup?\n\nEvery employee record, logged raise, review and document will be lost. This is a blank start, not a reload of any previous data.\n\nExport a backup first if you have not.")) persist(seedState()); }}>Clear all data</button>
                 </div>
               </div>
+
+              {/* Pay policies are NEVER stored in this page's source - the repo is public. They live
+                  in secure storage and arrive either by import here or by typing them in the JD &
+                  plan templates tab. */}
+              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2">
+                <h2 className="font-semibold text-sm">Import pay policies</h2>
+                <p className="text-sm text-slate-500">
+                  Load per-role commission rates, flat rates and spiffs from a pay-policy file. Employees are
+                  untouched, and existing job descriptions and 30/60/90 plans are kept — only the pay policy text
+                  is replaced, and only for the roles listed in the file.
+                </p>
+                <label className="border border-slate-300 px-3 py-2 rounded text-sm cursor-pointer inline-flex items-center gap-1 w-fit">
+                  <Icon d={ICONS.Plus} className="w-4 h-4" /> Choose a pay-policy file
+                  <input type="file" accept="application/json,.json" className="hidden" onChange={(e) => { importPayPolicies(e.target.files && e.target.files[0]); e.target.value = ""; }} />
+                </label>
+                <p className="text-xs text-slate-400">
+                  A policy attaches to a person only when their Role field matches the role name in the file
+                  exactly. Check the JD &amp; plan templates tab afterwards to confirm the names line up.
+                </p>
+              </div>
+
+              {importMsg && (
+                <div className={"rounded-xl p-3 text-sm border " + (importMsg.kind === "ok"
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                  : "bg-red-50 border-red-300 text-red-700")}>
+                  {importMsg.text}
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
 
-      {sel && <EmployeeDrawer emp={sel} templates={state.templates} matrix={state.meritMatrix} midpoints={state.marketMidpoints} onClose={() => setSelId(null)} onUpdate={updateEmp} onOpenReview={(e) => setReviewEmp(e)} />}
+      {sel && <EmployeeDrawer emp={sel} templates={state.templates} matrix={state.meritMatrix} midpoints={state.marketMidpoints} bands={state.compaBands} onClose={() => setSelId(null)} onUpdate={updateEmp} onOpenReview={(e) => setReviewEmp(e)} />}
       {reviewEmp && <ReviewGenerator emp={state.employees.find((e) => e.id === reviewEmp.id) || reviewEmp} matrix={state.meritMatrix} onClose={() => setReviewEmp(null)} onApproveRaise={approveRaiseFromReview} onMarkComplete={markReviewComplete} />}
       {showNew && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowNew(false)}>
