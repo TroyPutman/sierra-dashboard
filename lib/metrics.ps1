@@ -1158,9 +1158,23 @@ function Get-Metric-SiloRevenue($Ctx, [datetime]$Date) {
     }
 
     # THREE separate report pulls (Today / MTD / YTD), each server-side Pacific-day filtered.
+    # THROTTLE: ServiceTitan allows ONE run of the SAME report per minute per tenant, and all three
+    # pulls hit the same report id ($script:SILO_REV_REPORT_ID). Fired back to back they broke that
+    # rule on calls 2 and 3 every single build, and each then sat in the 60s retry inside
+    # Invoke-StReportPost - so the waiting was already happening, just as 429s that kept this
+    # tenant's report throttle hot (a 429 storm on 2026-08-11 put a fail-loud error on the wall for
+    # ~40 minutes). Sleep 65s BETWEEN the calls instead. Same wall time, no rule broken, retry
+    # budget left intact for genuine failures. Matches the SILO flip builder's postSpacingSeconds.
+    # Do NOT sleep before the first call or after the last - that is pure dead time.
+    # Do NOT collapse the three periods into one wider pull: the server-side From/To window is what
+    # does the Pacific-day bucketing, and client-side date parsing of report rows has broken this
+    # metric twice (see Get-SiloReportPeriod above).
     $per = @{}
+    $isFirstPull = $true
     foreach ($p in 'today','mtd','ytd') {
+        if (-not $isFirstPull) { Start-Sleep -Seconds 65 }   # between pulls only: 2 sleeps for 3 calls
         $per[$p] = Get-SiloReportPeriod $Ctx $windows[$p].from $windows[$p].to
+        $isFirstPull = $false
     }
 
     $monthStart = [datetime]::new($y, $m, 1)          # for the MTD label only
