@@ -310,25 +310,75 @@
 
   /* GOAL PROGRESS BARS (backed by the Cloudflare goals Worker + KV; graceful when unconfigured).
      Compact so the 3-column Revenue tab and the fixed Overview grid stay within 1920x1080. */
-  .goalbar{margin:8px 0 2px; cursor:pointer; user-select:none;}
+  /* position:relative = the positioning context for the pace tick, which must overhang the track
+     top and bottom (so it cannot live INSIDE .gtrack, which is overflow:hidden for the fill). */
+  .goalbar{position:relative; margin:8px 0 2px; cursor:pointer; user-select:none;}
   .goalbar .gtrack{position:relative; height:9px; border-radius:6px; background:var(--panel2);
      border:1px solid var(--hair); overflow:hidden;}
   .goalbar .gfill{position:absolute; left:0; top:0; bottom:0; border-radius:6px;
      background:linear-gradient(90deg,var(--brand),var(--gold)); transition:width .5s ease;}
   .goalbar .gfill.over{background:linear-gradient(90deg,var(--ok),#7ad19f);}
-  .goalbar .gmeta{display:flex; justify-content:space-between; align-items:baseline; gap:10px;
-     margin-top:4px; font-size:.8rem; color:var(--dim); line-height:1.2;}
-  .goalbar .gpct{font-weight:700; color:var(--brand-dark); font-variant-numeric:tabular-nums;}
+  /* THREE children now (pct, pace badge, goal text). align-items:center (was baseline) so the
+     padded badge pill can never make this row taller than its own text line - the Revenue tab is
+     already at the 1080p limit, so the bar's total height must not change. .ggoal takes the slack
+     and stays right-aligned, which keeps the no-badge case pixel-identical to space-between. */
+  .goalbar .gmeta{display:flex; justify-content:space-between; align-items:center; gap:10px;
+     margin-top:4px; font-size:.8rem; color:var(--dim); line-height:1.2; flex-wrap:nowrap;}
+  .goalbar .gpct{flex:0 0 auto; font-weight:700; color:var(--brand-dark); font-variant-numeric:tabular-nums;}
   .goalbar .gpct.over{color:var(--ok);}
-  .goalbar .ggoal{color:var(--dim2); font-variant-numeric:tabular-nums;}
+  /* min-width:0 + ellipsis: in the narrow .revcols columns the goal text yields rather than wrap
+     (wrapping would grow the bar); the exact figures are always in the bar's title tooltip. */
+  .goalbar .ggoal{flex:1 1 auto; min-width:0; text-align:right; white-space:nowrap;
+     overflow:hidden; text-overflow:ellipsis; color:var(--dim2); font-variant-numeric:tabular-nums;}
   .goalbar .gedit{margin-left:6px; color:var(--brand); font-weight:600; opacity:.7;}
   .goalbar:hover .gedit{opacity:1; text-decoration:underline;}
   .goalbar.noGoal{border:1px dashed var(--hair); border-radius:8px; padding:5px 10px; text-align:center;}
   .goalbar.noGoal .gset{font-size:.8rem; font-weight:600; color:var(--dim); opacity:.75;}
   .goalbar.noGoal:hover .gset{color:var(--brand); opacity:1;}
+  /* A stored goal that is out of range for its kind is an ERROR, not a bar (rule 1: fail loud).
+     Red dashed box + warning glyph, so it can never be confused with a real 0%, which still draws
+     a normal track and fill. Same click target as the other states (data-goalkey). */
+  .goalbar.badGoal{border:1px dashed var(--err); border-radius:8px; padding:5px 10px; text-align:center;
+     background:rgba(196,43,40,.06);}
+  .goalbar.badGoal .gbad{font-size:.8rem; font-weight:700; color:var(--err);}
+  .goalbar.badGoal:hover .gbad{text-decoration:underline;}
+
+  /* PACE TICK - where the metric SHOULD be for the elapsed part of the year. Read from across a
+     room, so: 3px wide, overhanging the 9px track ~5px top and bottom, a white halo for contrast
+     against both the empty track and the gradient fill, and a triangular cap so it reads at
+     distance. z-index puts it ABOVE the fill once the fill passes it. Sibling of .gtrack (not a
+     child) because .gtrack is overflow:hidden and would clip the overhang. */
+  .goalbar .gtick{position:absolute; top:-5px; height:19px; width:4px; margin-left:-2px; z-index:3;
+     background:var(--brand-dark); border-radius:1px;
+     box-shadow:0 0 0 1px rgba(255,255,255,.92), 0 0 3px rgba(0,0,0,.35);}
+  .goalbar .gtick::after{content:''; position:absolute; top:0; left:50%; margin-left:-6px; width:0; height:0;
+     border-left:6px solid transparent; border-right:6px solid transparent;
+     border-top:8px solid var(--brand-dark); filter:drop-shadow(0 0 1px rgba(255,255,255,.92));}
+  /* PACE BADGE - lives inside the .gmeta row so bar height is unchanged. Colour is never the only
+     signal (colour vision + distance): the word AHEAD/BEHIND and the triangle carry the meaning.
+     No border and line-height under the row's own, so the pill cannot grow the row. */
+  .goalbar .gbadge{flex:0 0 auto; display:inline-block; padding:1px 7px; border-radius:999px;
+     font-size:.72rem; font-weight:800; line-height:1.15; letter-spacing:.04em;
+     text-transform:uppercase; white-space:nowrap; font-variant-numeric:tabular-nums;}
+  .goalbar .gbadge .garrow{margin-right:4px; font-size:.66rem;}
+  .goalbar .gbadge.ahead{color:#12703c; background:rgba(31,157,85,.18);}
+  .goalbar .gbadge.behind{color:#8a3c06; background:rgba(180,84,10,.18);}
+  /* Neutral third state. Without it a delta that rounds to zero renders "BEHIND -0%", which reads
+     as broken on a wall display rather than as the good news it actually is. */
+  .goalbar .gbadge.onpace{color:var(--brand-dark); background:var(--panel2);}
+
   /* On the dark SILO/flip context, lighten label text for contrast. */
   .goalbar.dark .gmeta{color:#9fb2cc;} .goalbar.dark .gpct{color:#f4a522;}
   .goalbar.dark .ggoal{color:#7089ab;} .goalbar.dark .gtrack{background:rgba(255,255,255,.08); border-color:#24344f;}
+  /* Dark variants: flip the tick to white-on-dark, and brighten the badge tints so they stay
+     legible (and still keep the word + arrow doing the real work). */
+  .goalbar.dark .gtick{background:#ffffff; box-shadow:0 0 0 1px rgba(0,0,0,.6), 0 0 3px rgba(0,0,0,.5);}
+  .goalbar.dark .gtick::after{border-top-color:#ffffff; filter:drop-shadow(0 0 1px rgba(0,0,0,.6));}
+  .goalbar.dark .gbadge.ahead{color:#8ce7ae; background:rgba(31,157,85,.28);}
+  .goalbar.dark .gbadge.behind{color:#ffc98a; background:rgba(244,165,34,.22);}
+  .goalbar.dark .gbadge.onpace{color:#cfe0f5; background:rgba(255,255,255,.12);}
+  .goalbar.dark.badGoal{background:rgba(196,43,40,.20); border-color:#e2726f;}
+  .goalbar.dark.badGoal .gbad{color:#ffb5b2;}
 
   /* Inline goal editor — lives OUTSIDE #main so the dashboard's periodic re-render never wipes it. */
   #goalEditor{position:fixed; z-index:9998; width:250px; background:#fff; border:1px solid var(--hair);
@@ -525,10 +575,41 @@ const GOAL_META = {
   // Definition changed 2026-08: TGLs created / ROPP calls ran (was turnovers sold / total turnovers).
   'silo-flip-ytd':     {label:'SILO flip rate goal (YTD) - TGLs / ROPP calls ran', kind:'percent', period:'YTD'},
 };
+/* ONE source of truth for what a goal value may be, keyed by GOAL_META.kind. Used by BOTH the
+   editor (saveGoal, before the POST) and the renderer (goalBar, for a value already in the store) -
+   the thresholds live here and nowhere else. The Worker (goals-worker/worker.js) holds the
+   authoritative server-side copy; keep the two in sync.
+   Zero and negatives are rejected for EVERY kind: goalBar() treats 0 as "no goal set" (hasGoal
+   requires goal>0), so accepting a 0 would render the "+ Set goal" affordance again and look like
+   the save silently did nothing - and a negative target is meaningless for all three kinds.
+   money ceiling: the largest real YTD figure in this business is HVAC Sales at ~$28.5M, so $100M is
+   ~3.5x headroom for growth while still catching a fat-finger extra digit on any realistic goal.
+   percent: a rate goal is 0-100 by definition (an ACTUAL rate above 100% is legitimate for the flip
+   metric and is never clamped - this bounds the GOAL only). count: a day's booked calls are in the
+   hundreds, so 10,000 is the same kind of typo guard. */
+const GOAL_RANGE = {
+  money:   {max:100000000, type:'a dollar amount', range:'0 and $100,000,000', brief:'0-$100,000,000'},
+  percent: {max:100,       type:'a percentage',    range:'0 and 100',          brief:'0-100'},
+  count:   {max:10000,     type:'a count',         range:'0 and 10,000',       brief:'0-10,000'},
+};
+/* null when `n` is a valid goal for `kind`; otherwise a human-readable reason naming the type, the
+   valid range and the offending value (comma-formatted, so 30000000 reads as 30,000,000). */
+function goalRangeError(kind, n){
+  const r = GOAL_RANGE[kind] || GOAL_RANGE.count;
+  if(typeof n!=='number' || !isFinite(n)) return r.type+': enter a value between '+r.range;
+  if(n<=0 || n>r.max) return r.type+': enter a value between '+r.range+
+    ' (you entered '+n.toLocaleString('en-US')+')';
+  return null;
+}
+/* Metric name for those messages: every GOAL_META label reads "<metric> goal (period)", so the text
+   before " goal" is the metric ("SILO flip rate"). Falls back to the whole label. */
+function goalShortName(meta){ return String((meta&&meta.label)||'Goal').split(' goal')[0] || 'Goal'; }
 function goalFmt(kind, n){
   if(!isFinite(n)) return String(n);
   if(kind==='money')   return '$'+Math.round(n).toLocaleString('en-US');
-  if(kind==='percent') return (Math.round(n*10)/10)+'%';
+  /* toLocaleString, not bare concatenation: a normal rate is unchanged (36.6 -> "36.6") but a
+     bad stored goal reads as "30,000,000%" instead of an unscannable "30000000%". */
+  if(kind==='percent') return (Math.round(n*10)/10).toLocaleString('en-US')+'%';
   return Math.round(n).toLocaleString('en-US');
 }
 /* parse "$154,018.50" -> 154018.5 ; "36.6%" -> 36.6 ; numbers pass through. NaN if unparseable. */
@@ -547,6 +628,45 @@ async function loadGoals(){
     if(j && typeof j==='object' && !Array.isArray(j)) GOALS = j;
   }catch(e){ /* graceful: unreachable/misconfigured goals store must NOT blank or error the page */ }
 }
+/* ---------- PACE (how far into the year we are, for the YTD bars) ----------
+   Rule 4: all day boundaries are Pacific. todayStr() reads the BROWSER clock, so a wall PC set to
+   any other timezone would move the pace marker by a day - it is deliberately NOT used here.
+   The snapshot already carries the backend-resolved Pacific date in data.date ("YYYY-MM-DD"), so
+   this parses that string and does pure integer arithmetic: no new Date(), no Intl, no timezone
+   conversion anywhere. Returns null when data.date is absent or malformed, and the callers then
+   draw NO tick and NO badge rather than guessing a position (rule 1).
+   Sanity: 2026-08-11 -> day 223 of 365 (frac .6110); 2026-08-10 -> day 222. */
+const DOY_BEFORE = [0,31,59,90,120,151,181,212,243,273,304,334];   // days before month N in a non-leap year
+const MON3 = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function paceFromDate(ds){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ds==null?'':ds));
+  if(!m) return null;
+  const y = +m[1], mo = +m[2], d = +m[3];
+  if(mo<1 || mo>12 || d<1) return null;
+  const leap = (y%4===0 && y%100!==0) || y%400===0;
+  const dim = [31, leap?29:28, 31,30,31,30,31,31,30,31,30,31][mo-1];
+  if(d>dim) return null;
+  const day  = DOY_BEFORE[mo-1] + ((leap && mo>2) ? 1 : 0) + d;   // Jan 1 = day 1
+  const days = leap ? 366 : 365;
+  return {day:day, days:days, frac:day/days, label:MON3[mo-1]+' '+d};
+}
+/* AHEAD/BEHIND/ON PACE pill. The word and the triangle carry the meaning as well as the colour,
+   because this is read at a distance and colour vision is not assumed.
+   `state` is 'ahead' | 'behind' | 'onpace'. The neutral state exists because a delta that rounds to
+   zero would otherwise render "BEHIND -0%" - which looks like a bug on a wall, not like being on
+   target. On pace we show the words alone and drop the meaningless "-0". */
+function goalBadge(state, text){
+  const glyph = state==='ahead' ? '&#9650;' : (state==='behind' ? '&#9660;' : '&#9644;');
+  const word  = state==='ahead' ? 'AHEAD'   : (state==='behind' ? 'BEHIND' : 'ON PACE');
+  return `<span class="gbadge ${state}"><span class="garrow">${glyph}</span>${word}`
+       + (text ? ' '+esc(text) : '') + `</span>`;
+}
+/* Pick the badge state from a signed delta and the ALREADY-ROUNDED magnitude that will be shown, so
+   the word and the number can never disagree (e.g. "BEHIND" next to "0%"). */
+function goalBadgeState(delta, shownMagnitude){
+  if(Number(shownMagnitude)===0) return 'onpace';
+  return delta>=0 ? 'ahead' : 'behind';
+}
 /* Build a compact goal bar for `key` given the metric's actual value for that period.
    Returns '' when the feature is off (GOALS_API empty) so nothing renders. When on but no goal is
    set, returns a subtle "Set goal" affordance. `opt.dark` styles for the dark SILO context. */
@@ -560,6 +680,17 @@ function goalBar(key, actual, opt){
   if(!hasGoal){
     return `<div class="goalbar noGoal${darkCls}" data-goalkey="${esc(key)}"><span class="gset">+ Set goal</span></div>`;
   }
+  /* The goal ALREADY IN THE STORE can be out of range for its kind - the SILO flip goal was saved as
+     30000000 and rendered "YTD goal 30000000%" because nothing checked it. Fail loud (rule 1): show
+     an actionable error INSTEAD of a bar, never a fill or a percentage computed against a nonsense
+     goal. data-goalkey is kept so the delegated click handler still opens the editor.
+     (0 and negatives never reach here - hasGoal above already treats them as "no goal set", which is
+     exactly why saveGoal and the Worker refuse to store them.) */
+  const badGoal = goalRangeError(meta.kind, goal);
+  if(badGoal){
+    const rng = (GOAL_RANGE[meta.kind] || GOAL_RANGE.count).brief;
+    return `<div class="goalbar badGoal${darkCls}" data-goalkey="${esc(key)}" title="${esc(goalShortName(meta)+' is '+badGoal+'. Click to fix.')}"><span class="gbad">&#9888; Goal invalid: ${esc(goalFmt(meta.kind, goal))} - must be ${esc(rng)}. Click to fix.</span></div>`;
+  }
   const act = parseNum(actual);
   const known = isFinite(act);
   const pct = known ? (act/goal*100) : 0;
@@ -567,10 +698,56 @@ function goalBar(key, actual, opt){
   const over = known && pct>=100;
   const pctText = known ? (Math.round(pct)+'%') : '--';   // real % (uncapped) shown as text
   const actText = known ? goalFmt(meta.kind, act) : 'n/a';
-  return `<div class="goalbar${darkCls}" data-goalkey="${esc(key)}" title="Click to edit goal">
-    <div class="gtrack"><div class="gfill${over?' over':''}" style="width:${fill}%"></div></div>
+  /* ---- pace, per metric shape (deliberate: do NOT unify these three) --------------------------
+     known===false -> neither tick nor badge: a pace claim needs a real actual, and a wrong one on
+     the wall is worse than none.
+     a) cumulative YTD totals (plumbing revenue, HVAC sales; kind !== 'percent'): the actual grows
+        from zero on Jan 1, so elapsed time IS the fair yardstick -> tick at the elapsed-year
+        position plus an AHEAD/BEHIND badge. The track is actual/goal, so paceFrac*100% of the track
+        is exactly where "on pace" sits.
+     b) silo-flip-ytd is a RATE, not a running total. It does not accumulate from zero - it already
+        sits near its level on January 2nd - so an elapsed-time pace is meaningless for it and would
+        read as wildly "ahead" every December and "behind" every January. Compare the rate directly
+        to the goal rate, in percentage POINTS, and draw no tick. Please do not "fix" this into
+        elapsed-time pace.
+     c) calls-booked-today has no period (a single day's count): a year-elapsed pace says nothing
+        about one day, so it gets neither a tick nor a badge. */
+  let tickHtml = '', badgeHtml = '', barTitle = 'Click to edit goal';
+  if(known && meta.period==='YTD' && meta.kind!=='percent'){
+    const py = paceFromDate(data && data.date);           // null (missing/malformed date) -> nothing drawn
+    if(py){
+      const paceValue = goal * py.frac;
+      const deltaPct  = (act - paceValue) / goal * 100;   // in points of the goal, same scale as the bar
+      const ahead     = deltaPct >= 0;
+      const shown     = Math.abs(Math.round(deltaPct));   // round FIRST, so word and number agree
+      const state     = goalBadgeState(deltaPct, shown);
+      tickHtml  = `<div class="gtick" style="left:${(Math.max(0,Math.min(100,py.frac*100))).toFixed(2)}%"></div>`;
+      badgeHtml = goalBadge(state, state==='onpace' ? '' : ((ahead?'+':'-')+shown+'%'));
+      barTitle  = 'Pace on '+py.label+': '+goalFmt(meta.kind, paceValue)+' of the '
+                + goalFmt(meta.kind, goal)+' YTD goal ('+Math.round(py.frac*100)+'% of the year). Actual '
+                + goalFmt(meta.kind, act)+' - '
+                + (state==='onpace' ? 'on pace'
+                                    : (ahead?'ahead':'behind')+' by '+goalFmt(meta.kind, Math.abs(act-paceValue)))
+                + '. Click to edit goal.';
+    }
+  } else if(known && meta.period==='YTD' && meta.kind==='percent'){
+    // Rate-vs-rate, so this needs no date at all (see (b) above): points of difference, one decimal.
+    const dPts  = act - goal;
+    const ahead = dPts >= 0;
+    const shown = Math.abs(dPts).toFixed(1);            // round FIRST, so word and number agree
+    const state = goalBadgeState(dPts, shown);
+    badgeHtml = goalBadge(state, state==='onpace' ? '' : ((ahead?'+':'-')+shown+' pts'));
+    barTitle  = 'Rate '+goalFmt(meta.kind, act)+' against the '+goalFmt(meta.kind, goal)+' YTD goal - '
+              + (state==='onpace' ? 'on pace'
+                                  : (ahead?'ahead':'behind')+' by '+shown+' percentage points')
+              + '. A flip rate does not accumulate, so elapsed-time pace does not apply to it.'
+              + ' Click to edit goal.';
+  }
+  return `<div class="goalbar${darkCls}" data-goalkey="${esc(key)}" title="${esc(barTitle)}">
+    <div class="gtrack"><div class="gfill${over?' over':''}" style="width:${fill}%"></div></div>${tickHtml}
     <div class="gmeta">
       <span class="gpct${over?' over':''}">${pctText}<span class="gedit">edit</span></span>
+      ${badgeHtml}
       <span class="ggoal">${esc(actText)} / ${meta.period?esc(meta.period)+' ':''}goal ${esc(goalFmt(meta.kind, goal))}</span>
     </div>
   </div>`;
@@ -607,6 +784,13 @@ async function saveGoal(){
   const raw = $('geVal').value.trim();
   const val = Number(raw.replace(/,/g,''));   // accept typed commas (e.g. 10,000,000) and decimals; strip commas before saving
   if(raw==='' || !isFinite(val)){ geMsg('enter a valid number', true); return; }
+  /* Type-aware range check BEFORE the POST: a percent goal typed as 30000000 (how the SILO flip goal
+     came to render "YTD goal 30000000%") is rejected here with the type, the range and what they
+     typed, so the fix is obvious. The Worker repeats this check authoritatively; this copy is only
+     for a fast, specific message. Same thresholds - GOAL_RANGE - as the render-time check. */
+  const meta = GOAL_META[geKey] || {kind:'count', label:'Goal'};
+  const rangeErr = goalRangeError(meta.kind, val);
+  if(rangeErr){ geMsg(goalShortName(meta)+' is '+rangeErr+'.', true); return; }
   const pass = $('gePass').value;              // kept only in this input / local var; never stored or logged
   geMsg('saving...', false);
   try{

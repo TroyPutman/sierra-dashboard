@@ -536,6 +536,41 @@ permanently, and show when each number was last computed. **Do not simply delete
 ### DB.4 Wall display is always on — CONFIRMED
 **Decided:** Troy, 2026-08-03. Reinforces the outstanding need for a dedicated always-on machine.
 
+### DB.5 Goal values are validated per goal TYPE — BUILT 2026-08-11
+**Decided:** business owner, 2026-08-11, after the SILO flip goal was saved as `30000000` and the bar
+rendered "YTD goal 30000000%". Nothing checked a goal against its kind.
+**Ranges** (all reject zero and negatives): `money` `0 < v <= 100,000,000`; `percent` `0 < v <= 100`;
+`count` `0 < v <= 10,000`.
+**Why those numbers:** the largest real YTD figure in this business is HVAC Sales at ~$28.5M, so a
+$100M ceiling leaves ~3.5x headroom for growth while still catching a fat-finger extra digit — and it
+deliberately still ACCEPTS a legitimate $30M goal. Zero is rejected because `goalBar` reads `0` as
+"no goal set", so storing it would look like the save silently did nothing.
+**Enforced in three places**, because each catches what the others cannot: the editor (refuses to
+POST), the Cloudflare Worker (authoritative, HTTP 400 — needs `wrangler deploy` to take effect), and
+at RENDER time in `goalBar`, which is what handles a bad value **already in the store**. An invalid
+stored goal shows a clickable error instead of a bar — never a fill or a percentage computed against
+a nonsense goal. A real 0% stays visually distinct from that error.
+**Note:** a `percent` GOAL is capped at 100, but an actual flip RATE above 100% remains legitimate
+and uncapped (see M9.4) — the cap is on the target, not the measurement.
+
+### DB.6 Goal bars show a pace marker, and rate goals are excluded from it — BUILT 2026-08-11
+**Decided:** business owner, 2026-08-11. Bars fill on the YTD figure against the YTD goal (they
+already did). Added a tick showing where the metric should be to finish the year on target, plus an
+AHEAD / ON PACE / BEHIND pill.
+`pace = goal x (days elapsed in year / days in year)`, from the snapshot's own **Pacific** date
+string (`data.date`), parsed as integers. Deliberately NOT from the browser clock: `todayStr()` reads
+browser-local time, which would drift for any viewer outside Pacific.
+**Applies to cumulative totals only** — Plumbing revenue and HVAC Sales, which grow from zero on
+Jan 1, so elapsed time is a fair yardstick.
+**Deliberately NOT applied to the SILO flip rate.** A flip rate is a ratio, not a running total: it
+already sits near its level on January 2nd. Elapsed-time pace would call it wildly "ahead" every
+December and "behind" every January. It gets the badge only, comparing the current rate directly to
+the goal rate in percentage points. Do not "fix" this into elapsed-time pace.
+`calls-booked-today` gets neither — a year-elapsed pace says nothing about a single day.
+**ON PACE is a real third state**, not cosmetic: without it a delta rounding to zero rendered
+"BEHIND -0%", which reads as a bug on a wall. The state is derived from the already-rounded
+magnitude so the word and the number can never disagree.
+
 ---
 
 ## Still open

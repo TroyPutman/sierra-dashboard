@@ -15,7 +15,8 @@
  *   OPTIONS *        → CORS preflight (204).
  *   GET     /goals   → returns the goals object from KV (default {} if unset). OPEN, no auth.
  *   POST    /goals   → header `X-Edit-Password` must equal EDIT_PASSWORD. Body {key,value}.
- *                      On match + valid numeric value → merge {key:value} into KV, return 200
+ *                      On match + a numeric value that is IN RANGE for that key's goal kind (see
+ *                      GOAL_KINDS/GOAL_RANGES below) → merge {key:value} into KV, return 200
  *                      + the updated goals object. Wrong/missing password → 401. Bad input → 400.
  *
  * Design notes:
@@ -27,6 +28,54 @@
  */
 
 const KV_KEY = "goals";
+
+/* ===========================================================================
+ * GOAL VALUE RANGES — the AUTHORITATIVE check. The dashboard validates too (in its editor and
+ * again at render time), but that copy runs in the browser and can be bypassed, so nothing is
+ * trusted until it has passed through here.
+ *
+ * !!! KEEP `GOAL_KINDS` BELOW IN SYNC WITH `GOAL_META` IN dashboard.html !!!  Same keys, same
+ *     kinds, same three ranges. Adding a bar means adding its key in BOTH places.
+ * !!! WORKER CHANGES ARE NOT LIVE UNTIL `wrangler deploy` RUNS. !!!  Editing this file alone
+ *     changes nothing in production.
+ *
+ * Zero and negatives are rejected for every kind: the dashboard's goalBar() treats 0 as "no goal
+ * set", so storing a 0 would make the page show the "+ Set goal" affordance again and look like the
+ * save silently did nothing. Money ceiling: the largest real YTD figure in this business is HVAC
+ * Sales at ~$28.5M, so $100M leaves ~3.5x headroom for growth while still catching a fat-finger
+ * extra digit. A rate goal is 0-100 by definition; a day's booked calls are in the hundreds.
+ * =========================================================================== */
+const GOAL_KINDS = {
+  "plumbing-rev-ytd": "money",
+  "hvac-sales-ytd": "money",
+  "silo-flip-ytd": "percent",
+  "calls-booked-today": "count",
+};
+const GOAL_RANGES = {
+  money: { max: 100000000, desc: "a dollar amount greater than 0 and at most 100,000,000" },
+  percent: { max: 100, desc: "a percentage greater than 0 and at most 100" },
+  count: { max: 10000, desc: "a count greater than 0 and at most 10,000" },
+};
+/* An UNKNOWN key is deliberately NOT rejected outright: that would be a deploy-order trap where a
+ * new bar added to dashboard.html could not be used until this Worker was redeployed. Instead it
+ * gets the strictest generic guard (>0, <= the money ceiling), which still stops a fat-finger. */
+const GENERIC_MAX = 100000000;
+
+/** null when `num` is a valid goal for `key`; otherwise the 400 message, naming the valid range. */
+function goalRangeError(key, num) {
+  const kind = GOAL_KINDS[key];
+  const range = kind
+    ? GOAL_RANGES[kind]
+    : { max: GENERIC_MAX, desc: "a number greater than 0 and at most 100,000,000 (unrecognised goal key '" + key + "': generic guard applied)" };
+  if (num <= 0) {
+    return "invalid 'value': " + num + " is out of range for '" + key + "' - expected " + range.desc +
+      " (0 means \"no goal set\" to the dashboard, so it is never stored as a goal)";
+  }
+  if (num > range.max) {
+    return "invalid 'value': " + num + " is out of range for '" + key + "' - expected " + range.desc;
+  }
+  return null;
+}
 
 /** Build CORS headers that reflect the request Origin (permissive, but writes still need the password). */
 function corsHeaders(request) {
@@ -121,6 +170,12 @@ export default {
       const num = typeof value === "number" ? value : Number(value);
       if (!Number.isFinite(num)) {
         return json(request, { error: "invalid 'value': expected a finite number" }, 400);
+      }
+      // Type-aware range check (see GOAL_KINDS/GOAL_RANGES above) — a percent goal of 30000000 is
+      // rejected here even if the page's own checks were bypassed. Fail loud with the range.
+      const rangeErr = goalRangeError(key, num);
+      if (rangeErr) {
+        return json(request, { error: rangeErr }, 400);
       }
 
       // Merge and persist.
