@@ -49,9 +49,14 @@ const GOAL_KINDS = {
   "plumbing-rev-ytd": "money",
   "hvac-sales-ytd": "money",
   "silo-rev-ytd": "money",
-  "silo-flip-ytd": "percent",
   "calls-booked-today": "count",
 };
+/* `percent` currently has no key mapped to it: silo-flip-ytd was removed on 2026-08-11 because the
+ * SILO flip arc gauges already carry a target tick and an ahead/behind delta, so a straight goal bar
+ * repeated the same comparison. The range is kept so that adding a future percentage goal is a
+ * one-line change here, and so the definition of "a valid percentage goal" does not have to be
+ * re-derived. Any value still stored in KV under silo-flip-ytd is ORPHANED - nothing reads it, and
+ * note that it is now covered only by the generic guard below, not by the 0-100 percent range. */
 const GOAL_RANGES = {
   money: { max: 100000000, desc: "a dollar amount greater than 0 and at most 100,000,000" },
   percent: { max: 100, desc: "a percentage greater than 0 and at most 100" },

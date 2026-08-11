@@ -264,15 +264,20 @@
   .revnotes-toggle:hover{color:var(--brand); text-decoration:underline;}
   .revnotes-body{display:none; margin-top:4px;}
   .revnotes.open .revnotes-body{display:block;}
-  /* SILO revenue flip-rate cards (Revenue tab, below Plumbing) */
-  .fliprow{display:flex; gap:22px; margin:6px 0 12px; flex-wrap:wrap;}
-  .flipcard{background:var(--panel); border:1px solid var(--hair); box-shadow:0 1px 4px rgba(8,66,122,.05);
-     border-radius:16px; padding:14px 26px 16px; flex:1; min-width:230px;}
-  .flipcard.today{border-color:var(--gold); box-shadow:0 1px 8px rgba(244,165,34,.18);}
-  .flipcard .rl{font-size:.95rem; font-weight:700; letter-spacing:.05em; color:var(--brand); text-transform:uppercase;}
-  .flipcard .fv{font-size:clamp(2rem,3.4vw,2.8rem); font-weight:650; line-height:1; margin-top:8px;
-     font-variant-numeric:tabular-nums; color:var(--text);}
-  .flipcard .fs{font-size:.85rem; color:var(--dim); margin-top:8px; font-weight:600;}
+  /* SILO flip rate - THREE semicircular ARC GAUGES (Today / MTD / YTD), Revenue tab, below the SILO
+     revenue figures. These replaced the old flat .fliprow/.flipcard cards so the flip rate reads the
+     way the SILO manager's own display does. All geometry and colour live in flipArc() (the same arc
+     maths as siloGauge(), light palette); this only sizes the row, the period label and the counts
+     line. Budget ~135px total per gauge - the Revenue tab is already at the 1080p limit.
+     SCOPE: only the flip rate is an arc. Every GOAL PROGRESS BAR stays a straight .goalbar, including
+     the flip rate's own goal bar directly below these gauges. */
+  .fliparcs{display:flex; gap:10px; margin:4px 0 6px; flex-wrap:wrap;}
+  .fliparc{flex:1 1 0; min-width:150px; text-align:center;}
+  .fliparc .fal{font-size:.78rem; font-weight:700; letter-spacing:.05em; color:var(--brand);
+     text-transform:uppercase; line-height:1.2; white-space:nowrap;}
+  .fliparc svg{display:block; width:100%; max-width:215px; margin:0 auto;}
+  .fliparc .fac{font-size:.72rem; font-weight:600; color:var(--dim2); line-height:1.25;
+     font-variant-numeric:tabular-nums;}
   /* Revenue tab compaction - Plumbing + SILO must fit one 1080p screen, no horizontal overflow */
   .revtab{padding:12px 30px 16px;}
   .revtab .head{margin-bottom:4px;}
@@ -284,11 +289,7 @@
   .revtab .revhero .rl{font-size:.88rem;}
   .revtab .revhero .rv{font-size:clamp(1.7rem,2.7vw,2.3rem); margin-top:3px;}
   .revtab .big td{font-size:1.3rem; padding:5px 14px;}
-  .revtab .fliprow{margin:4px 0 4px; gap:16px;}
-  .revtab .flipcard{padding:9px 24px 11px; border-radius:14px;}
-  .revtab .flipcard .rl{font-size:.88rem;}
-  .revtab .flipcard .fv{font-size:clamp(1.5rem,2.3vw,1.95rem); margin-top:3px;}
-  .revtab .flipcard .fs{margin-top:4px; font-size:.82rem;}
+  .revtab .fliparcs{margin:4px 0 4px;}
   /* HVAC Sales (sold) + SILO (sold turnovers) sit SIDE-BY-SIDE below Plumbing (billed) so all three
      revenue streams fit one 1080p screen without clipping. Two equal columns; cards compacted to fit
      half-width. Plumbing and SILO content/logic are unchanged - only laid out in columns here. */
@@ -299,11 +300,13 @@
   .revcols .revhero{min-width:140px; padding:8px 16px 10px; border-radius:12px;}
   .revcols .revhero .rl{font-size:.8rem;}
   .revcols .revhero .rv{font-size:clamp(1.3rem,1.7vw,1.6rem); font-weight:700;}
-  .revcols .fliprow{gap:12px; margin:4px 0 4px;}
-  .revcols .flipcard{min-width:110px; padding:8px 14px 10px; border-radius:12px;}
-  .revcols .flipcard .rl{font-size:.8rem;}
-  .revcols .flipcard .fv{font-size:clamp(1.25rem,1.6vw,1.65rem);}
-  .revcols .flipcard .fs{font-size:.76rem;}
+  /* The SILO column is ~590px at 1920, i.e. ~185px per gauge: tighter gap, a smaller min-width and
+     smaller label/counts text so all THREE arcs sit side by side without wrapping. Same approach the
+     column already takes with .revhero above. */
+  .revcols .fliparcs{gap:8px; margin:4px 0 4px;}
+  .revcols .fliparc{min-width:118px;}
+  .revcols .fliparc .fal{font-size:.72rem;}
+  .revcols .fliparc .fac{font-size:.68rem;}
   .revcols .big td{font-size:1.05rem; padding:4px 10px;}
   .revcols h3{margin:6px 0 2px;}
   .revcols .cav{font-size:.74rem;}
@@ -454,7 +457,6 @@
   .revcols > .revcol + .revcol{ padding-left:20px; }
   .revcols .revhero{ padding:9px 10px 11px; }
   .revcols .revhero .rv{ font-size:clamp(1.3rem,1.7vw,1.6rem); font-weight:700; white-space:nowrap; letter-spacing:-.02em; }
-  .revcols .flipcard .fv{ white-space:nowrap; }
 </style>
 </head>
 <body>
@@ -564,9 +566,12 @@ function shortBU(s){ return String(s).replace(' - ',' '); }
      hvac-sales-ytd      HVAC Sales sold, Year-To-Date (sold/signed, pre-tax)   -> currency
      calls-booked-today  Calls booked, TODAY (all business units)               -> count
      silo-rev-ytd        SILO revenue, Year-To-Date (sold/signed, pre-tax)      -> currency
-     silo-flip-ytd       SILO flip rate, YTD (TGLs created / ROPP calls ran)    -> percent
-   The SILO section carries TWO bars: silo-rev-ytd (dollars, with a pace tick) sits under the
-   revenue figures, and silo-flip-ytd (a percentage, badge only) sits under the flip figures.
+   The SILO section has exactly ONE goal bar: silo-rev-ytd (dollars, with a pace tick) under the
+   revenue figures. There is deliberately NO goal bar on the flip rate: its arc gauges already
+   carry a tick at the target and a signed ahead/behind delta per period, so a straight bar
+   underneath was saying the same thing twice. The old silo-flip-ytd key was removed 2026-08-11 -
+   see DECISIONS.md M9.4. Any value still stored under it in the Worker's KV is now ORPHANED
+   (nothing reads it); it is harmless but can be deleted.
 */
 const GOALS_API = 'https://sierra-goals.troy-18a.workers.dev';   // <-- paste your Cloudflare Worker URL here (see comment above)
 let GOALS = {};         // key -> goal number (fetched from the Worker; empty when unconfigured)
@@ -575,12 +580,12 @@ const GOAL_META = {
   'plumbing-rev-ytd':  {label:'Plumbing revenue goal (YTD)', kind:'money',   period:'YTD'},
   'hvac-sales-ytd':    {label:'HVAC Sales sold goal (YTD)',  kind:'money',   period:'YTD'},
   'calls-booked-today':{label:'Calls booked goal (today)',   kind:'count'},
-  // Definition changed 2026-08: TGLs created / ROPP calls ran (was turnovers sold / total turnovers).
-  // The SILO section has TWO goals. These labels are what the editor shows and what
-  // goalShortName() derives the metric name from for validation messages, so they must stay
-  // unmistakable: one is dollars, the other a percentage, and they must never be confused.
+  // These labels are what the editor shows, and what goalShortName() derives the metric name from
+  // for validation messages, so they must name the metric AND its unit unmistakably.
+  // NOTE: no 'percent' goal key exists any more (silo-flip-ytd was removed 2026-08-11 - the flip
+  // arcs carry their own target tick and delta). The percent entry in GOAL_RANGE below is still
+  // required: the flip gauges reuse it to validate siloFlip.targetRate.
   'silo-rev-ytd':      {label:'SILO revenue goal (YTD)', kind:'money',   period:'YTD'},
-  'silo-flip-ytd':     {label:'SILO flip rate goal (YTD) - TGLs / ROPP calls ran', kind:'percent', period:'YTD'},
 };
 /* ONE source of truth for what a goal value may be, keyed by GOAL_META.kind. Used by BOTH the
    editor (saveGoal, before the POST) and the renderer (goalBar, for a value already in the store) -
@@ -708,15 +713,18 @@ function goalBar(key, actual, opt){
   /* ---- pace, per metric shape (deliberate: do NOT unify these three) --------------------------
      known===false -> neither tick nor badge: a pace claim needs a real actual, and a wrong one on
      the wall is worse than none.
-     a) cumulative YTD totals (plumbing revenue, HVAC sales; kind !== 'percent'): the actual grows
-        from zero on Jan 1, so elapsed time IS the fair yardstick -> tick at the elapsed-year
-        position plus an AHEAD/BEHIND badge. The track is actual/goal, so paceFrac*100% of the track
-        is exactly where "on pace" sits.
-     b) silo-flip-ytd is a RATE, not a running total. It does not accumulate from zero - it already
-        sits near its level on January 2nd - so an elapsed-time pace is meaningless for it and would
-        read as wildly "ahead" every December and "behind" every January. Compare the rate directly
-        to the goal rate, in percentage POINTS, and draw no tick. Please do not "fix" this into
-        elapsed-time pace.
+     a) cumulative YTD totals (plumbing revenue, HVAC sales, SILO revenue; kind !== 'percent'): the
+        actual grows from zero on Jan 1, so elapsed time IS the fair yardstick -> tick at the
+        elapsed-year position plus an AHEAD/BEHIND badge. The track is actual/goal, so paceFrac*100%
+        of the track is exactly where "on pace" sits.
+     b) a percent-kind YTD goal is a RATE, not a running total. It does not accumulate from zero - it
+        already sits near its level on January 2nd - so an elapsed-time pace is meaningless for it
+        and would read as wildly "ahead" every December and "behind" every January. Compare the rate
+        directly to the goal rate, in percentage POINTS, and draw no tick.
+        NOTE: this branch is currently UNREACHABLE - no percent goal key exists since silo-flip-ytd
+        was removed 2026-08-11. It is kept on purpose: it is the guardrail that stops the next
+        percentage goal from being given elapsed-time pace, which is the exact mistake DECISIONS.md
+        DB.6 exists to prevent. Do not "tidy" it away, and do not "fix" it into elapsed-time pace.
      c) calls-booked-today has no period (a single day's count): a year-elapsed pace says nothing
         about one day, so it gets neither a tick nor a badge. */
   let tickHtml = '', badgeHtml = '', barTitle = 'Click to edit goal';
@@ -1427,23 +1435,140 @@ function renderHvacSalesSection(){
          + errBlock({status:'error', error:(e && e.message) || String(e)}, 'HVAC Sales revenue');
   }
 }
-/* Flip-rate cards, read from the PRECOMPUTED cache (FLIP) - not from the metrics snapshot, whose
-   old "turnovers sold / total turnovers" flip table has been removed. Contract: FLIP.block.tables[0]
-   has exactly two rows, MTD then YTD (Period | Flip Rate | TGLs / calls ran), plus a footer with the
-   as-of text; FLIP.block.periods.ytd.rate is the raw unrounded number (or null).
-   The .today accent goes on the YTD card - it is the goal-tracked headline figure, and Today is gone.
-   Rates ABOVE 100% are legitimate for this metric and are never clamped or hidden (handoff 8.4);
-   the card prints the cache's string verbatim. */
+/* ---- SILO flip-rate ARC GAUGE (Revenue tab, LIGHT palette) -----------------------------------
+   One semicircular gauge per period, matching the SILO manager's own display.
+   The arc maths is siloGauge()'s, unchanged: angle = PI*(1-f), x = cx + R*cos(a), y = cy - R*sin(a),
+   drawn as one `A R R 0 0 1` sweep. pt() takes an OPTIONAL radius so the target tick can be a radial
+   line at the same angle - no new geometry was invented for it. siloGauge()/siloTier() themselves are
+   deliberately untouched: they are the DARK SILO tab's gauge and keep their own palette and sizing.
+   `p` is the cache's period object {num, den, rate}; `rate` is null when no calls have run yet.
+   The FILL fraction is clamped to 0..1 (rates above 100% are real for this metric - handoff 8.4 - and
+   must not draw an invalid arc), but the NUMBER printed is always the true, uncapped rate.
+   `target` is passed in from the cache (config.json siloFlip.targetRate); this function never has a
+   default for it. Colour is never the only signal: the delta carries a triangle glyph and a sign too.
+   Colours are existing vars only: track var(--panel2) over a var(--hair) hairline (mirroring
+   .gtrack's background + 1px border), fill var(--brand) at/above target and var(--gold) below it,
+   number var(--brand)/var(--warn), target tick var(--dim2), counts var(--dim2) (from CSS). */
+function flipArc(label, p, counts, target, title){
+  const R=80, cx=100, cy=94, SW=13;
+  const pt = (f,r) => { const rr=(r===undefined?R:r), a=Math.PI*(1-Math.max(0,Math.min(1,f))); return [cx+rr*Math.cos(a), cy-rr*Math.sin(a)]; };
+  const arc = (f0,f1) => { const [x0,y0]=pt(f0), [x1,y1]=pt(f1); return `M ${x0.toFixed(1)} ${y0.toFixed(1)} A ${R} ${R} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`; };
+  // Colours go in style="" rather than in the stroke/fill presentation attributes: var() is reliably
+  // honoured in an inline style, not in every browser's presentation-attribute parsing.
+  const track = `<path d="${arc(0,1)}" fill="none" stroke-width="${SW+2}" stroke-linecap="round" style="stroke:var(--hair)"/>`
+              + `<path d="${arc(0,1)}" fill="none" stroke-width="${SW}" stroke-linecap="round" style="stroke:var(--panel2)"/>`;
+  const den  = parseNum(p && p.den);
+  const rate = (p && p.rate!=null) ? parseNum(p.rate) : NaN;
+  const live = isFinite(den) && den>0 && isFinite(rate);
+  if(!live){
+    /* NO CALLS HAVE RUN YET (den 0 / rate null) - every morning until the first ROPP call completes.
+       Track only: no fill, no target tick, an em dash instead of a number and "no calls yet" instead
+       of the counts. This must NEVER read 0.0% or NaN. A genuine 0% (calls ran, no TGLs) is visibly
+       different: it draws a real gauge WITH its target tick, a 0.0% number and its real counts. */
+    return `<div class="fliparc" title="${esc(title)}"><div class="fal">${esc(label)}</div>`
+      + `<svg viewBox="0 0 200 103" role="img" aria-label="${esc(label+': no calls have run yet')}">${track}`
+      +   `<text x="100" y="80" text-anchor="middle" font-size="34" font-weight="700" style="font-family:'Poppins',sans-serif; fill:var(--dim2)">&mdash;</text>`
+      + `</svg>`
+      + `<div class="fac">no calls yet</div></div>`;
+  }
+  const hit  = rate >= target;
+  /* Below target the ARC is var(--gold) but the NUMBER is var(--warn): var(--warn) is a dark brown -
+     right for text, muddy as a 13px stroke - and var(--gold) is the reverse (near-illegible as text on
+     white). Both are existing palette vars; nothing new was introduced. */
+  const stroke = hit ? 'var(--brand)' : 'var(--gold)';
+  const numCol = hit ? 'var(--brand)' : 'var(--warn)';
+  const frac = Math.max(0, Math.min(1, rate/100));       // FILL clamped 0..1; the printed number is not
+  const tf   = Math.max(0, Math.min(1, target/100));     // target tick, same scale as the fill
+  const [tx0,ty0] = pt(tf, R-(SW/2)-2.5), [tx1,ty1] = pt(tf, R+(SW/2)+2.5);
+  const d     = rate - target;
+  const shown = Math.abs(d).toFixed(1);                  // round FIRST so glyph, sign and number agree
+  const flat  = Number(shown)===0;                       // "-0.0 pts" would read as a bug on a wall
+  const glyph = flat ? '&#9644;' : (d>=0 ? '&#9650;' : '&#9660;');
+  const dText = flat ? 'on target' : ((d>=0?'+':'-')+shown+' pts');
+  // Tick is drawn AFTER the fill so it stays visible once the fill passes it (same intent as .gtick's z-index).
+  return `<div class="fliparc" title="${esc(title)}"><div class="fal">${esc(label)}</div>`
+    + `<svg viewBox="0 0 200 103" role="img" aria-label="${esc(label+': '+rate.toFixed(1)+'% flip rate, '+counts+' TGLs / calls ran')}">${track}`
+    +   `<path d="${arc(0,frac)}" fill="none" stroke-width="${SW}" stroke-linecap="round" style="stroke:${stroke}"/>`
+    +   `<line x1="${tx0.toFixed(1)}" y1="${ty0.toFixed(1)}" x2="${tx1.toFixed(1)}" y2="${ty1.toFixed(1)}" stroke-width="2.5" style="stroke:var(--dim2)"/>`
+    +   `<text x="100" y="76" text-anchor="middle" font-size="31" font-weight="700" style="font-family:'Poppins',sans-serif; font-variant-numeric:tabular-nums; fill:${numCol}">${rate.toFixed(1)}%</text>`
+    +   `<text x="100" y="93" text-anchor="middle" font-size="12" font-weight="700" style="font-family:'Poppins',sans-serif; fill:${numCol}">${glyph} ${esc(dText)}</text>`
+    + `</svg>`
+    + `<div class="fac">${esc(counts)} TGLs / calls ran</div></div>`;
+}
+/* Flip rate, read from the PRECOMPUTED cache (FLIP) - not from the metrics snapshot, whose old
+   "turnovers sold / total turnovers" flip table has been removed. Contract: FLIP.block.tables[0] has
+   exactly THREE rows, today then MTD then YTD (Period | Flip Rate | TGLs / calls ran), plus a footer
+   with the as-of text; FLIP.block.periods.{today,mtd,ytd} carry the raw unrounded rate (null when den
+   is 0); FLIP.block.target is the target rate from config.json.
+   Rendered as three arc gauges in that same order, so they line up with the Today/MTD/YTD revenue
+   figures above them in this column. Rates ABOVE 100% are legitimate for this metric (handoff 8.4):
+   the arc FILL is clamped, the number never is.
+   The goal bar below the gauges is unchanged - a straight bar with its AHEAD/BEHIND badge. */
 function renderSiloFlipCards(){
   const fb = FLIP && FLIP.block;
-  // Fail loud: no cache, or the refresh script recorded an error -> project-standard error banner
-  // in place of the cards, so a genuine 0% can never be confused with a failure.
+  // Fail loud, and in THIS order - every guard below runs before any arc maths, so a bad cache can
+  // never draw a partial or invented gauge.
+  // 1) no cache, or the refresh script recorded an error -> project-standard error banner in place of
+  //    the gauges, so a genuine 0% can never be confused with a failure.
   if(!fb || fb.status!=='ok'){ return errBlock(fb, 'SILO flip rate'); }
   const t  = asArray(fb.tables)[0];
   const fr = asArray(t && t.rows).map(r=>asArray(r));
   if(!fr.length){ return errBlock({status:'error', error:'the flip cache has no rows - run refresh-silo-flip.ps1'}, 'SILO flip rate'); }
-  const last = fr.length - 1;   // YTD is the last row (contract: [MTD, YTD])
-  let h = '<div class="fliprow">' + fr.map((r,i)=>`<div class="flipcard ${i===last?'today':''}"><div class="rl">${esc(r[0])}</div><div class="fv">${esc(r[1])}</div><div class="fs">${esc(r[2])} TGLs / calls ran</div></div>`).join('') + '</div>';
+  // 2) the target is a BUSINESS THRESHOLD. It comes from config.json (siloFlip.targetRate) through the
+  //    cache; hard rule 2 says never bake one into code, so a missing or out-of-range target is an
+  //    ERROR, not a default. A silently assumed target would repaint every gauge's colour and its
+  //    delta with a made-up number. Validity is judged by goalRangeError('percent', ...) - the same
+  //    check the goal bars use, so there is one definition of "a usable percentage" on this page.
+  const target = parseNum(fb.target);
+  if(goalRangeError('percent', target)){
+    return errBlock({status:'error', error:'the flip cache carries an unusable target rate (got '
+      + String(fb.target===undefined ? 'nothing' : JSON.stringify(fb.target))
+      + ') - it must be a percentage between ' + GOAL_RANGE.percent.range
+      + '. The gauges are drawn against config.json siloFlip.targetRate and this dashboard will not guess a target. Fix it in config.json and re-run refresh-silo-flip.ps1.'}, 'SILO flip rate');
+  }
+  // 3) exactly three period rows (today, MTD, YTD). Fewer means the cache was written by an older
+  //    refresh-silo-flip.ps1 - say so instead of drawing a partial set of gauges.
+  if(fr.length<3){
+    return errBlock({status:'error', error:'the flip cache has '+fr.length+' period row'+(fr.length===1?'':'s')
+      + ', expected 3 (today, month to date, year to date) - it was written by an older refresh-silo-flip.ps1. Re-run it to rebuild the cache.'}, 'SILO flip rate');
+  }
+  // 4) the gauges are drawn from the MACHINE-READABLE periods (raw unrounded rates), never from the
+  //    formatted strings, so those must be present and self-consistent. A missing rate is only valid
+  //    when den is 0 (no calls yet) - that is the em-dash state below, not an error.
+  const keys = ['today','mtd','ytd'], per = (fb.periods || {}), bad = [];
+  keys.forEach(k=>{
+    const p = per[k];
+    if(!p || typeof p!=='object'){ bad.push(k+' (missing)'); return; }
+    if(!isFinite(parseNum(p.num))){ bad.push(k+' (no TGL count)'); return; }
+    const den = parseNum(p.den);
+    if(!isFinite(den)){ bad.push(k+' (no calls-ran count)'); return; }
+    if(den>0 && !(p.rate!=null && isFinite(parseNum(p.rate)))) bad.push(k+' (no rate despite '+fmt(den)+' calls)');
+  });
+  if(bad.length){
+    return errBlock({status:'error', error:'the flip cache periods are unusable: '+bad.join(', ')
+      + '. Expected periods.today, periods.mtd and periods.ytd, each with num, den and rate (rate null only when den is 0). Re-run refresh-silo-flip.ps1.'}, 'SILO flip rate');
+  }
+  /* SHORT labels above the arcs (Today / MTD / YTD) instead of the row's own long period text: at
+     ~185px per gauge "Month to date (Aug 1 - Aug 11)" needs three lines and blows the height budget.
+     The order is contract-fixed (today, MTD, YTD), and the row's full text is kept verbatim in each
+     gauge's hover title, so no date range is lost. */
+  const short = ['Today','MTD','YTD'];
+  const gauges = keys.map((k,i)=>{
+    const r = fr[i] || [], p = per[k];
+    const den  = parseNum(p.den);
+    const rate = (p.rate!=null) ? parseNum(p.rate) : NaN;
+    const live = isFinite(den) && den>0 && isFinite(rate);
+    // Counts come from the row's third column ("17 / 21"); fall back to the same numbers off the
+    // period object if that cell is blank, so the line can never render as bare " TGLs / calls ran".
+    const cell = (r[2]==null) ? '' : String(r[2]).trim();
+    const counts = cell || (fmt(parseNum(p.num))+' / '+fmt(den));
+    const full = (r[0]==null || String(r[0]).trim()==='') ? short[i] : String(r[0]);
+    const title = full + ' - ' + (live
+      ? (rate.toFixed(1)+'% flip rate, '+counts+' TGLs / calls ran, against the '+target.toFixed(1)+'% target')
+      : 'no ROPP calls have run yet in this period, so there is no flip rate to show');
+    return flipArc(short[i], p, counts, target, title);
+  }).join('');
+  let h = `<div class="fliparcs">${gauges}</div>`;
   // As-of: this figure comes from a cache, so always say how current it is (handoff 7.3).
   const stamp = [ (t && t.footer) ? String(t.footer) : '', FLIP.generatedAt ? ('cache pulled '+agoText(FLIP.generatedAt)) : '' ].filter(x=>x);
   // Escape each part, then join with an HTML ENTITY. A literal U+00B7 byte here renders as
@@ -1451,10 +1576,10 @@ function renderSiloFlipCards(){
   // which decodes a BOM-less UTF-8 file as ANSI and turns every multi-byte char into two.
   // That is why this file is ASCII + HTML entities throughout - keep it that way.
   if(stamp.length){ h += `<div class="cav">${stamp.map(esc).join(' &middot; ')}</div>`; }
-  // Goal bar off the machine-readable rate, NOT a row index or a formatted string.
-  const ytd = fb.periods && fb.periods.ytd;
-  const rate = (ytd && typeof ytd.rate === 'number' && isFinite(ytd.rate)) ? ytd.rate : null;   // parseNum() passes numbers through
-  h += goalBar('silo-flip-ytd', rate);
+  // NO goal bar here, deliberately. Each arc already draws a tick at the target and prints a signed
+  // ahead/behind delta, so a straight silo-flip-ytd bar underneath repeated the same comparison in a
+  // second visual language. Removed 2026-08-11 (DECISIONS.md M9.4). The SILO revenue goal bar is
+  // unaffected - it lives in renderSiloRevenueSection() above the gauges and stays a straight bar.
   // The flip block carries its OWN notes (count-weighting, row-vs-distinct counting, why >100% is
   // real). They live on FLIP.block, not on silo-revenue, so they need their own panel or they would
   // never be shown. Separate OPEN_NOTES key -> no collision with the silo-revenue panel.

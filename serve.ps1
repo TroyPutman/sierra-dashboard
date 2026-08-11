@@ -112,7 +112,7 @@ function Get-SiloJson([string]$monthStr) {
 }
 
 # --- SILO flip rate (TGLs created / ROPP calls ran) : READ-ONLY cache passthrough --------------
-# This endpoint NEVER computes on request. A full pull is ~5-6 min of 429-throttled Reporting API
+# This endpoint NEVER computes on request. A full pull is ~7-8 min of 429-throttled Reporting API
 # POSTs, which would hang the HTTP request; SILO-FLIP-HANDOFF.md 7.3 and 8.4/9 forbid it outright.
 # So: do NOT call Build-SiloFlipSnapshot from serve.ps1. The ONLY producer of data/silo-flip.json
 # is refresh-silo-flip.ps1 (run by the GitHub Actions workflow and manually), and that script owns

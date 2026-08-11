@@ -462,11 +462,32 @@ Three quirks are copied **deliberately** because they are what make the number m
   period can read **above 100%**. That is faithful to the source and is never clamped or hidden — the
   manager's own non-SILO MTD reads 111.1%.
 
-**Cost and cadence:** a full recompute is 4 throttled report POSTs (~65s apart) plus a ~42k-job pull ≈ 5–6
+**Three periods — TODAY (Pacific), MTD and YTD** (today added 2026-08-11), each from its own server-side
+windowed pull of both reports. Today is deliberately NOT re-sliced out of the MTD/YTD rows: that would mean
+parsing report-row dates client-side, the thing that broke this metric twice cross-platform, so it costs its
+own pair of POSTs. Today is displayed as a **live indicator, not a settled number** — one day is often a few
+dozen calls, so a handful swings it many points. Judge performance on MTD/YTD.
+
+**Cost and cadence:** a full recompute is 6 throttled report POSTs (~65s apart) plus a ~42k-job pull ≈ 7–8
 minutes, against a CI job that refreshes every 15 minutes and normally finishes in 2–3. So it is computed in
-the refresh layer into `data/silo-flip.json` behind a TTL (`config.json` → `siloFlip.cacheTtlSeconds`, 6h)
-and only ever **read** at display time. It is never computed on request and never frozen (`final:false`) —
-TGLs keep getting scheduled onto days already counted, so the figure keeps settling upward.
+the refresh layer into `data/silo-flip.json` and only ever **read** at display time. It is never computed on
+request and never frozen (`final:false`) — TGLs keep getting scheduled onto days already counted, so the
+figure keeps settling upward.
+
+**Two freshness clocks, because the periods go stale at wildly different speeds.**
+`siloFlip.cacheTtlSeconds` (6h) gates the full rebuild — a YTD figure off ~4,900 calls barely moves in six
+hours. `siloFlip.todayTtlSeconds` (30m) gates **today alone**, which is cheap to refresh: 2 POSTs plus a
+one-day jobs pull of a few hundred jobs (~1–2 min) instead of 6 POSTs and 42k jobs. When today's clock
+expires but the 6h one has not, only today is recomputed and the stored MTD/YTD are carried forward
+verbatim; a today-only run advances only `todayGeneratedAt`, never `generatedAt`, or the 30-minute cadence
+would keep resetting the 6-hour clock and the full rebuild would never run.
+
+**Display:** the three periods render as **semicircular arc gauges** (matching the SILO manager's own
+display), colour-coded against `siloFlip.targetRate` — at/above target in `--brand`, below in `--gold`, with
+a signed delta and an up/down glyph so colour is never the only signal, and a tick on the arc at the target.
+The target is config-driven; the number must not appear in code or in the page. Zero calls yet renders an
+empty arc with a dash and "no calls yet" — never `0.0%`, which is a real and different reading.
+**Only the flip figures are arcs.** Every goal bar on the dashboard stays a straight horizontal bar.
 
 **A FAILED build runs on a second, shorter clock** (`siloFlip.errorRetryCooldownSeconds`, 1h) — added
 2026-08-11 after a real incident. A failed build still writes a `status='error'` block and the workflow
@@ -480,8 +501,15 @@ because the Pacific date rolled over. Raise the cooldown if 429s persist; lower 
 cost of more API pressure. `refresh-silo-flip.ps1 -CheckOnly` prints the skip/recompute decision with no
 network calls, which is how to answer "why didn't it refresh?".
 
-**Goal bar:** `silo-flip-ytd` still tracks the YTD flip, but it now measures the new definition, so its
-target needs re-stating — the owner is setting it himself.
+**Goal bar: REMOVED 2026-08-11.** The flip rate briefly had its own `silo-flip-ytd` goal bar. Once the
+figures became arc gauges — each drawing a tick at `siloFlip.targetRate` and printing a signed
+ahead/behind delta — a straight bar underneath was making the same comparison twice in a second visual
+language, so it was deleted along with its `GOAL_META` entry and its `GOAL_KINDS` mapping in the Worker.
+The flip rate is now measured against the config target by the gauges alone. **The SILO revenue goal bar
+(`silo-rev-ytd`) is unaffected and stays a straight bar.**
+**Orphaned KV:** whatever value sits under `silo-flip-ytd` in the Worker's KV is now dead — nothing reads
+it. Harmless, and safe to delete via the Worker. It joins `plumbing-rev-mtd`, `silo-flip-mtd` and
+`hvac-sales-mtd`, orphaned earlier when the revenue bars moved from MTD to YTD.
 
 ---
 
@@ -575,13 +603,17 @@ browser-local time, which would drift for any viewer outside Pacific.
 **Applies to cumulative totals only** — Plumbing revenue, HVAC Sales and SILO revenue
 (`silo-rev-ytd`, added 2026-08-11), which grow from zero on Jan 1, so elapsed time is a fair
 yardstick.
-**The SILO section therefore carries TWO bars**, and they must not be confused: `silo-rev-ytd` is
-DOLLARS with a pace tick, sitting under the revenue figures; `silo-flip-ytd` is a PERCENTAGE with a
-badge only, sitting under the flip figures. `silo-rev-ytd` is registered `kind:'money'`, so it
-inherits the DB.5 money range (0–$100M) rather than defining its own. The two are independent data
-sources — the metrics snapshot vs. the precomputed flip cache — and each fails loud on its own: a
-flip failure (error state OR an outright throw, via `safeSiloFlipCards()`) cannot hide the revenue
-figures or their goal bar, and vice versa.
+**The SILO section carries exactly ONE goal bar**: `silo-rev-ytd`, DOLLARS with a pace tick, under the
+revenue figures. It is registered `kind:'money'`, so it inherits the DB.5 money range (0–$100M) rather
+than defining its own. The flip rate has **no** goal bar — its arc gauges carry the target tick and the
+ahead/behind delta themselves (see M9.4). Revenue and flip remain independent data sources — the metrics
+snapshot vs. the precomputed flip cache — and each fails loud on its own: a flip failure (error state OR
+an outright throw, via `safeSiloFlipCards()`) cannot hide the revenue figures or their goal bar, and
+vice versa.
+**No `percent` goal key exists any more.** The percent branch in `goalBar`'s pace logic is therefore
+unreachable, and is kept deliberately: it is the guardrail that stops the next percentage goal from
+being handed elapsed-time pace. The percent entry in both range tables also stays — the flip gauges
+reuse the dashboard's one to validate `siloFlip.targetRate`.
 **Deliberately NOT applied to the SILO flip rate.** A flip rate is a ratio, not a running total: it
 already sits near its level on January 2nd. Elapsed-time pace would call it wildly "ahead" every
 December and "behind" every January. It gets the badge only, comparing the current rate directly to

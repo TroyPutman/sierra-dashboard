@@ -1296,7 +1296,7 @@ function Get-Metric-HvacSalesSold($Ctx, [datetime]$Date) {
 }
 
 # ============================================================================
-#  M-SiloFlip: SILO flip rate = (TGLs created) / (ROPP calls ran), MTD + YTD only
+#  M-SiloFlip: SILO flip rate = (TGLs created) / (ROPP calls ran) for TODAY + MTD + YTD
 #  DEFINITION (the SILO manager's own definition, verified against live ServiceTitan 2026-08-10 -
 #  see SILO-FLIP-HANDOFF.md, which is the spec this block implements):
 #    flip rate = (TGLs created) / (ROPP calls ran)
@@ -1339,22 +1339,55 @@ function Get-Metric-HvacSalesSold($Ctx, [datetime]$Date) {
 #      pre-filtered. They are implemented faithfully anyway: if that report is ever edited the
 #      DROP paths start mattering, and refresh-silo-flip.ps1 prints the per-rule drop counts every
 #      recompute so such a change shows up instead of shifting the number silently (handoff SS5.1).
+#  THREE PERIODS, ALWAYS, IN THIS ORDER: today, mtd, ytd - matching the order of the revenue cards
+#    the dashboard stacks above this table, so the eye reads the same three periods down the page.
+#    Windows are built from D (the Pacific snapshot date) as plain Pacific calendar strings:
+#      today: From = To = D          mtd: From = D's 1st .. D          ytd: From = Jan 1 .. D
+#    TODAY IS A SMALL SAMPLE and is therefore VOLATILE - on a 20-call day one TGL moves it several
+#    points. It is a live indicator, not a settled number; MTD/YTD are the figures to judge by.
 #  NO CLIENT-SIDE DATE PARSING ANYWHERE. Each period gets its OWN server-side windowed pull and we
-#    count the rows the server returns. MTD is NEVER derived by filtering the YTD pull in code.
-#    Client-side date parsing of report rows broke this project twice cross-platform (PS5.1 keeps
-#    the report's offset, pwsh7-on-Linux normalizes to UTC) - handoff SS7.2, SS8.5.
+#    count the rows the server returns. MTD is NEVER derived by filtering the YTD pull in code, and
+#    neither is today. Client-side date parsing of report rows broke this project twice
+#    cross-platform (PS5.1 keeps the report's offset, pwsh7-on-Linux normalizes to UTC) - handoff
+#    SS7.2, SS8.5.
 #  FAIL LOUD: a report id that no longer resolves surfaces as an HTTP error; a changed column
 #    layout is caught by the STRICT ORDERED column check (count + name at every index) against
 #    config's expectedColumns. Both reports are one person's personal copies, so a silent edit is
 #    the likeliest failure mode and it must error on screen, never fall back to a stale number.
-#  NOT IN $METRIC_DEFS ON PURPOSE, AND NOT COMPUTED IN serve.ps1: a full compute is 4 report POSTs
-#    spaced ~65s apart (this tenant 429-throttles rapid report runs) = ~5-6 minutes, far too slow
-#    for a per-day snapshot or an on-demand request. It is a current-state MTD/YTD figure served
-#    from its own cache file, exactly like Build-SiloSnapshot -> data/silo-<month>.json. The cache
-#    is written by refresh-silo-flip.ps1, which TTL-gates the recompute (handoff SS6.2 / SS7.3).
+#  TWO COMPUTE PATHS, BECAUSE THE THREE PERIODS COST WILDLY DIFFERENT AMOUNTS:
+#    * Compute-SiloFlip (FULL) = 6 report POSTs (num+den x ytd, mtd, today) spaced
+#      postSpacingSeconds apart, plus ONE jobs pull over the whole YTD span (~42,000 jobs, reused
+#      by all three periods - today's JobNumbers are a subset, so pulling twice would buy nothing
+#      but 429 risk) => roughly 7-8 MINUTES.
+#    * Compute-SiloFlipToday (CHEAP) = 2 report POSTs (num+den for today only) plus a NARROW
+#      ONE-DAY jobs pull of a few hundred jobs => roughly 1-2 minutes. It recomputes today ONLY
+#      and the caller carries the stored mtd/ytd forward verbatim.
+#    Both hand their period data to the SAME builder, New-SiloFlipBlock, so the presentation
+#    (labels, row order, formatting, notes, target) exists in exactly ONE place and the two paths
+#    cannot drift apart.
+#  TWO FRESHNESS CLOCKS, ONE PER PATH (both from config, enforced by refresh-silo-flip.ps1):
+#    * cacheTtlSeconds (6h) gates the FULL rebuild. A YTD figure off ~4,900 calls barely moves in
+#      six hours, and the rebuild is the expensive one.
+#    * todayTtlSeconds (30m) gates the TODAY-ONLY rebuild. A daily figure goes stale in MINUTES,
+#      and refreshing it alone is cheap, so it runs far more often. The snapshot therefore carries
+#      TWO timestamps: generatedAt (when mtd/ytd were last built) and todayGeneratedAt (when today
+#      was last built). A today-only run advances todayGeneratedAt and leaves generatedAt alone.
+#  NOT IN $METRIC_DEFS ON PURPOSE, AND NOT COMPUTED IN serve.ps1: even the cheap path is minutes of
+#    throttled POSTs, far too slow for a per-day snapshot or an on-demand request. It is a
+#    current-state today/MTD/YTD figure served from its own cache file, exactly like
+#    Build-SiloSnapshot -> data/silo-<month>.json. The cache is written by refresh-silo-flip.ps1,
+#    which TTL-gates both paths (handoff SS6.2 / SS7.3).
+#  TARGET IS CONFIG-DRIVEN: siloFlip.targetRate is emitted on the block as `target` so the
+#    dashboard colour-codes against a number it READ rather than one written into the page. The
+#    target must never be hard-coded here or in JS (CLAUDE.md rule 2) - not even inside a note
+#    string, which is why the notes interpolate it.
 #  NEVER FINAL: the figure is retroactive (TGLs keep being scheduled onto earlier days), so it
 #    keeps settling upward and is never frozen.
 # ============================================================================
+
+# The block title. Used by the ok path, the error path and the error-snapshot helper, so it lives in
+# one place - three copies of a long title string is how they end up disagreeing.
+$script:SILO_FLIP_BLOCK_TITLE = 'SILO flip rate (TGLs created / ROPP calls ran)'
 
 # Read + fully validate config.json -> siloFlip. Returns a plain hashtable with everything the
 # metric needs, all strings normalized. NOTHING here has a default: every report id, category,
@@ -1409,13 +1442,37 @@ function Get-SiloFlipConfig {
     }
     $out['tags'] = $tags
 
+    # targetRate: the flip-rate target the dashboard colour-codes each period against. Emitted on the
+    # block as `target` so the number lives in config and NOWHERE in code - not in PowerShell, not in
+    # JS, not even inside a note string (CLAUDE.md rule 2). Validated SEPARATELY from the durations
+    # below because it is a PERCENTAGE, not a whole number of seconds: it may be fractional (59.5 is
+    # a legal goal) and it has an upper bound. Out of range is a LOUD error with NO default - silently
+    # falling back to some built-in target would be exactly the hard-coded goal the rule forbids.
+    # Parsed with the INVARIANT culture on purpose: this file is read by Windows PS 5.1 here and by
+    # pwsh7 on the Linux CI runner, and a culture-sensitive parse of "59.5" would disagree between
+    # hosts if either ever ran under a comma-decimal locale.
+    if ($null -eq $sf.PSObject.Properties['targetRate']) { throw "config.json is missing siloFlip.targetRate - the flip-rate target must come from config, never from code (CLAUDE.md rule 2)" }
+    $trRaw = "$($sf.targetRate)"
+    if ([string]::IsNullOrWhiteSpace($trRaw)) { throw "config.json is missing siloFlip.targetRate - the flip-rate target must come from config, never from code (CLAUDE.md rule 2)" }
+    $trVal = 0.0
+    if (-not [double]::TryParse($trRaw, [Globalization.NumberStyles]::Float, [Globalization.CultureInfo]::InvariantCulture, [ref]$trVal)) {
+        throw "config.json siloFlip.targetRate must be a number (got '$trRaw')"
+    }
+    if (($trVal -le 0) -or ($trVal -gt 100)) { throw "config.json siloFlip.targetRate is a percentage and must be greater than 0 and at most 100 (got $trRaw)" }
+    $out['targetRate'] = $trVal
+
     # postSpacingSeconds: the deliberate gap between report POSTs (tenant 429 cooldown is ~60s).
-    # cacheTtlSeconds: how long data/silo-flip.json counts as fresh (used by refresh-silo-flip.ps1).
+    # cacheTtlSeconds: how long the WHOLE cache (mtd/ytd) counts as fresh - the clock on the
+    #   expensive 6-POST full rebuild (used by refresh-silo-flip.ps1).
+    # todayTtlSeconds: the SEPARATE, much shorter clock on today's figure alone. A YTD figure off
+    #   ~4,900 calls barely moves in six hours; a single day's figure is stale within minutes, and
+    #   rebuilding just today costs 2 POSTs and a one-day jobs pull instead of 6 POSTs and a ~42k-job
+    #   pull. Two clocks is what lets today be live without making the full rebuild frequent.
     # errorRetryCooldownSeconds: how long to leave a FAILED cache alone before retrying it. Without
-    #   this, an errored cache is retried by every 15-minute CI run - 4 throttled report POSTs plus a
+    #   this, an errored cache is retried by every 15-minute CI run - 6 throttled report POSTs plus a
     #   ~42k-job pull each time, on top of the 3 report POSTs refresh.ps1 already makes in the same
     #   run - which is enough to keep the tenant 429-throttled instead of letting it recover.
-    foreach ($k in 'postSpacingSeconds','cacheTtlSeconds','errorRetryCooldownSeconds') {
+    foreach ($k in 'postSpacingSeconds','cacheTtlSeconds','todayTtlSeconds','errorRetryCooldownSeconds') {
         if ($null -eq $sf.PSObject.Properties[$k]) { throw "config.json is missing siloFlip.$k" }
         $raw = "$($sf.$k)"
         if ([string]::IsNullOrWhiteSpace($raw)) { throw "config.json is missing siloFlip.$k" }
@@ -1486,84 +1543,52 @@ function Measure-SiloFlipWindow($Rep, $Spec, [string]$FromStr, [string]$ToStr) {
     @{ outOfWindow = $bad; unparsed = $unparsed }
 }
 
-# The expensive part: 4 report POSTs + one bulk jobs pull, then the cleaning rules.
-# Returns @{ periods = [ordered]@{ mtd=@{from;to;numerator;denominator;rate}; ytd=@{...} };
-#            diagnostics = @{ mtd=@{...}; ytd=@{...} } }
-function Compute-SiloFlip($Ctx, [datetime]$Date) {
-    $cfg = Get-SiloFlipConfig
+# ---------- building blocks shared by BOTH compute paths --------------------------------------
+# Everything below is factored out precisely because there are now TWO compute paths (the 6-POST
+# full rebuild and the 2-POST today-only rebuild). The cleaning rules, the fail-loud window guard
+# and the rate arithmetic exist ONCE each: two copies of the manager's rules would eventually
+# disagree, and then today's figure and MTD's figure would be measuring different things.
 
-    # Both windows are built from $Date's CALENDAR COMPONENTS only - no timezone conversion of
-    # $Date, no client-side parsing anywhere. Same zero-padded, culture-independent idiom as
-    # Get-Metric-SiloRevenue.
-    $y = $Date.Year; $m = $Date.Month; $d = $Date.Day
-    $fmt  = { param($yy,$mm,$dd) '{0:D4}-{1:D2}-{2:D2}' -f [int]$yy,[int]$mm,[int]$dd }
-    $dStr = & $fmt $y $m $d                                   # D = the 'To' of both periods
-    $windows = [ordered]@{
-        mtd = @{ from = (& $fmt $y $m 1); to = $dStr }         # 1st of D's month .. D
-        ytd = @{ from = (& $fmt $y 1 1);  to = $dStr }         # Jan 1 of D's year .. D
+# One period's server-side windowed pull of ONE report, plus the out-of-window tripwire.
+# THROWS if any row's date key fell outside the requested window: that means the report's
+# server-side From/To has stopped agreeing with the counted column, so the count cannot be trusted.
+# This is the guard that caught the cross-platform date bug last time; both paths must have it.
+# Returns @{ rep; outOfWindow; unparsed }.
+function Get-SiloFlipPull($Ctx, $Spec, [string]$Period, [string]$FromStr, [string]$ToStr) {
+    $rep = Invoke-SiloFlipReport $Ctx $Spec $FromStr $ToStr
+    $chk = Measure-SiloFlipWindow $rep $Spec $FromStr $ToStr
+    if ($chk.outOfWindow -gt 0) {
+        throw "SILO flip: report $($Spec.reportId) returned $($chk.outOfWindow) row(s) whose $($Spec.dateColumn) falls outside the requested window $FromStr..$ToStr ($Period) - the report's server-side From/To no longer matches the counted column, so the count cannot be trusted"
     }
+    @{ rep = $rep; outOfWindow = [int]$chk.outOfWindow; unparsed = [int]$chk.unparsed }
+}
 
-    # FOUR POSTs, in this order, each its OWN server-side windowed pull. MTD is NOT derived by
-    # filtering the YTD pull client-side (that would require parsing row dates - forbidden).
-    # Start-Sleep BETWEEN pulls only: 3 sleeps, none before the first, none after the last. The
-    # tenant 429-throttles rapid report runs with a ~60s backoff; this spacing is what avoids them,
-    # and Invoke-StReportPost's Retry-After retry remains the backstop.
-    $pulls = @(
-        @{ period='ytd'; side='numerator' },
-        @{ period='ytd'; side='denominator' },
-        @{ period='mtd'; side='numerator' },
-        @{ period='mtd'; side='denominator' }
-    )
-    $reps = @{}
-    $oow  = @{ mtd=0; ytd=0 }      # out-of-window rows, summed over that period's two pulls
-    $unp  = @{ mtd=0; ytd=0 }      # rows whose date cell had no ISO prefix (informational only)
-    for ($i = 0; $i -lt $pulls.Count; $i++) {
-        if ($i -gt 0) { Start-Sleep -Seconds $cfg.postSpacingSeconds }
-        $p    = $pulls[$i]
-        $spec = $cfg[$p.side]
-        $w    = $windows[$p.period]
-        $rep  = Invoke-SiloFlipReport $Ctx $spec $w.from $w.to
-        $chk  = Measure-SiloFlipWindow $rep $spec $w.from $w.to
-        $oow[$p.period] += $chk.outOfWindow
-        $unp[$p.period] += $chk.unparsed
-        if ($chk.outOfWindow -gt 0) {
-            throw "SILO flip: report $($spec.reportId) returned $($chk.outOfWindow) row(s) whose $($spec.dateColumn) falls outside the requested window $($w.from)..$($w.to) ($($p.period)) - the report's server-side From/To no longer matches the counted column, so the count cannot be trusted"
-        }
-        $reps["$($p.period)/$($p.side)"] = $rep
-    }
+# The numerator IS the row count of the TGLs-created report for the period - no filtering, no date
+# parsing. The same pull also yields that period's TGL-SOURCE SET (the JobNumbers that produced a
+# TGL), which denominator cleaning rule 4 needs. Column located BY NAME, never by index.
+# Returns @{ rows=[int]; tglSet=HashSet[string] }.
+function Measure-SiloFlipNumerator($Rep, $Spec) {
+    $iJob = (Get-ReportColMap $Rep.fields @($Spec.jobNumberColumn))[$Spec.jobNumberColumn]
+    $set  = New-Object 'System.Collections.Generic.HashSet[string]'
+    foreach ($row in $Rep.rows) { [void]$set.Add("$($row[$iJob])") }
+    @{ rows = [int](@($Rep.rows).Count); tglSet = $set }
+}
 
-    # ---- numerator: the row count IS "TGLs created". Also collect the period's TGL-source set
-    # (the JobNumbers that produced a TGL) - cleaning rule 4 needs it. Column located BY NAME.
-    $numRows = @{}; $tglSets = @{}
-    foreach ($p in 'mtd','ytd') {
-        $rep  = $reps["$p/numerator"]
-        $iJob = (Get-ReportColMap $rep.fields @($cfg.numerator.jobNumberColumn))[$cfg.numerator.jobNumberColumn]
-        $set  = New-Object 'System.Collections.Generic.HashSet[string]'
-        foreach ($row in $rep.rows) { [void]$set.Add("$($row[$iJob])") }
-        $numRows[$p] = @($rep.rows).Count
-        $tglSets[$p] = $set
-    }
-
-    # ---- jobs map: ONE bulk pull covering the YTD span, reused for BOTH periods (the MTD
-    # JobNumbers are a subset of the YTD span, so a second pull would buy nothing but 429 risk).
-    # Two windows are needed:
-    #   A) completedOnOrAfter/completedBefore - the population the denominator report reports on
-    #   B) createdOnOrAfter/createdBefore     - catches NON-completed TGL-source calls, which
-    #                                           window A cannot return but rule 4 must see
-    # Bounds are built the project-correct way: a Pacific day converted to a UTC range ONCE via
-    # Get-PacDayWindow (Jan 1 for the start, D for the end, so D is fully included). Paged at
-    # Invoke-StPaged's DEFAULT pageSize of 200 - NEVER 300 on this tenant (duplicate rows).
-    $yearStart = [datetime]::new($y, 1, 1)
-    $startIso  = (Get-PacDayWindow $Ctx $yearStart).StartIso
-    $endIso    = (Get-PacDayWindow $Ctx $Date).EndIso
-    $jobs = @{}                       # jobNumber (string) -> @{ jobStatus; tagTypeIds }
-    foreach ($q in @(
-        @{ completedOnOrAfter=$startIso; completedBefore=$endIso },
-        @{ createdOnOrAfter=$startIso;   createdBefore=$endIso }
-    )) {
+# Bulk-pull jobs into a jobNumber (string) -> @{ jobStatus; tagTypeIds } map over the given query
+# windows. TWO windows are always needed:
+#   A) completedOnOrAfter/completedBefore - the population the denominator report reports on
+#   B) createdOnOrAfter/createdBefore     - catches NON-completed TGL-source calls, which window A
+#                                           cannot return but cleaning rule 4 must see
+# The CALLER supplies the bounds, and that is the ONLY difference between the two paths' lookups:
+# the full path spans Jan 1..D (~42,000 jobs), the today path spans D's single Pacific day (a few
+# hundred). Paged at Invoke-StPaged's DEFAULT pageSize of 200 - NEVER 300 on this tenant
+# (CLAUDE.md rule 7: byte-identical duplicate rows at exactly that value).
+# FAIL LOUD only on a MECHANISM break (a missing field means the jobs API shape changed). An
+# individual job we never see is a completely different thing and fails open via cleaning rule 1.
+function Get-SiloFlipJobsMap($Ctx, $Queries) {
+    $jobs = @{}
+    foreach ($q in $Queries) {
         foreach ($j in (Invoke-StPaged $Ctx "/jpm/v2/tenant/$($Ctx.Tenant)/jobs" $q)) {
-            # A missing field here is a MECHANISM break (the jobs API shape changed) -> fail loud.
-            # An individual job we never see is a different thing entirely and fails open (rule 1).
             foreach ($f in 'jobNumber','jobStatus','tagTypeIds') {
                 if ($null -eq $j.PSObject.Properties[$f]) { throw "SILO flip: job $($j.id) is missing field '$f' - the jobs API shape changed" }
             }
@@ -1575,125 +1600,352 @@ function Compute-SiloFlip($Ctx, [datetime]$Date) {
             $jobs[$key] = @{ jobStatus = "$($j.jobStatus)"; tagTypeIds = $tagIds }
         }
     }
-    $jobsPulled = $jobs.Count
-
-    # ---- denominator: cleaning rules per DISTINCT JobNumber, then count ROWS.
-    $periods = [ordered]@{}; $diag = @{}
-    foreach ($p in 'mtd','ytd') {
-        $rep   = $reps["$p/denominator"]
-        $iJob  = (Get-ReportColMap $rep.fields @($cfg.denominator.jobNumberColumn))[$cfg.denominator.jobNumberColumn]
-        $rows  = @($rep.rows)
-        $keep  = @{}                  # JobNumber -> $true/$false, decided ONCE per distinct number
-        $dropMgmt = 0; $dropNotRopp = 0; $dropNotCompletedNotTgl = 0; $failedOpen = 0
-        foreach ($row in $rows) {
-            $jn = "$($row[$iJob])"
-            if ($keep.ContainsKey($jn)) { continue }
-            # RULES 1-5 IN EXACTLY THIS ORDER (handoff SS3). Order matters: a Management-Removed job
-            # is dropped before the ROPP test, and both run before the not-completed test.
-            if (-not $jobs.ContainsKey($jn)) {
-                $keep[$jn] = $true; $failedOpen++                                   # 1. unresolvable -> KEEP (fails open)
-            } elseif ($jobs[$jn].tagTypeIds -contains $cfg.tags.managementRemoved) {
-                $keep[$jn] = $false; $dropMgmt++                                    # 2. Management Removed -> DROP
-            } elseif ($jobs[$jn].tagTypeIds -notcontains $cfg.tags.ropp) {
-                $keep[$jn] = $false; $dropNotRopp++                                 # 3. not ROPP-tagged -> DROP
-            } elseif (($jobs[$jn].jobStatus -ne 'Completed') -and (-not $tglSets[$p].Contains($jn))) {
-                $keep[$jn] = $false; $dropNotCompletedNotTgl++                      # 4. not Completed and never made a TGL -> DROP
-            } else {
-                $keep[$jn] = $true                                                  # 5. KEEP
-            }
-        }
-        # DENOMINATOR = COUNT OF ROWS whose JobNumber was kept - deliberately NOT deduped to
-        # distinct jobs. 25 jobs carry more than one invoice YTD, so row counting reads ~0.5%
-        # higher; that inflation is exactly what makes this match the SILO manager's calls-ran
-        # (4873 vs their 4872, where deduping gives 4848 and misses by ~24). Handoff SS5.2 / SS8.2.
-        $den = 0
-        foreach ($row in $rows) { if ($keep["$($row[$iJob])"]) { $den++ } }
-        $num = $numRows[$p]
-
-        # rate is an UNROUNDED [double] and is NOT clamped: >100% is legitimate here because the
-        # two sides key on different date fields, and the manager renders such readings too.
-        # A zero denominator yields $null (rendered '-'), never a divide-by-zero or a fake 0%.
-        $rate = $null
-        if ($den -gt 0) { $rate = [double](100.0 * $num / $den) }
-
-        $periods[$p] = @{ from = $windows[$p].from; to = $windows[$p].to; numerator = [int]$num; denominator = [int]$den; rate = $rate }
-        $diag[$p] = @{
-            rawNumeratorRows                = [int]$num
-            rawDenominatorRows              = [int]$rows.Count
-            distinctJobNumbers              = [int]$keep.Count
-            droppedManagementRemoved        = [int]$dropMgmt
-            droppedNotRopp                  = [int]$dropNotRopp
-            droppedNotCompletedNotTglSource = [int]$dropNotCompletedNotTgl
-            failedOpen                      = [int]$failedOpen
-            outOfWindowRows                 = [int]$oow[$p]
-            unparsedDateRows                = [int]$unp[$p]
-            jobsPulled                      = [int]$jobsPulled
-        }
-    }
-    @{ periods = $periods; diagnostics = $diag }
+    $jobs
 }
 
-# Build the presentation block. Same shape every other Get-Metric-* returns (id/title/status/
-# error/notes/tables) plus `periods` + `diagnostics`, which the SILO-flip renderer reads directly.
-function Get-Metric-SiloFlip($Ctx, [datetime]$Date) {
-    $res = Compute-SiloFlip $Ctx $Date
-    $per = $res.periods
+# The denominator for ONE period: cleaning rules per DISTINCT JobNumber, then COUNT THE ROWS that
+# belong to kept JobNumbers.
+# Returns @{ den; rawRows; distinct; dropMgmt; dropNotRopp; dropNotCompletedNotTgl; failedOpen }.
+function Measure-SiloFlipDenominator($Rep, $Spec, $Jobs, $TglSet, $Tags) {
+    $iJob = (Get-ReportColMap $Rep.fields @($Spec.jobNumberColumn))[$Spec.jobNumberColumn]
+    $rows = @($Rep.rows)
+    $keep = @{}                       # JobNumber -> $true/$false, decided ONCE per distinct number
+    $dropMgmt = 0; $dropNotRopp = 0; $dropNotCompletedNotTgl = 0; $failedOpen = 0
+    foreach ($row in $rows) {
+        $jn = "$($row[$iJob])"
+        if ($keep.ContainsKey($jn)) { continue }
+        # RULES 1-5 IN EXACTLY THIS ORDER (handoff SS3). Order matters: a Management-Removed job
+        # is dropped before the ROPP test, and both run before the not-completed test.
+        if (-not $Jobs.ContainsKey($jn)) {
+            $keep[$jn] = $true; $failedOpen++                                   # 1. unresolvable -> KEEP (fails open)
+        } elseif ($Jobs[$jn].tagTypeIds -contains $Tags.managementRemoved) {
+            $keep[$jn] = $false; $dropMgmt++                                    # 2. Management Removed -> DROP
+        } elseif ($Jobs[$jn].tagTypeIds -notcontains $Tags.ropp) {
+            $keep[$jn] = $false; $dropNotRopp++                                 # 3. not ROPP-tagged -> DROP
+        } elseif (($Jobs[$jn].jobStatus -ne 'Completed') -and (-not $TglSet.Contains($jn))) {
+            $keep[$jn] = $false; $dropNotCompletedNotTgl++                      # 4. not Completed and never made a TGL -> DROP
+        } else {
+            $keep[$jn] = $true                                                  # 5. KEEP
+        }
+    }
+    # DENOMINATOR = COUNT OF ROWS whose JobNumber was kept - deliberately NOT deduped to distinct
+    # jobs. 25 jobs carry more than one invoice YTD, so row counting reads ~0.5% higher; that
+    # inflation is exactly what makes this match the SILO manager's calls-ran (4873 vs their 4872,
+    # where deduping gives 4848 and misses by ~24). Handoff SS5.2 / SS8.2.
+    $den = 0
+    foreach ($row in $rows) { if ($keep["$($row[$iJob])"]) { $den++ } }
+    @{ den=[int]$den; rawRows=[int]$rows.Count; distinct=[int]$keep.Count;
+       dropMgmt=[int]$dropMgmt; dropNotRopp=[int]$dropNotRopp;
+       dropNotCompletedNotTgl=[int]$dropNotCompletedNotTgl; failedOpen=[int]$failedOpen }
+}
 
-    # Verbose period labels, same style as the revenue blocks: "Month to date (Aug 1 - Aug 10)".
+# Assemble ONE period's public figures + diagnostics from its numerator and denominator results.
+# rate is an UNROUNDED [double] and is NOT clamped: >100% is legitimate here because the two sides
+# key on different date fields, and the manager renders such readings too. A zero denominator
+# yields $null (rendered '-'), never a divide-by-zero and never a fake 0%.
+# Returns @{ period=@{from;to;num;den;rate}; diag=@{...} }.
+function New-SiloFlipPeriod([string]$FromStr, [string]$ToStr, $Num, $Den, [int]$OutOfWindow, [int]$Unparsed, [int]$JobsPulled) {
+    $rate = $null
+    if ($Den.den -gt 0) { $rate = [double](100.0 * $Num.rows / $Den.den) }
+    @{
+        period = @{ from=$FromStr; to=$ToStr; num=[int]$Num.rows; den=[int]$Den.den; rate=$rate }
+        diag   = @{
+            rawNumeratorRows                = [int]$Num.rows
+            rawDenominatorRows              = [int]$Den.rawRows
+            distinctJobNumbers              = [int]$Den.distinct
+            droppedManagementRemoved        = [int]$Den.dropMgmt
+            droppedNotRopp                  = [int]$Den.dropNotRopp
+            droppedNotCompletedNotTglSource = [int]$Den.dropNotCompletedNotTgl
+            failedOpen                      = [int]$Den.failedOpen
+            outOfWindowRows                 = [int]$OutOfWindow
+            unparsedDateRows                = [int]$Unparsed
+            jobsPulled                      = [int]$JobsPulled
+        }
+    }
+}
+
+# ---------- the FULL compute path (all three periods) -----------------------------------------
+# 6 report POSTs spaced postSpacingSeconds apart + ONE bulk jobs pull over the YTD span, then the
+# cleaning rules => roughly 7-8 minutes. This is the expensive path; refresh-silo-flip.ps1 gates it
+# on cacheTtlSeconds (6h).
+# Returns @{ periods = [ordered]@{ today=@{from;to;num;den;rate}; mtd=@{...}; ytd=@{...} };
+#            diagnostics = @{ today=@{...}; mtd=@{...}; ytd=@{...} };
+#            target = <config siloFlip.targetRate> }
+function Compute-SiloFlip($Ctx, [datetime]$Date) {
+    $cfg = Get-SiloFlipConfig
+
+    # All THREE windows are built from $Date's CALENDAR COMPONENTS only - no timezone conversion of
+    # $Date, no client-side parsing anywhere. Same zero-padded, culture-independent idiom as
+    # Get-Metric-SiloRevenue.
+    $y = $Date.Year; $m = $Date.Month; $d = $Date.Day
+    $fmt  = { param($yy,$mm,$dd) '{0:D4}-{1:D2}-{2:D2}' -f [int]$yy,[int]$mm,[int]$dd }
+    $dStr = & $fmt $y $m $d                                   # D = the 'To' of all three periods
+    $windows = [ordered]@{
+        today = @{ from = $dStr;            to = $dStr }      # D .. D - one single Pacific day
+        mtd   = @{ from = (& $fmt $y $m 1); to = $dStr }      # 1st of D's month .. D
+        ytd   = @{ from = (& $fmt $y 1 1);  to = $dStr }      # Jan 1 of D's year .. D
+    }
+
+    # SIX POSTs, in this order, each its OWN server-side windowed pull. NEITHER mtd NOR today is
+    # derived by filtering the ytd pull client-side (that would require parsing row dates -
+    # forbidden, and it broke this project twice). Today is pulled LAST so its figure - the one
+    # that moves - is the freshest of the three when the run finishes.
+    # Start-Sleep BETWEEN pulls only: 5 sleeps, none before the first, none after the last. The
+    # tenant 429-throttles rapid report runs with a ~60s backoff; this spacing is what avoids them,
+    # and Invoke-StReportPost's Retry-After retry remains the backstop.
+    $pulls = @(
+        @{ period='ytd';   side='numerator' },
+        @{ period='ytd';   side='denominator' },
+        @{ period='mtd';   side='numerator' },
+        @{ period='mtd';   side='denominator' },
+        @{ period='today'; side='numerator' },
+        @{ period='today'; side='denominator' }
+    )
+    $reps = @{}
+    $oow  = @{ today=0; mtd=0; ytd=0 }   # out-of-window rows, summed over that period's two pulls
+    $unp  = @{ today=0; mtd=0; ytd=0 }   # rows whose date cell had no ISO prefix (informational only)
+    for ($i = 0; $i -lt $pulls.Count; $i++) {
+        if ($i -gt 0) { Start-Sleep -Seconds $cfg.postSpacingSeconds }
+        $p   = $pulls[$i]
+        $w   = $windows[$p.period]
+        $res = Get-SiloFlipPull $Ctx $cfg[$p.side] $p.period $w.from $w.to
+        $oow[$p.period] += $res.outOfWindow
+        $unp[$p.period] += $res.unparsed
+        $reps["$($p.period)/$($p.side)"] = $res.rep
+    }
+
+    # ---- numerators: the row count IS "TGLs created", plus each period's TGL-source set.
+    $nums = @{}
+    foreach ($p in 'today','mtd','ytd') { $nums[$p] = Measure-SiloFlipNumerator $reps["$p/numerator"] $cfg.numerator }
+
+    # ---- jobs map: ONE bulk pull covering the YTD span, reused for ALL THREE periods. The mtd and
+    # today JobNumbers are SUBSETS of the ytd span, so pulling again for them would buy nothing but
+    # 429 risk and minutes. Bounds are built the project-correct way: a Pacific day converted to a
+    # UTC range ONCE via Get-PacDayWindow (Jan 1 for the start, D for the end, so D is fully
+    # included).
+    $yearStart = [datetime]::new($y, 1, 1)
+    $startIso  = (Get-PacDayWindow $Ctx $yearStart).StartIso
+    $endIso    = (Get-PacDayWindow $Ctx $Date).EndIso
+    $jobs = Get-SiloFlipJobsMap $Ctx @(
+        @{ completedOnOrAfter=$startIso; completedBefore=$endIso },
+        @{ createdOnOrAfter=$startIso;   createdBefore=$endIso }
+    )
+    $jobsPulled = $jobs.Count
+
+    # ---- denominators: cleaning rules per DISTINCT JobNumber, then count ROWS.
+    $periods = [ordered]@{}; $diag = @{}
+    foreach ($p in 'today','mtd','ytd') {
+        $den = Measure-SiloFlipDenominator $reps["$p/denominator"] $cfg.denominator $jobs $nums[$p].tglSet $cfg.tags
+        $one = New-SiloFlipPeriod $windows[$p].from $windows[$p].to $nums[$p] $den $oow[$p] $unp[$p] $jobsPulled
+        $periods[$p] = $one.period
+        $diag[$p]    = $one.diag
+    }
+    @{ periods = $periods; diagnostics = $diag; target = $cfg.targetRate }
+}
+
+# ---------- the CHEAP compute path (today only) ------------------------------------------------
+# 2 report POSTs (numerator + denominator for D..D, one sleep between) plus a NARROW ONE-DAY jobs
+# pull of a few hundred jobs instead of ~42,000 => roughly 1-2 minutes. That is what makes a
+# 30-minute refresh of today's figure affordable while the full rebuild stays a 6-hourly event.
+# Returns the SAME shape as Compute-SiloFlip but with only the `today` key; the caller carries the
+# stored mtd/ytd forward.
+# KNOWN, ACCEPTED DIFFERENCE FROM THE FULL PATH: this jobs map only spans D, so a denominator row
+# whose job's completedOn/createdOn falls outside D's Pacific window is absent from the map and
+# takes cleaning rule 1 - FAILS OPEN, i.e. is KEPT. The full path, whose map spans the year, would
+# have resolved that job and applied rules 2-4 to it. Keeping it is the same verdict the rules
+# reach on every live row today anyway (all ROPP-tagged, all Completed, none Management-Removed -
+# handoff SS5.1), and `failedOpen` in the diagnostics is the observable that says how often it
+# happened, so a real divergence shows up rather than hiding. The next full rebuild re-derives
+# today with the full-year map regardless, so nothing is permanently skewed.
+function Compute-SiloFlipToday($Ctx, [datetime]$Date) {
+    $cfg = Get-SiloFlipConfig
+
+    # Same calendar-components-only idiom as Compute-SiloFlip. From = To = D: exactly one Pacific
+    # day, windowed SERVER-SIDE. Today is never carved out of the MTD/YTD rows in code.
+    $fmt  = { param($yy,$mm,$dd) '{0:D4}-{1:D2}-{2:D2}' -f [int]$yy,[int]$mm,[int]$dd }
+    $dStr = & $fmt $Date.Year $Date.Month $Date.Day
+    $w    = @{ from = $dStr; to = $dStr }
+
+    # TWO POSTs with ONE sleep BETWEEN them - none before the first, none after the last, same rule
+    # as the full path. Two POSTs is one tenant-cooldown gap, not five.
+    $numPull = Get-SiloFlipPull $Ctx $cfg.numerator   'today' $w.from $w.to
+    Start-Sleep -Seconds $cfg.postSpacingSeconds
+    $denPull = Get-SiloFlipPull $Ctx $cfg.denominator 'today' $w.from $w.to
+
+    $num = Measure-SiloFlipNumerator $numPull.rep $cfg.numerator
+
+    # ONE-DAY jobs pull: the same two windows the full path uses, but bounded to D's single Pacific
+    # day via Get-PacDayWindow instead of the whole year. Default pageSize of 200 - NEVER 300.
+    $day  = Get-PacDayWindow $Ctx $Date
+    $jobs = Get-SiloFlipJobsMap $Ctx @(
+        @{ completedOnOrAfter=$day.StartIso; completedBefore=$day.EndIso },
+        @{ createdOnOrAfter=$day.StartIso;   createdBefore=$day.EndIso }
+    )
+
+    $den = Measure-SiloFlipDenominator $denPull.rep $cfg.denominator $jobs $num.tglSet $cfg.tags
+    $one = New-SiloFlipPeriod $w.from $w.to $num $den `
+             ($numPull.outOfWindow + $denPull.outOfWindow) ($numPull.unparsed + $denPull.unparsed) $jobs.Count
+
+    @{ periods = [ordered]@{ today = $one.period }; diagnostics = @{ today = $one.diag }; target = $cfg.targetRate }
+}
+
+# ---------- presentation: the ONE place period data becomes a block ----------------------------
+# BOTH compute paths funnel through here, and that is the entire point of the refactor: a full
+# rebuild and a today-only rebuild must emit IDENTICAL structure, labels, row order, formatting and
+# notes, or the tile would visibly change shape depending on which path happened to run last.
+# $Periods and $Diagnostics are CONTAINERS keyed today/mtd/ytd (a hashtable or [ordered] hashtable).
+# Their VALUES may be hashtables fresh out of a compute OR ConvertFrom-Json objects carried forward
+# from the existing cache, so each period's fields are read with plain dot access - which resolves a
+# key on a hashtable and a property on a PSCustomObject, identically on PS 5.1 and pwsh7.
+# ROWS ARE ALWAYS EXACTLY THREE, in today/mtd/ytd order - the same order as the revenue cards
+# stacked above this table, so the eye reads the same three periods down the page. A missing period
+# THROWS rather than yielding a short table: a silently two-row table is how a broken period gets
+# mistaken for "there was no data".
+function New-SiloFlipBlock($Periods, $Diagnostics, $Target, [datetime]$Date) {
+    # Verbose period labels, same style as the revenue blocks: "Month to date (Aug 1 - Aug 11)".
     $monthStart = [datetime]::new($Date.Year, $Date.Month, 1)
     $yearStart  = [datetime]::new($Date.Year, 1, 1)
     $lbls = @{
-        mtd = "Month to date ($($monthStart.ToString('MMM 1')) - $($Date.ToString('MMM d')))"
-        ytd = "Year to date ($($yearStart.ToString('MMM 1')) - $($Date.ToString('MMM d')))"
-    }
-    # ALWAYS exactly two rows, MTD then YTD.
-    $rows = @()
-    foreach ($p in 'mtd','ytd') {
-        $x = $per[$p]
-        $pct = '-'
-        if ($null -ne $x.rate) { $pct = "{0:N1}%" -f $x.rate }
-        $rows += ,@($lbls[$p], $pct, "$($x.numerator) / $($x.denominator)")
+        today = "Today ($($Date.ToString('MMM d')))"
+        mtd   = "Month to date ($($monthStart.ToString('MMM 1')) - $($Date.ToString('MMM d')))"
+        ytd   = "Year to date ($($yearStart.ToString('MMM 1')) - $($Date.ToString('MMM d')))"
     }
 
+    $rows = @(); $outPer = @{}; $outDiag = @{}
+    foreach ($p in 'today','mtd','ytd') {
+        $x = $Periods[$p]
+        if ($null -eq $x)     { throw "SILO flip: period '$p' is missing - the block always reports today, mtd and ytd" }
+        if ($null -eq $x.num) { throw "SILO flip: period '$p' has no num (TGLs created)" }
+        if ($null -eq $x.den) { throw "SILO flip: period '$p' has no den (calls ran)" }
+        $dg = $Diagnostics[$p]
+        if ($null -eq $dg)    { throw "SILO flip: period '$p' has no diagnostics - the per-rule drop counts must stay observable (handoff SS5.1)" }
+        # rate is $null when the denominator was 0 -> '-' , never a fake 0%. A rate above 100% is
+        # legitimate here and is printed as-is, NOT clamped.
+        $pct = '-'
+        if ($null -ne $x.rate) { $pct = "{0:N1}%" -f $x.rate }
+        $rows       += ,@($lbls[$p], $pct, "$($x.num) / $($x.den)")
+        $outPer[$p]  = @{ num=[int]$x.num; den=[int]$x.den; rate=$x.rate }
+        $outDiag[$p] = $dg
+    }
+
+    # The target is INTERPOLATED into the note rather than typed out, because writing the number
+    # into this string would be hard-coding the goal in code (CLAUDE.md rule 2) just as surely as
+    # writing it into the comparison would.
     $notes = @(
         'Flip rate = TGLs created / ROPP calls ran, per period - the SILO manager''s own definition. The counts behind each % are shown as "TGLs / calls ran". This REPLACED the older flip figure (turnovers that sold an estimate / total turnovers), which was a different measurement roughly 10 points lower.',
         'Rollups are COUNT-WEIGHTED: the period rate is total TGLs / total calls ran. Percentages are never averaged together (not per tech, not per day) - averaging percentages would weight a 3-call day the same as a 300-call day.',
+        'TODAY IS A LIVE INDICATOR, NOT A SETTLED NUMBER. It is one day''s worth of calls - often only a few dozen - so a handful of calls swings it many points: 2 TGLs on 3 calls reads 66.7% and the next call can move it 15 points either way. Watch it to see how today is going; judge performance on month-to-date and year-to-date, which have the volume to be stable.',
         'The calls-ran count counts invoice ROWS, not distinct jobs, so the ~25 jobs a year carrying more than one invoice are counted more than once. That inflates calls ran by about 0.5% and is deliberate: it is what makes this figure match the SILO manager''s number instead of drifting ~24 calls below it.',
         'The two sides are dated on different fields - TGLs by the job''s scheduled date, calls ran by the invoice''s completion date - so a short period can show MORE TGLs than calls ran and read above 100%. That is faithful to the source reports, not a bug, and is shown as-is rather than capped at 100%.',
-        'NOT FINAL / RETROACTIVE BY DESIGN: TGLs keep getting scheduled onto days already counted, so both figures keep settling upward after the fact. Nothing here is ever frozen; every recompute replaces the whole figure.'
+        "The target each period is measured against is $Target% and is read from config.json (siloFlip.targetRate) when the figure is built - it is deliberately NOT written into this code or into the dashboard page, so moving the goal is a one-number edit in config.json with no code change.",
+        'NOT FINAL / RETROACTIVE BY DESIGN: TGLs keep getting scheduled onto days already counted, so every figure here keeps settling upward after the fact. Nothing is ever frozen; each recompute replaces the whole figure.'
     )
 
-    @{ id='silo-flip'; title='SILO flip rate (TGLs created / ROPP calls ran)'; status='ok'; error=$null;
+    @{ id='silo-flip'; title=$script:SILO_FLIP_BLOCK_TITLE; status='ok'; error=$null; target=$Target;
        notes=$notes;
-       periods=@{
-         mtd=@{ num=[int]$per['mtd'].numerator; den=[int]$per['mtd'].denominator; rate=$per['mtd'].rate }
-         ytd=@{ num=[int]$per['ytd'].numerator; den=[int]$per['ytd'].denominator; rate=$per['ytd'].rate }
-       };
+       periods=$outPer;
        tables=@(
          @{ subtitle='Flip rate'; columns=@('Period','Flip Rate','TGLs / calls ran'); rows=$rows;
             footer=("As of $($Date.ToString('MMM d, yyyy')) - partial and still settling (TGLs are scheduled retroactively).") }
        );
-       diagnostics=$res.diagnostics }
+       diagnostics=$outDiag }
 }
 
-# Cache-file wrapper, mirroring Build-SiloSnapshot: build the block, and on ANY failure store a
-# status='error' block instead of a number (fail loud on screen, never a stale figure).
-# `final` is ALWAYS $false - this metric is retroactive, so it is never frozen.
+# Build the block for a FULL rebuild. Same shape every other Get-Metric-* returns (id/title/status/
+# error/notes/tables) plus `target`, `periods` + `diagnostics`, which the SILO-flip renderer reads.
+function Get-Metric-SiloFlip($Ctx, [datetime]$Date) {
+    $res = Compute-SiloFlip $Ctx $Date
+    New-SiloFlipBlock $res.periods $res.diagnostics $res.target $Date
+}
+
+# The configured target, or $null when config itself is the thing that broke. Used on the ERROR
+# path only: `target` must be present in EVERY emitted block so the renderer can index it without a
+# guard, and when Get-SiloFlipConfig is what threw there is no target to report. $null says
+# "unknown", which is honest; a built-in fallback would be exactly the hard-coded goal CLAUDE.md
+# rule 2 forbids.
+function Get-SiloFlipTarget {
+    try { return (Get-SiloFlipConfig).targetRate } catch { return $null }
+}
+
+# The ERROR envelope, in ONE place, so a full-rebuild failure and a today-only failure write
+# structurally identical files - refresh-silo-flip.ps1 calls this for the today-only path, which is
+# what lets the error-retry cooldown govern both the same way.
+# `final` is ALWAYS $false - this metric is retroactive, so it is never frozen. BOTH timestamps are
+# set to now: there is no usable figure left to date separately, and dating them apart would let a
+# stale-looking today clock trigger a today-only retry against a cache with no mtd/ytd to reuse.
+function New-SiloFlipErrorSnapshot {
+    param([datetime]$Date, [string]$Message)
+    $b = New-ErrorBlock 'silo-flip' $script:SILO_FLIP_BLOCK_TITLE $Message
+    # Keep the key set stable across ok/error so a renderer can index these without a guard.
+    $b.periods = @{}; $b.diagnostics = @{}; $b.target = (Get-SiloFlipTarget)
+    $now = Get-UtcNow
+    @{ asOf=$Date.ToString('yyyy-MM-dd'); final=$false; generatedAt=$now; todayGeneratedAt=$now; block=$b }
+}
+
+# FULL cache-file wrapper, mirroring Build-SiloSnapshot: build all three periods, and on ANY failure
+# store a status='error' block instead of a number (fail loud on screen, never a stale figure).
+# ONE timestamp serves both clocks here: a full rebuild just rebuilt all three periods, so today's
+# figure and the mtd/ytd figures are exactly as old as each other.
 function Build-SiloFlipSnapshot {
     param($Ctx, [datetime]$Date)
+    $b = $null
     try { $b = Get-Metric-SiloFlip $Ctx $Date }
-    catch {
-        $b = New-ErrorBlock 'silo-flip' 'SILO flip rate (TGLs created / ROPP calls ran)' ("$($_.Exception.Message)")
-        # Keep the key set stable across ok/error so a renderer can index these without a guard.
-        $b.periods = @{}; $b.diagnostics = @{}
+    catch { return (New-SiloFlipErrorSnapshot $Date ("$($_.Exception.Message)")) }
+    $now = Get-UtcNow
+    @{ asOf=$Date.ToString('yyyy-MM-dd'); final=$false; generatedAt=$now; todayGeneratedAt=$now; block=$b }
+}
+
+# TODAY-ONLY cache-file wrapper: recompute TODAY (2 POSTs + a one-day jobs pull) and carry the
+# EXISTING cache's mtd/ytd periods and diagnostics forward VERBATIM. Emits the same envelope as
+# Build-SiloFlipSnapshot, so the file the dashboard reads is indistinguishable in shape.
+# THE TWO TIMESTAMPS ARE THE WHOLE POINT: generatedAt keeps the EXISTING value because mtd/ytd did
+# NOT change - re-dating them to "now" would restart the 6-hour clock on every 30-minute today run
+# and the expensive full rebuild would then never happen again. todayGeneratedAt is now.
+# THIS THROWS INSTEAD OF CATCHING, on purpose, in two situations:
+#   * the existing cache has no healthy mtd/ytd to carry forward. Inventing zeros would put a
+#     fabricated number on the wall (CLAUDE.md rule 1), and quietly promoting itself to a full
+#     recompute would hide a broken cache. The CALLER decides: full recompute, or error block.
+#   * the today pull itself fails. The caller records that with New-SiloFlipErrorSnapshot, exactly
+#     as a full failure is recorded, so the error-retry cooldown then governs the retry.
+function Build-SiloFlipTodaySnapshot {
+    param($Ctx, [datetime]$Date, $ExistingCache)
+    if ($null -eq $ExistingCache) { throw "SILO flip today-only: no existing cache was passed - there are no MTD/YTD figures to carry forward" }
+    $eb = $ExistingCache.block
+    if ($null -eq $eb) { throw "SILO flip today-only: the existing cache has no block - nothing to carry forward" }
+    if ("$($eb.status)" -ne 'ok') { throw "SILO flip today-only: the existing cache holds a status='$($eb.status)' block, so it has no MTD/YTD figures to carry forward" }
+    $ep = $eb.periods; $ed = $eb.diagnostics
+    # num/den are checked for NULL, not for truthiness: a genuine 0 must pass (a day with no calls
+    # ran is real data), and Is-EmptyVal would call it missing.
+    foreach ($p in 'mtd','ytd') {
+        if (($null -eq $ep) -or ($null -eq $ep.$p) -or ($null -eq $ep.$p.num) -or ($null -eq $ep.$p.den)) {
+            throw "SILO flip today-only: the existing cache has no healthy '$p' period to carry forward"
+        }
+        if (($null -eq $ed) -or ($null -eq $ed.$p)) {
+            throw "SILO flip today-only: the existing cache has no '$p' diagnostics to carry forward"
+        }
     }
-    @{ asOf=$Date.ToString('yyyy-MM-dd'); final=$false; generatedAt=(Get-UtcNow); block=$b }
+    # generatedAt must be carried forward as the SAME INSTANT on both hosts. Windows PS 5.1's
+    # ConvertFrom-Json coerces an ISO-8601 string into a LOCAL [datetime] while pwsh7 leaves it a
+    # [string], so normalize whatever the host handed us into a UTC "o" string rather than trusting
+    # the host's typing - the same coercion trap refresh-silo-flip.ps1's raw-text regex reads avoid.
+    $prevGen = $ExistingCache.generatedAt
+    if ($prevGen -is [datetime]) { $prevGen = ([datetime]$prevGen).ToUniversalTime().ToString('o') }
+    else { $prevGen = "$prevGen" }
+    if ([string]::IsNullOrWhiteSpace($prevGen)) { throw "SILO flip today-only: the existing cache has no generatedAt, so the MTD/YTD age cannot be carried forward" }
+    try { [void](Parse-Utc $prevGen) } catch { throw "SILO flip today-only: the existing cache's generatedAt '$prevGen' is unparseable, so the MTD/YTD age cannot be carried forward" }
+
+    $res     = Compute-SiloFlipToday $Ctx $Date
+    $periods = @{ today = $res.periods['today'];     mtd = $ep.mtd; ytd = $ep.ytd }
+    $diag    = @{ today = $res.diagnostics['today']; mtd = $ed.mtd; ytd = $ed.ytd }
+    $b       = New-SiloFlipBlock $periods $diag $res.target $Date
+    @{ asOf=$Date.ToString('yyyy-MM-dd'); final=$false; generatedAt=$prevGen; todayGeneratedAt=(Get-UtcNow); block=$b }
 }
 
 # ---------- registry + snapshot assembler ----------
 # NOTE: silo-flip is deliberately ABSENT from $METRIC_DEFS. It is not a per-day snapshot metric -
-# it is a current-state MTD/YTD figure that costs ~5-6 minutes of throttled report POSTs, so it is
-# built by refresh-silo-flip.ps1 into its own cache file (same pattern as Build-SiloSnapshot).
+# it is a current-state today/MTD/YTD figure whose full rebuild costs ~7-8 minutes of throttled
+# report POSTs (and even the today-only rebuild costs 1-2), so it is built by refresh-silo-flip.ps1
+# into its own cache file on two separate TTLs (same pattern as Build-SiloSnapshot).
 $script:METRIC_DEFS = @(
     @{ id='call-counts';    title='Call Count';               act={ param($c,$d) Get-Metric-CallCounts   $c $d } },
     @{ id='cancellations';  title='Cancellations';            act={ param($c,$d) Get-Metric-Cancellations $c $d } },
