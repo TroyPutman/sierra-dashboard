@@ -44,9 +44,14 @@
       ?simulate-failure=watchdog   skip rendering entirely, to prove the timer fires
   The switch can only BREAK things. It cannot bypass the password or reach data.
 
-  ASCII ONLY, please. This page is copied byte-for-byte into the static build so it does not hit
-  the PowerShell read path that mangles non-ASCII in dashboard.html - but keeping it ASCII costs
-  nothing and removes the trap entirely if anyone ever routes it differently.
+  NON-ASCII IS SAFE IN THIS FILE (unlike dashboard.html). The mojibake trap belongs to serve.ps1,
+  which reads dashboard.html with PowerShell 5.1 `Get-Content -Raw` and turns every multi-byte
+  character into two. serve.ps1 does not serve this page at all - build-static.ps1 copies it with
+  Copy-Item, byte for byte, and GitHub Pages serves those bytes unchanged - so the em dashes and
+  curly quotes that came across with the ported app render correctly.
+  Two conditions keep that true, and both must hold: the <meta charset="utf-8"> above stays, and
+  the build keeps COPYING this file rather than reading and rewriting it. If anyone ever routes
+  hr.html through PowerShell, the ASCII rule starts applying here too.
 -->
 <style>
   /* Everything here is dependency-free on purpose: the lock screen and the failure screen must
@@ -417,56 +422,39 @@ function boot() {
  * ========================================================================================== */
 function render(myRun) {
   if (myRun !== undefined && myRun !== bootRun) return;   // a newer boot owns the screen now
-  booted = true;
   if (watchdogId) { clearTimeout(watchdogId); watchdogId = null; }
 
-  var versions = {
-    React:    (window.React && window.React.version) ? window.React.version : 'loaded',
-    ReactDOM: (window.ReactDOM && window.ReactDOM.version) ? window.ReactDOM.version : 'loaded',
-    Recharts: 'loaded',
-    Babel:    (window.Babel && window.Babel.version) ? window.Babel.version : 'loaded',
-    Tailwind: 'loaded'
-  };
+  // ---- CHECK 4 of 4: THE APP CODE ITSELF -------------------------------------------------
+  // The HR app lives in a <script type="text/babel"> block at the bottom of this page. The
+  // browser does not execute that type, and Babel only auto-scans for such blocks at ITS OWN
+  // load time - ours is fetched dynamically after unlock, long after that moment - so nothing
+  // has compiled it yet. Trigger the compile here, then confirm it actually registered
+  // window.renderHrApp.
+  //
+  // This check exists because a syntax error in the app compiles to NOTHING and throws nothing
+  // useful: all six libraries would verify green, the boot would look perfect, and the user
+  // would be left staring at a blank page. A silent blank screen is the exact failure this
+  // page was built to make impossible, so a non-registering app is treated as hard a failure
+  // as a library that would not download.
+  var compiled = false, compileErr = '';
+  try {
+    window.Babel.transformScriptTags();
+    compiled = (typeof window.renderHrApp === 'function');
+    if (!compiled) { compileErr = 'the app compiled but did not start'; }
+  } catch (e) {
+    compileErr = (e && e.message) ? e.message : 'compile error';
+  }
+  if (!compiled) {
+    loadState.push({ name: 'HR app code', status: 'failed', detail: compileErr });
+    fail('The HR app could not be started: ' + compileErr + '.');
+    return;
+  }
 
+  booted = true;
   appEl.innerHTML = '';
-  var card = document.createElement('div');
-  card.className = 'card wide';
-
-  var h = document.createElement('h2');
-  h.className = 'ok';
-  h.textContent = 'Shell is working';
-  card.appendChild(h);
-
-  var p = document.createElement('p');
-  p.className = 'sub';
-  p.textContent = 'Password accepted, every library loaded and verified. The HR app is added here in chunk 2.';
-  card.appendChild(p);
-
-  var ul = document.createElement('ul');
-  ul.className = 'libs';
-  LIBS.forEach(function (l) {
-    var li = document.createElement('li');
-    var a = document.createElement('span'); a.textContent = l.name;
-    var b = document.createElement('span'); b.className = 'ok'; b.textContent = versions[l.name] || 'loaded';
-    li.appendChild(a); li.appendChild(b);
-    ul.appendChild(li);
-  });
-  card.appendChild(ul);
-
-  var hint = document.createElement('div');
-  hint.className = 'hint';
-  hint.innerHTML = 'Test the failure screen without developer tools by adding '
-    + '<code>?simulate-failure=Recharts</code> or <code>?simulate-failure=watchdog</code> to the URL.';
-  card.appendChild(hint);
-
-  var lockBtn = document.createElement('button');
-  lockBtn.type = 'button';
-  lockBtn.textContent = 'Lock this page';
-  lockBtn.onclick = function () { relock('Locked.'); };
-  card.appendChild(lockBtn);
-
-  appEl.appendChild(card);
+  document.body.className = 'app-running';   // light background + normal page flow for the app
   showOnly(appEl);
+  window.renderHrApp();
 }
 
 el('retryBtn').addEventListener('click', function () {
@@ -478,6 +466,1527 @@ el('retryBtn').addEventListener('click', function () {
 
 /* On load: if a session is already open in this tab, skip straight to loading. */
 if (getToken()) { boot(); } else { showOnly(lockCard); }
+</script>
+
+<!-- =========================================================================================
+     THE HR APP
+     =========================================================================================
+     type="text/babel" means the BROWSER DOES NOT EXECUTE THIS. Babel compiles it only after the
+     libraries have loaded and verified, which only happens after the password has been accepted
+     (see render() above). A visitor who never unlocks never runs a line of it.
+
+     NOTHING IN THIS BLOCK MAY EVER CONTAIN A PAY FIGURE.
+     Commission rates, spiffs, flat rates, pay bands and the merit matrix were all stripped when
+     this was ported from the React prototype. They live in Cloudflare KV and load after unlock.
+     Screens that used to show them render "Not loaded" until then. This repo is PUBLIC and its
+     history is permanent: if you are about to paste a number in here, it belongs in KV instead.
+
+     THE COMMISSION CALCULATORS ARE DELIBERATELY DISCONNECTED (calcConfig is hard-null). The gate
+     for reconnecting them is TROY confirming the rates - not the policy PDFs confirming them.
+     The retired Goodman sales category was removed entirely and must not come back.
+     ========================================================================================= -->
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+const { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } = Recharts;
+
+/* ============ ICONS (lucide-react is not available on this page — tiny inline replacement) ============ */
+const ICONS = {
+  Users: "M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2 M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75",
+  Calendar: "M8 2v4 M16 2v4 M3 10h18 M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z",
+  DollarSign: "M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6",
+  FileText: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z M14 2v6h6 M9 13h6 M9 17h6",
+  Settings: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z",
+  Search: "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z M21 21l-4.35-4.35",
+  Plus: "M12 5v14 M5 12h14",
+  X: "M18 6 6 18 M6 6l12 12",
+  Download: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3",
+  Mail: "M4 4h16v16H4Z M22 6l-10 7L2 6",
+  ChevronRight: "M9 18l6-6-6-6",
+  AlertTriangle: "M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z M12 9v4 M12 17h.01",
+  CheckCircle2: "M22 11.08V12a10 10 0 1 1-5.93-9.14 M22 4 12 14.01l-3-3",
+  Clock: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z M12 6v6l4 2",
+  TrendingUp: "M23 6l-9.5 9.5-5-5L1 18 M17 6h6v6",
+  Copy: "M9 9h11a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V11a2 2 0 0 1 2-2Z M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1",
+  Pencil: "M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z",
+  SlidersHorizontal: "M4 21v-7 M4 10V3 M12 21v-9 M12 8V3 M20 21v-5 M20 12V3 M1 14h6 M9 8h6 M17 16h6",
+};
+const Icon = ({ d, className }) => (
+  <svg className={className || "w-4 h-4"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d={d} />
+  </svg>
+);
+
+/* ============ SEED DATA (from Salary History 10-21-2024 + Org Chart) ============ */
+const SEED_RAW = [];
+
+const OPS_JD = `JOB DESCRIPTION — [ROLE]
+Company: Sierra LLC | Reports To: [Manager] | Full-Time
+
+POSITION OVERVIEW
+Responsible for overseeing and optimizing daily operations across assigned departments. Accountable for operational performance, process execution, team leadership, and cross-department alignment.
+
+KEY RESPONSIBILITIES
+• Operational Leadership — lead day-to-day operations; ensure consistent execution of SOPs, policies, and standards; identify bottlenecks and implement solutions; drive discipline, urgency, and accountability.
+• Accountability & Performance — hold team members accountable; address performance issues promptly; enforce standards consistently; lead difficult conversations when necessary.
+• Process & Continuous Improvement — own and optimize workflows; ensure full adoption of ServiceTitan and related tools; lead SOP development, rollout, training, and enforcement.
+• Financial & KPI Management — own departmental KPIs (revenue, margin, callbacks, quality, productivity, CSAT); analyze data to drive decisions; drive EBITDA impact.
+• People Leadership & Culture — build and develop high-performing teams; coach supervisors into strong leaders; foster ownership and continuous improvement.
+• Cross-Department Coordination — align departments; resolve conflicts quickly and constructively.`;
+
+const OPS_PLAN = `30-60-90 DAY PLAN (EXTENDED TO 6 MONTHS) — [ROLE]
+
+DAYS 1–30: LEARN, OBSERVE, ALIGN
+Focus: people, processes, performance. Build trust with leadership and managers. Ride-alongs / shadowing. Review SOPs, KPIs, ServiceTitan workflows, reporting. Establish communication rhythms.
+Check-ins: Daily 15-min leadership alignment • Weekly 60-min operational review • Monthly 90-min strategic check-in.
+
+DAYS 31–60: EXECUTE, ENFORCE, STABILIZE
+Focus: accountability, execution, quick wins. Enforce SOPs. Address performance gaps immediately. Improve cross-department communication. Implement 3+ operational quick wins. Refine KPI dashboards.
+Check-ins: Daily stand-up with dept leaders • Weekly KPI + accountability review • Monthly progress review vs. goals.
+
+DAYS 61–90: OPTIMIZE, LEAD, SCALE
+Focus: optimization, leadership development, planning. Measurable improvement in 2+ KPIs. Coach managers through accountability conversations. Establish recurring rhythms. Root-cause fixes. Present 6–12 month roadmap.
+Check-ins: Weekly leadership scorecard review • Monthly executive-level performance review.
+
+MONTHS 4–6: OWNERSHIP, SCALE, PERFORMANCE
+Focus: full ownership of results. Own KPIs and results. Develop bench strength and succession. Optimize core flows. Deliver consistent EBITDA improvement. Prepare next-phase scaling plan.
+Check-ins: Weekly KPI/execution review • Monthly executive review • Quarterly formal evaluation tied to bonus metrics.`;
+
+/* ============ DATE HELPERS ============ */
+const DAY = 86400000;
+const todayISO = () => new Date().toISOString().slice(0, 10);
+const parseD = (iso) => (iso ? new Date(iso + "T12:00:00") : null);
+const addDays = (iso, n) => { const d = parseD(iso); d.setTime(d.getTime() + n * DAY); return d.toISOString().slice(0, 10); };
+const addYears = (iso, n) => { const d = parseD(iso); d.setFullYear(d.getFullYear() + n); return d.toISOString().slice(0, 10); };
+const daysUntil = (iso) => Math.round((parseD(iso) - parseD(todayISO())) / DAY);
+const fmtDate = (iso) => { if (!iso) return "—"; const d = parseD(iso); return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); };
+const fmt$ = (n) => (n == null ? "—" : "$" + Math.round(n).toLocaleString());
+const fmt$2 = (n) => (n == null ? "—" : "$" + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+const displayName = (n) => { const p = n.split(","); return p.length > 1 ? `${p[1].trim()} ${p[0].trim()}` : n; };
+
+// Next annual review: 1 year after last completed annual, else next anniversary of hire date
+function nextAnnual(emp) {
+  if (emp.lastAnnualReview) return addYears(emp.lastAnnualReview, 1);
+  if (!emp.hireDate) return null;
+  let d = emp.hireDate;
+  const t = todayISO();
+  let anniv = t.slice(0, 4) + d.slice(4);
+  if (anniv < t) anniv = addYears(anniv, 1);
+  return anniv;
+}
+function sixMonthDue(emp) {
+  if (emp.lastAnnualReview && !emp.sixMonthDone) return addDays(emp.lastAnnualReview, 183);
+  return null;
+}
+
+/* ============ COMP POLICY: MERIT MATRIX + COMPA-RATIO ============ */
+// NOTE: there is no default/seeded merit matrix — it starts empty and is entered by the user
+// in the Comp policy tab (Policy content is not baked into code; see CLAUDE.md rule #2).
+function tierForPct(matrix, pct) {
+  if (pct == null || isNaN(pct)) return null;
+  const m = matrix && matrix.length ? matrix : [];
+  if (!m.length) return null;
+  for (const t of [...m].sort((a, b) => a.min - b.min)) if (pct >= Number(t.min) && pct <= Number(t.max)) return { label: t.tier, over: false };
+  const top = Math.max(...m.map((t) => Number(t.max) || 0));
+  if (pct > top) return { label: `Above policy cap (${top}% max)`, over: true };
+  return { label: "Between bands", over: false };
+}
+const isMgrRole = (role) => /manager|director|supervisor|chief|ceo|cfo|coo|cmo|controller|\bvp\b/i.test(role || "");
+function deriveManagers(employees) {
+  const mgrNames = Array.from(new Set(employees.map((e) => (e.manager || "").toLowerCase().trim()).filter(Boolean)));
+  return employees.map((e) => {
+    if (e.isManager !== undefined && e.isManager !== null) return e;
+    const toks = displayName(e.name).toLowerCase().split(" ");
+    const listed = mgrNames.some((m) => { const mt = m.split(" "); return mt.length > 1 && toks.includes(mt[0]) && toks.includes(mt[mt.length - 1]); });
+    return { ...e, isManager: listed || isMgrRole(e.role) };
+  });
+}
+function compaRatio(emp, midpoints) {
+  const mid = midpoints && Number(midpoints[emp.role]);
+  if (!mid || !emp.salary) return null;
+  return emp.salary / mid;
+}
+const CompaChip = ({ ratio }) => {
+  if (ratio == null) return null;
+  const tone = ratio < 0.85 ? "bg-red-100 text-red-700" : ratio > 1.1 ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-700";
+  const label = ratio < 0.85 ? "below market" : ratio > 1.1 ? "above market" : "at market";
+  return <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap ${tone}`}>{ratio.toFixed(2)}× {label}</span>;
+};
+const TierChip = ({ t }) => (t ? <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${t.over ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600"}`}>{t.over ? "⚠ " : ""}{t.label}</span> : null);
+const TierTabs = ({ value, onChange }) => (
+  <div className="inline-flex rounded-lg border border-slate-300 overflow-hidden text-sm">
+    {[["managers", "Managers"], ["team", "Team"], ["all", "All"]].map(([k, l]) => (
+      <button key={k} onClick={() => onChange(k)} className={`px-3 py-1.5 ${value === k ? "bg-slate-800 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}>{l}</button>
+    ))}
+  </div>
+);
+/* ============ PAYROLL UPDATE 7-6-2026 (Employee Salary History export) ============ */
+const UPDATE_20260706 = [];
+function applyPayrollUpdate(st) {
+  if (st.applied20260706) return st;
+  const emps = [...st.employees];
+  UPDATE_20260706.forEach((u) => {
+    let e = emps.find((x) => x.id === u.id);
+    if (!e && u.create) {
+      e = { id: u.id, name: u.name, hireDate: u.create.hireDate, rate: null, salary: 0, role: u.create.role, department: u.create.department, manager: u.create.manager, isManager: u.create.isManager, status: "active", reviewFormat: "annual", lastAnnualReview: null, sixMonthDone: false, bonusStructure: "", notes: "", docs: [], wageHistory: [] };
+      emps.push(e);
+    }
+    if (!e) return;
+    const dup = e.wageHistory.some((w) => w.date === u.entry.date && Math.round(w.newSalary || 0) === Math.round(u.entry.newSalary || 0));
+    if (!dup) e.wageHistory = [...e.wageHistory, { ...u.entry, loggedInApp: false, source: "payroll-7-6-26" }].sort((a, b) => (a.date < b.date ? -1 : 1));
+    const latest = e.wageHistory.filter((w) => !w.isBonus && w.newSalary).slice(-1)[0];
+    if (latest) { e.salary = latest.newSalary; if (latest.rate != null) e.rate = latest.rate; }
+    e.onSheet0706 = true;
+  });
+  return { ...st, employees: emps, applied20260706: true };
+}
+
+/* ============ PAY POLICIES ============ */
+// Removed: role pay policies, commission calculators, and the Inside Sales Rehasher pay plan
+// are not loaded pending rate confirmation. Nothing here is hard-coded — see CLAUDE.md rule #2.
+
+function migrate(st) {
+  const s2 = { ...st };
+  if (!s2.meritMatrix) s2.meritMatrix = [];
+  if (!s2.marketMidpoints) s2.marketMidpoints = {};
+  s2.employees = deriveManagers(s2.employees);
+  s2.v = 3;
+  return applyPayrollUpdate(s2);
+}
+
+function seedState() {
+  const employees = SEED_RAW.map((r) => ({
+    id: r.id, name: r.n, hireDate: r.h, rate: r.r, salary: r.s || 0,
+    role: r.role || "", department: r.d || "", manager: r.m || "",
+    status: "active", reviewFormat: "annual",
+    lastAnnualReview: null, sixMonthDone: false,
+    bonusStructure: "", notes: "", docs: [],
+    wageHistory: r.s ? [{ date: r.e || r.h, oldSalary: null, newSalary: r.s, rate: r.r, type: "baseline", note: "From salary sheet 10-21-2024", loggedInApp: false }] : [],
+  }));
+  return applyPayrollUpdate({
+    v: 3,
+    employees: deriveManagers(employees),
+    meritMatrix: [],
+    marketMidpoints: {},
+    templates: { "Operations Manager": { jd: OPS_JD.replace(/\[ROLE\]/g, "Operations Manager"), plan: OPS_PLAN.replace(/\[ROLE\]/g, "Operations Manager") } },
+    lastSaved: null,
+  });
+}
+
+/* ============ REVIEW TEMPLATE GENERATORS (match your two formats) ============ */
+function genAnnualReview(emp, opts) {
+  const name = displayName(emp.name).split(" ")[0];
+  const full = displayName(emp.name);
+  const yr = new Date().getFullYear();
+  const compLine = opts.pct
+    ? `Based on your overall performance this past year, I have approved a ${opts.pct}% salary increase effective with this annual review. [Personalize: name the specific results that earned it.]`
+    : `[Compensation decision — state increase % / amount, or explain why compensation remains unchanged and what would change that.]`;
+  return `ANNUAL PERFORMANCE REVIEW & LEADERSHIP DEVELOPMENT PLAN
+
+Employee: ${full}
+Role: ${emp.role || "[Role]"}
+Manager: ${emp.manager || "[Manager]"}
+Review Period: ${yr - 1}–${yr}
+Hire Date: ${fmtDate(emp.hireDate)}
+Current Compensation: ${emp.rate && emp.rate < 200 ? `$${emp.rate}/hr (${fmt$(emp.salary)} annualized)` : fmt$(emp.salary)}
+
+LEADERSHIP PHILOSOPHY
+This review recognizes accomplishments, establishes clear expectations, and provides a roadmap for continued growth. Performance, development, and compensation should never be surprises.
+
+ANNUAL PERFORMANCE SUMMARY
+${name}, thank you for your contribution over the past year. [Summarize 2–3 standout accomplishments with specifics — measurable results, leadership moments, cost savings, customer impact.]
+
+KEY STRENGTHS
+• [Strength 1]
+• [Strength 2]
+• [Strength 3]
+• [Strength 4]
+
+DEVELOPMENT PRIORITIES
+• [Priority 1 — bolded theme + one sentence of specific expectation]
+• [Priority 2]
+• [Priority 3]
+• Build Bench Strength: Develop cross-training and succession so every critical responsibility has trained backup. Document key processes.
+
+SMART GOALS
+• [Goal 1 — measurable, with timeframe]
+• [Goal 2]
+• [Goal 3]
+• Identify at least one meaningful process improvement each quarter.
+
+OVERALL EXPECTATIONS
+[One paragraph: where they are, what the next step is, what support you'll provide, what you expect in return.]
+
+COMPENSATION DECISION
+${compLine}
+
+SIX-MONTH DEVELOPMENT REVIEW
+Approximately six months from this review we will meet to evaluate progress on these development goals. This meeting supports continued growth and should not be interpreted as an expectation of another compensation increase. Future compensation decisions will be based on sustained performance, increased responsibility, company performance, and continued contribution to Sierra.
+
+ACKNOWLEDGEMENT & SIGNATURES
+I acknowledge this review has been discussed with me. I understand the expectations, development goals, and performance objectives outlined in this document. My signature does not necessarily indicate agreement with every aspect of the review, but confirms it has been reviewed with me.
+
+Employee Signature: ______________________  Date: __________
+Manager Signature: ______________________  Date: __________
+General Manager: ________________________  Date: __________
+
+Employee Comments:
+______________________________________________________________
+______________________________________________________________`;
+}
+
+function genLeadershipReview(emp, opts) {
+  const name = displayName(emp.name).split(" ")[0];
+  const full = displayName(emp.name);
+  const compLine = opts.pct
+    ? `Based on the progress you have demonstrated, I have approved a ${opts.pct}% compensation increase effective with this review. This increase is based on your performance to this point — not on future expectations. Going forward, I expect continued development, increased ownership, and consistent execution of this development plan.`
+    : `[Compensation decision — recognize progress to date; if approving an increase, make clear it is based on performance to this point, not future expectations.]`;
+  return `LEADERSHIP DEVELOPMENT REVIEW & COMPENSATION PLAN
+
+Employee: ${full}
+Role: ${emp.role || "[Role]"}
+Manager: ${emp.manager || "[Manager]"}
+Review Type: Mid-Year / Development Review
+Current Compensation: ${emp.rate && emp.rate < 200 ? `$${emp.rate}/hr (${fmt$(emp.salary)} annualized)` : fmt$(emp.salary)}
+
+LEADERSHIP PHILOSOPHY
+This review is intended to develop leaders, not simply evaluate them. The objective is clear expectations, transparent accountability, measurable goals, and ongoing coaching. Performance and compensation should never be surprises.
+
+PURPOSE OF THIS REVIEW
+This review recognizes accomplishments to date while establishing a structured six-month development plan.
+
+STRENGTHS
+• [Strength 1]
+• [Strength 2]
+• [Strength 3]
+
+PRIMARY DEVELOPMENT AREAS
+• [Area 1 — specific behavior + expectation]
+• [Area 2]
+• [Area 3]
+• Ask questions early rather than waiting. Curiosity is an expectation.
+
+PARTNERSHIP DEVELOPMENT PLAN
+Over the next six months, [Manager] and ${name} will intentionally develop one another. [Describe the two-way mentoring: what exposure the manager provides, what the employee teaches back.]
+• Weekly one-on-one meetings
+• Living task management checklist
+• Monthly progress reviews
+• Consistent communication and frequent questions
+
+SMART DEVELOPMENT GOALS
+• [Goal 1]
+• [Goal 2]
+• [Goal 3]
+• [Certification / training to complete by year-end]
+
+PERFORMANCE SCORECARD
+| Category                      | Weight | Score (1-5) | Comments |
+| [Core function accuracy]      |  25%   |             |          |
+| Operational Partnership       |  20%   |             |          |
+| Initiative & Ownership        |  20%   |             |          |
+| Communication & Leadership    |  20%   |             |          |
+| Professional Development      |  15%   |             |          |
+
+MONTHLY MILESTONES
+Month 1: [Foundation — checklist, meeting cadence]
+Month 2: [Communication / cadence improvement]
+Month 3: [Lead portions of core process; present improvements]
+Month 4: [Independent ownership]
+Month 5: [Reduce coaching, increase leadership]
+Month 6: Formal development review.
+
+FUTURE COMPENSATION CONSIDERATIONS
+Future compensation recommendations will be based on sustained performance, demonstrated leadership, increased responsibilities, business impact, company performance, and continued professional growth. Meeting the objectives in this plan is expected as part of successful performance and does not, by itself, guarantee a future salary adjustment.
+
+OVERALL EXPECTATIONS
+${name}, [one paragraph of belief + expectation: what you see in them, what to keep developing, your commitment to coaching, their commitment to improvement.]
+
+COMPENSATION DECISION
+${compLine}
+
+SIX-MONTH PROGRESS REVIEW
+A formal progress review will be conducted approximately six months from the date of this review. We will evaluate progress against the development goals, communication, partnership, leadership growth, and overall execution. This six-month review should not be interpreted as an expectation of an additional compensation increase.
+
+ACKNOWLEDGEMENT
+Employee Signature: ______________________  Date: __________
+Manager Signature: ______________________  Date: __________`;
+}
+
+/* ============ ICS EXPORT ============ */
+function buildICS(employees) {
+  const esc = (s) => s.replace(/[\\;,]/g, (m) => "\\" + m);
+  let ev = [];
+  const horizon = addDays(todayISO(), 400);
+  employees.filter((e) => e.status === "active").forEach((e) => {
+    const a = nextAnnual(e);
+    if (a && a <= horizon) ev.push({ date: a, title: `Annual Review — ${displayName(e.name)}`, desc: `Role: ${e.role || "?"} | Dept: ${e.department || "?"} | Current: ${fmt$(e.salary)} | Prep the pre-loaded review in the Sierra HR dashboard.` });
+    const s = sixMonthDue(e);
+    if (s && s <= horizon) ev.push({ date: s, title: `6-Month Progress Review — ${displayName(e.name)}`, desc: `Follow-up to annual review on ${fmtDate(e.lastAnnualReview)}. Evaluate development goals — not a compensation event.` });
+  });
+  const stamp = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";
+  const body = ev.map((x, i) => {
+    const d = x.date.replace(/-/g, "");
+    const dn = addDays(x.date, 1).replace(/-/g, "");
+    return `BEGIN:VEVENT\r\nUID:sierra-hr-${d}-${i}@sierra\r\nDTSTAMP:${stamp}\r\nDTSTART;VALUE=DATE:${d}\r\nDTEND;VALUE=DATE:${dn}\r\nSUMMARY:${esc(x.title)}\r\nDESCRIPTION:${esc(x.desc)}\r\nBEGIN:VALARM\r\nTRIGGER:-P7D\r\nACTION:DISPLAY\r\nDESCRIPTION:Review coming up in 1 week\r\nEND:VALARM\r\nEND:VEVENT`;
+  }).join("\r\n");
+  return `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Sierra LLC//HR Dashboard//EN\r\n${body}\r\nEND:VCALENDAR`;
+}
+function download(filename, text, mime) {
+  const blob = new Blob([text], { type: mime || "text/plain" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ============ PERFORMANCE APPRAISAL FORM (print-ready, editable on screen) ============ */
+const APPRAISAL_FACTORS = [
+  ["Quality", "Accuracy, thoroughness and neatness of the employee's work."],
+  ["Productivity", "Volume of work completed efficiently within expected timeframes."],
+  ["Job Knowledge", "Command of the practical and technical knowledge the role requires."],
+  ["Reliability", "Dependability in completing assignments and following through."],
+  ["Attendance", "Punctuality, observance of scheduled breaks and meal periods, and overall attendance record."],
+  ["Independence", "Ability to carry out work with little or no supervision."],
+  ["Creativity", "Contribution of new ideas and better ways of doing the work."],
+  ["Initiative", "Willingness to seek out new assignments and take on added duties when needed."],
+  ["Adherence to Policy", "Compliance with safety and conduct rules, regulations and company policies."],
+  ["Interpersonal Relationships", "Cooperation and communication with coworkers, supervisors, direct reports and outside contacts."],
+  ["Judgment", "Soundness of decision making when situations call for it."],
+];
+function appraisalEsc(s) {
+  return (s == null ? "" : String(s)).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+function appraisalFactorRow(num, name, desc) {
+  const radios = ["O", "V", "G", "I", "U"].map((r) => `<label class="ap-radio"><input type="radio" name="ap-rating-${num}" value="${r}"/> ${r}</label>`).join("");
+  return `
+  <tr class="ap-factor-row">
+    <td class="ap-fname"><b>${num}. ${appraisalEsc(name)} –</b> ${appraisalEsc(desc)}</td>
+    <td class="ap-ratings">${radios}</td>
+    <td class="ap-scale">100-90<br/>89-80<br/>79-70<br/>69-60<br/>Below 60</td>
+    <td class="ap-points">
+      <input type="text" class="ap-points-input" data-ap-points placeholder="Pts" />
+      <textarea class="ap-comments" placeholder="Comments"></textarea>
+    </td>
+  </tr>`;
+}
+function buildAppraisalDoc(emp) {
+  const name = displayName(emp.name);
+  const rows1 = APPRAISAL_FACTORS.slice(0, 6).map(([n, d], i) => appraisalFactorRow(i + 1, n, d)).join("");
+  const rows2 = APPRAISAL_FACTORS.slice(6).map(([n, d], i) => appraisalFactorRow(i + 7, n, d)).join("");
+  const style = `
+    * { box-sizing: border-box; }
+    body { font-family: Arial, Helvetica, sans-serif; font-size: 8.5pt; color: #1a1a1a; margin: 0; }
+    .ap-page { padding: 0.5in; }
+    .ap-page + .ap-page { page-break-before: always; }
+    .ap-title-bar { background: #3f3f3f; color: #fff; font-weight: bold; font-size: 16pt; padding: 8px 12px; }
+    .ap-caption { font-size: 7pt; letter-spacing: 0.5px; margin: 4px 0 10px; }
+    .ap-row { display: flex; gap: 16px; margin-bottom: 6px; }
+    .ap-field { flex: 1; display: flex; align-items: baseline; gap: 6px; }
+    .ap-field label { font-weight: bold; white-space: nowrap; }
+    .ap-field input[type=text], .ap-field input[type=date] { flex: 1; background: #f2f4f7; border: 1px solid #9aa3ad; padding: 2px 4px; font-size: 8.5pt; font-family: inherit; }
+    .ap-reason { margin: 8px 0; }
+    .ap-reason-row { display: flex; gap: 18px; flex-wrap: wrap; margin: 4px 0; }
+    .ap-reason-row label { display: flex; align-items: center; gap: 4px; }
+    .ap-instructions { background: #f2f4f7; border: 1px solid #d6dae0; padding: 6px 10px; margin: 10px 0; font-size: 8pt; }
+    .ap-section-bar { background: #3f3f3f; color: #fff; font-weight: bold; padding: 5px 10px; margin: 10px 0 0; font-size: 9pt; }
+    .ap-defs { display: flex; gap: 24px; padding: 8px 4px; }
+    .ap-defs > div { flex: 1; }
+    .ap-defs p { margin: 3px 0; }
+    table.ap-factors { width: 100%; border-collapse: collapse; margin-top: 4px; }
+    table.ap-factors th { text-align: left; background: #3f3f3f; color: #fff; font-size: 8pt; padding: 4px 6px; }
+    .ap-factor-row td { vertical-align: top; padding: 5px 6px; border-bottom: 1px solid #d6dae0; }
+    .ap-fname { width: 34%; }
+    .ap-ratings { width: 16%; }
+    .ap-radio { display: block; white-space: nowrap; }
+    .ap-radio input { margin-right: 3px; }
+    .ap-scale { width: 12%; font-size: 7.5pt; line-height: 1.5; color: #555; }
+    .ap-points { width: 38%; }
+    .ap-points-input { width: 55px; background: #f2f4f7; border: 1px solid #9aa3ad; padding: 2px 4px; font-size: 8.5pt; display: block; margin-bottom: 3px; font-family: inherit; }
+    .ap-comments { width: 100%; height: 34px; background: #f2f4f7; border: 1px solid #9aa3ad; font-size: 8pt; font-family: inherit; resize: none; }
+    .ap-overall { margin: 12px 0; }
+    .ap-overall-flex { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+    .ap-calc { display: flex; align-items: center; gap: 8px; font-weight: bold; }
+    .ap-calc input, .ap-calc-out { background: #f2f4f7; border: 1px solid #9aa3ad; padding: 3px 6px; width: 60px; text-align: center; font-family: inherit; }
+    table.ap-legend { border-collapse: collapse; font-size: 8pt; }
+    table.ap-legend td { padding: 1px 8px; text-align: right; }
+    .ap-complete-heading { font-weight: bold; margin: 12px 0 6px; }
+    .ap-complete-section { margin-bottom: 8px; }
+    .ap-complete-section > label { font-weight: bold; display: block; margin-bottom: 3px; font-size: 8pt; }
+    .ap-complete-box { width: 100%; height: 44px; background: #f2f4f7; border: 1px solid #9aa3ad; font-size: 8pt; font-family: inherit; resize: none; }
+    .ap-absences { display: flex; gap: 20px; margin-top: 4px; }
+    .ap-fineprint { font-size: 7pt; color: #666; margin-top: 4px; }
+    .ap-sig-row { display: flex; gap: 24px; align-items: baseline; margin: 10px 0 2px; }
+    .ap-sig-row .ap-field { flex: 1; }
+    .ap-followup { display: flex; gap: 20px; align-items: center; margin: 8px 0; font-size: 8.5pt; }
+    .ap-toolbar { position: sticky; top: 0; background: #fff; border-bottom: 2px solid #3f3f3f; padding: 8px 0.5in; display: flex; gap: 10px; z-index: 10; }
+    .ap-toolbar button { font-family: inherit; font-size: 10pt; padding: 6px 14px; border-radius: 4px; border: none; cursor: pointer; }
+    .ap-print-btn { background: #059669; color: #fff; font-weight: bold; }
+    .ap-close-btn { background: #e2e8f0; color: #1a1a1a; }
+    @media print { .ap-toolbar { display: none; } }
+  `;
+  const bodyInner = `
+    <div class="ap-toolbar">
+      <button id="ap-print-btn" class="ap-print-btn">Print / Save as PDF</button>
+      <button id="ap-close-btn" class="ap-close-btn">Close</button>
+      <span style="align-self:center;font-size:9pt;color:#555;">Fill in ratings and comments, then click Print / Save as PDF — choose "Save as PDF" as the destination.</span>
+    </div>
+    <div class="ap-page">
+      <div class="ap-title-bar">Performance Appraisal</div>
+      <div class="ap-caption">PLEASE PRINT OR TYPE</div>
+      <div class="ap-row">
+        <div class="ap-field"><label>Employee Name:</label><input type="text" value="${appraisalEsc(name)}"/></div>
+        <div class="ap-field"><label>Title:</label><input type="text" value="${appraisalEsc(emp.role || "")}"/></div>
+      </div>
+      <div class="ap-row">
+        <div class="ap-field"><label>Department:</label><input type="text" value="${appraisalEsc(emp.department || "")}"/></div>
+        <div class="ap-field"><label>Employee Payroll #:</label><input type="text" value="${appraisalEsc(emp.id || "")}"/></div>
+      </div>
+      <div class="ap-reason">
+        <b>Reason for Review</b>
+        <div class="ap-reason-row">
+          <label><input type="checkbox"/> Annual</label>
+          <label><input type="checkbox"/> Promotion</label>
+          <label><input type="checkbox"/> Peer Appraisal</label>
+          <label><input type="checkbox"/> Unsatisfactory Performance</label>
+        </div>
+        <div class="ap-reason-row">
+          <label><input type="checkbox"/> Merit</label>
+          <label><input type="checkbox"/> End of Introductory Period</label>
+          <label><input type="checkbox"/> Other</label><input type="text" style="width:160px;background:#f2f4f7;border:1px solid #9aa3ad;padding:2px 4px;"/>
+        </div>
+      </div>
+      <div class="ap-row">
+        <div class="ap-field"><label>Date began present position:</label><input type="text" value="${appraisalEsc(fmtDate(emp.hireDate))}"/></div>
+        <div class="ap-field"><label>Date of last appraisal:</label><input type="text" value="${appraisalEsc(fmtDate(emp.lastAnnualReview))}"/></div>
+        <div class="ap-field"><label>Next appraisal date:</label><input type="text" value="${appraisalEsc(fmtDate(nextAnnual(emp)))}"/></div>
+      </div>
+      <div class="ap-instructions"><b>Instructions:</b> Evaluate the employee's performance against the essential functions of the job. Check the rating box that reflects actual performance and enter the point value for that rating in the Points box. Enter N/A in the Points box if a factor does not apply. Points are totaled and averaged for an overall performance score.</div>
+      <div class="ap-section-bar">DEFINITIONS OF PERFORMANCE RATINGS</div>
+      <div class="ap-defs">
+        <div>
+          <p><b>O – Outstanding.</b> Exceptional performance in all areas and clearly superior to others in comparable roles.</p>
+          <p><b>V – Very Good.</b> Results consistently exceed most requirements of the position and the work is high quality.</p>
+          <p><b>G – Good.</b> Competent and dependable performance that meets the standards of the job.</p>
+        </div>
+        <div>
+          <p><b>I – Improvement Needed.</b> Performance falls short in certain areas and must improve.</p>
+          <p><b>U – Unsatisfactory.</b> Results are generally unacceptable and require immediate correction. No merit increase should be granted at this rating.</p>
+          <p><b>N/A – Not Applicable</b> or too soon to rate.</p>
+        </div>
+      </div>
+      <div class="ap-section-bar">GENERAL FACTORS</div>
+      <table class="ap-factors">
+        <tr><th class="ap-fname">GENERAL FACTORS</th><th class="ap-ratings">RATING</th><th class="ap-scale">SCALE</th><th class="ap-points">SUPPORTIVE DETAILS OR COMMENTS</th></tr>
+        ${rows1}
+      </table>
+    </div>
+    <div class="ap-page">
+      <div class="ap-section-bar">GENERAL FACTORS (continued)</div>
+      <table class="ap-factors">
+        <tr><th class="ap-fname">GENERAL FACTORS</th><th class="ap-ratings">RATING</th><th class="ap-scale">SCALE</th><th class="ap-points">SUPPORTIVE DETAILS OR COMMENTS</th></tr>
+        ${rows2}
+      </table>
+      <div class="ap-overall">
+        <p>Rate the employee's overall performance in comparison to the duties and responsibilities of the position.</p>
+        <div class="ap-overall-flex">
+          <div class="ap-calc">
+            Total Points <span id="ap-total-points" class="ap-calc-out">0</span>
+            ÷ Number of Factors Rated <span id="ap-factor-count" class="ap-calc-out">0</span>
+            = Overall Rating <span id="ap-overall-rating" class="ap-calc-out">0.0</span>
+          </div>
+          <table class="ap-legend">
+            <tr><td>Outstanding</td><td>100 - 90</td></tr>
+            <tr><td>Very Good</td><td>89 - 80</td></tr>
+            <tr><td>Good</td><td>79 - 70</td></tr>
+            <tr><td>Improvement Needed</td><td>69 - 60</td></tr>
+            <tr><td>Unsatisfactory</td><td>Below 60</td></tr>
+          </table>
+        </div>
+      </div>
+      <div class="ap-complete-heading">Complete all of the following sections.</div>
+      <div class="ap-complete-section"><label>Accomplishments or new abilities demonstrated since last review</label><textarea class="ap-complete-box"></textarea></div>
+      <div class="ap-complete-section"><label>Specific areas of needed improvement</label><textarea class="ap-complete-box"></textarea></div>
+      <div class="ap-complete-section"><label>Recommendations for professional development (seminars, training, schooling, etc.)</label><textarea class="ap-complete-box"></textarea></div>
+      <div class="ap-absences">
+        <div class="ap-field"><label>Absences — Number of incidents:</label><input type="text" style="width:50px;background:#f2f4f7;border:1px solid #9aa3ad;padding:2px 4px;"/></div>
+        <div class="ap-field"><label>Number of days:</label><input type="text" style="width:50px;background:#f2f4f7;border:1px solid #9aa3ad;padding:2px 4px;"/></div>
+      </div>
+      <div class="ap-complete-section" style="margin-top:8px;"><label>Employee's Comments</label><textarea class="ap-complete-box"></textarea></div>
+      <div class="ap-fineprint">If necessary, additional sheets may be attached.</div>
+      <div class="ap-sig-row">
+        <div class="ap-field"><label>Discussed with individual on:</label><input type="text"/></div>
+        <div class="ap-field"><label>Employee's Signature:</label><input type="text"/></div>
+      </div>
+      <div class="ap-fineprint">I acknowledge that this Performance Appraisal was discussed with me.</div>
+      <div class="ap-followup">
+        <span>Follow-up requested/desired</span>
+        <label><input type="checkbox"/> Yes</label>
+        <label><input type="checkbox"/> No</label>
+        <div class="ap-field" style="flex:0 0 220px;"><label>Follow-up Date:</label><input type="text"/></div>
+      </div>
+      <div class="ap-sig-row">
+        <div class="ap-field"><label>Evaluator's Signature:</label><input type="text"/></div>
+        <div class="ap-field" style="flex:0 0 180px;"><label>Date:</label><input type="text"/></div>
+      </div>
+    </div>
+  `;
+  return { style, bodyInner, title: `Performance Appraisal - ${name}` };
+}
+function openAppraisal(emp) {
+  const { style, bodyInner, title } = buildAppraisalDoc(emp);
+  const script = `
+    document.addEventListener("DOMContentLoaded", function () {
+      function recalc() {
+        var inputs = document.querySelectorAll("[data-ap-points]");
+        var total = 0, count = 0;
+        inputs.forEach(function (el) {
+          var v = (el.value || "").trim();
+          if (v !== "" && !isNaN(parseFloat(v)) && isFinite(v)) { total += parseFloat(v); count++; }
+        });
+        var totalEl = document.getElementById("ap-total-points");
+        var countEl = document.getElementById("ap-factor-count");
+        var avgEl = document.getElementById("ap-overall-rating");
+        if (totalEl) totalEl.textContent = String(total);
+        if (countEl) countEl.textContent = String(count);
+        if (avgEl) avgEl.textContent = count > 0 ? (total / count).toFixed(1) : "0.0";
+      }
+      document.querySelectorAll("[data-ap-points]").forEach(function (el) { el.addEventListener("input", recalc); });
+      var printBtn = document.getElementById("ap-print-btn");
+      var closeBtn = document.getElementById("ap-close-btn");
+      if (printBtn) printBtn.addEventListener("click", function () { window.print(); });
+      if (closeBtn) closeBtn.style.display = "none";
+      recalc();
+    });
+  `;
+  const fullDoc = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${appraisalEsc(title)}</title>
+    <style>@page { size: letter; margin: 0; } ${style}</style></head>
+    <body>${bodyInner}<script>${script}<\/script></body></html>`;
+  const filename = `Appraisal_${displayName(emp.name).replace(/[^a-zA-Z0-9]+/g, "_")}.html`;
+  download(filename, fullDoc, "text/html");
+}
+
+/* ============ SMALL UI PRIMITIVES ============ */
+const Badge = ({ children, tone }) => {
+  const map = { red: "bg-red-100 text-red-700", amber: "bg-amber-100 text-amber-800", green: "bg-emerald-100 text-emerald-700", slate: "bg-slate-100 text-slate-600", blue: "bg-blue-100 text-blue-700" };
+  return <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${map[tone || "slate"]}`}>{children}</span>;
+};
+const Field = ({ label, children }) => (
+  <label className="block text-sm">
+    <span className="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">{label}</span>
+    {children}
+  </label>
+);
+const inp = "w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400";
+
+function dueBadge(iso) {
+  if (!iso) return <Badge tone="slate">—</Badge>;
+  const d = daysUntil(iso);
+  if (d < 0) return <Badge tone="red">{Math.abs(d)}d overdue</Badge>;
+  if (d <= 30) return <Badge tone="amber">in {d}d</Badge>;
+  return <Badge tone="slate">in {d}d</Badge>;
+}
+
+/* ============ RAISE MODAL ============ */
+function RaiseModal({ emp, matrix, onClose, onSave }) {
+  const [type, setType] = useState("Annual review increase");
+  const [mode, setMode] = useState("pct");
+  const [pct, setPct] = useState("4");
+  const [amt, setAmt] = useState("");
+  const [date, setDate] = useState(todayISO());
+  const [note, setNote] = useState("");
+  const isBonus = type === "One-time bonus";
+  const cur = emp.salary || 0;
+  let newSalary = cur, bonusAmt = 0;
+  if (isBonus) bonusAmt = parseFloat(amt) || 0;
+  else if (mode === "pct") newSalary = Math.round(cur * (1 + (parseFloat(pct) || 0) / 100) * 100) / 100;
+  else newSalary = parseFloat(amt) || cur;
+  const delta = isBonus ? bonusAmt : newSalary - cur;
+  const pctVal = isBonus ? null : cur > 0 ? ((newSalary - cur) / cur) * 100 : null;
+  const tier = tierForPct(matrix, pctVal);
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="font-semibold text-slate-800">Log increase / bonus — {displayName(emp.name)}</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><Icon d={ICONS.X} className="w-[18px] h-[18px]" /></button>
+        </div>
+        <div className="space-y-3">
+          <Field label="Type">
+            <select className={inp} value={type} onChange={(e) => setType(e.target.value)}>
+              {["Annual review increase", "6-month adjustment", "Promotion", "Market adjustment", "New hire rate", "One-time bonus"].map((t) => <option key={t}>{t}</option>)}
+            </select>
+          </Field>
+          {!isBonus && (
+            <div className="flex gap-2 text-sm">
+              <button className={`px-3 py-1 rounded border ${mode === "pct" ? "bg-slate-800 text-white border-slate-800" : "border-slate-300"}`} onClick={() => setMode("pct")}>% increase</button>
+              <button className={`px-3 py-1 rounded border ${mode === "amt" ? "bg-slate-800 text-white border-slate-800" : "border-slate-300"}`} onClick={() => setMode("amt")}>New salary $</button>
+            </div>
+          )}
+          {isBonus ? (
+            <Field label="Bonus amount ($)"><input type="number" className={inp} value={amt} onChange={(e) => setAmt(e.target.value)} placeholder="e.g. 1500" /></Field>
+          ) : mode === "pct" ? (
+            <Field label="Percent increase"><input type="number" step="0.5" className={inp} value={pct} onChange={(e) => setPct(e.target.value)} /></Field>
+          ) : (
+            <Field label="New annual salary ($)"><input type="number" className={inp} value={amt} onChange={(e) => setAmt(e.target.value)} placeholder={String(cur)} /></Field>
+          )}
+          <Field label="Effective date"><input type="date" className={inp} value={date} onChange={(e) => setDate(e.target.value)} /></Field>
+          <Field label="Note"><input className={inp} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Reason / context" /></Field>
+          <div className="bg-slate-50 rounded p-3 text-sm">
+            {isBonus ? (
+              <>One-time bonus: <b>{fmt$(bonusAmt)}</b> (does not change annual salary)</>
+            ) : (
+              <>Salary: {fmt$(cur)} → <b>{fmt$(newSalary)}</b> &nbsp;|&nbsp; Annualized payroll impact: <b className={delta >= 0 ? "text-emerald-700" : "text-red-700"}>{delta >= 0 ? "+" : ""}{fmt$(delta)}</b>{cur > 0 && <> ({((delta / cur) * 100).toFixed(1)}%)</>}</>
+            )}
+          </div>
+          {!isBonus && tier && (
+            <div className={`rounded p-2 text-xs flex items-center gap-2 ${tier.over ? "bg-red-50 border border-red-200 text-red-700" : "bg-slate-50 text-slate-600"}`}>
+              <span>Merit band:</span> <TierChip t={tier} />
+              {tier.over && <span>Exceeds your merit matrix — this will be flagged in the tracker.</span>}
+            </div>
+          )}
+          <button
+            className={`w-full text-white rounded py-2 font-medium ${tier && tier.over ? "bg-red-600 hover:bg-red-700" : "bg-emerald-600 hover:bg-emerald-700"}`}
+            onClick={() => onSave({ date, type, note, isBonus, bonusAmt, newSalary, pct: pctVal != null ? Math.round(pctVal * 10) / 10 : null })}
+          >{tier && tier.over ? "Approve over-policy increase anyway" : "Approve & add to payroll tracker"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============ EMPLOYEE DRAWER ============ */
+function EmployeeDrawer({ emp, templates, matrix, midpoints, onClose, onUpdate, onOpenReview }) {
+  const [tab, setTab] = useState("profile");
+  const [raiseOpen, setRaiseOpen] = useState(false);
+  const [edit, setEdit] = useState(false);
+  const [draft, setDraft] = useState(emp);
+  const [docTitle, setDocTitle] = useState("");
+  const [docNote, setDocNote] = useState("");
+  useEffect(() => setDraft(emp), [emp]);
+  const tmpl = templates[emp.role];
+  const chart = emp.wageHistory.filter((w) => !w.isBonus && w.newSalary).map((w) => ({ date: w.date, salary: w.newSalary }));
+  // Calculators are intentionally disconnected pending rate confirmation — do not re-enable
+  // without a reviewed pay-policy source. This also hides the "Pay calculator" drawer tab
+  // and the "Commission-based role" banner below, since both are gated on calcConfig.
+  const calcConfig = null;
+  const earnings = emp.commissionEarnings || [];
+
+  const saveRaise = (r) => {
+    const h = { date: r.date, type: r.type, note: r.note, loggedInApp: true, isBonus: r.isBonus, pct: r.pct, byManager: emp.manager || "" };
+    let upd = { ...emp };
+    if (r.isBonus) { h.bonusAmt = r.bonusAmt; h.newSalary = emp.salary; h.oldSalary = emp.salary; }
+    else {
+      h.oldSalary = emp.salary; h.newSalary = r.newSalary;
+      upd.salary = r.newSalary;
+      if (emp.rate && emp.rate < 200) upd.rate = Math.round((r.newSalary / 2080) * 100) / 100;
+      h.rate = upd.rate;
+    }
+    upd.wageHistory = [...emp.wageHistory, h].sort((a, b) => (a.date < b.date ? -1 : 1));
+    onUpdate(upd);
+    setRaiseOpen(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-40 flex justify-end bg-black/30" onClick={onClose}>
+      <div className="w-full max-w-2xl bg-white h-full overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="sticky top-0 bg-slate-900 text-white px-5 py-4 flex justify-between items-start z-10">
+          <div>
+            <div className="text-lg font-semibold">{displayName(emp.name)}</div>
+            <div className="text-slate-300 text-sm">{emp.role || "No role assigned"} {emp.department && <>· {emp.department}</>} {emp.isManager && <span className="ml-1 align-middle text-xs bg-amber-400/20 text-amber-200 px-1.5 py-0.5 rounded">Manager — reviewed by you</span>}</div>
+            <div className="text-slate-400 text-xs mt-1">Hired {fmtDate(emp.hireDate)} · Manager: {emp.manager || "—"}</div>
+          </div>
+          <button onClick={onClose} className="text-slate-300 hover:text-white"><Icon d={ICONS.X} className="w-5 h-5" /></button>
+        </div>
+        <div className="flex border-b border-slate-200 px-5 gap-4 text-sm bg-white">
+          {[["profile", "Profile"], ["comp", "Wage history"], ...(calcConfig ? [["calc", "Pay calculator"]] : []), ["docs", `Documents (${emp.docs.length})`], ["jd", "JD, plan & pay"]].map(([k, l]) => (
+            <button key={k} onClick={() => setTab(k)} className={`py-2.5 border-b-2 -mb-px ${tab === k ? "border-slate-800 text-slate-900 font-medium" : "border-transparent text-slate-500"}`}>{l}</button>
+          ))}
+        </div>
+        <div className="p-5">
+          {tab === "profile" && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-slate-50 rounded-lg p-3"><div className="text-xs text-slate-500 uppercase">Current salary</div><div className="text-xl font-semibold tabular-nums">{fmt$(emp.salary)}</div>{emp.rate && emp.rate < 200 ? <div className="text-xs text-slate-500">${emp.rate}/hr</div> : null}</div>
+                <div className="bg-slate-50 rounded-lg p-3"><div className="text-xs text-slate-500 uppercase">Next annual review</div><div className="text-sm font-medium mt-1">{fmtDate(nextAnnual(emp))}</div><div className="mt-1">{dueBadge(nextAnnual(emp))}</div></div>
+              </div>
+              <div className="border border-slate-200 rounded-lg p-3">
+                <div className="text-xs font-medium text-slate-500 uppercase mb-2">Pay over time</div>
+                {chart.length > 1 ? (
+                  <div className="h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={chart}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                        <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => "$" + (v / 1000) + "k"} domain={["auto", "auto"]} />
+                        <Tooltip formatter={(v) => fmt$(v)} />
+                        <Line type="stepAfter" dataKey="salary" stroke="#059669" strokeWidth={2} dot={{ r: 3 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : chart.length === 1 ? (
+                  <p className="text-sm text-slate-400 py-6 text-center">Only one pay record on file ({fmtDate(chart[0].date)}, {fmt$(chart[0].salary)}) — the chart appears once there's a second data point.</p>
+                ) : (
+                  <p className="text-sm text-slate-400 py-6 text-center">No wage history yet for this employee.</p>
+                )}
+              </div>
+              {compaRatio(emp, midpoints) != null && (
+                <div className="bg-slate-50 rounded-lg p-3 flex items-center justify-between text-sm">
+                  <div><div className="text-xs text-slate-500 uppercase">Compa-ratio</div><div className="text-xs text-slate-500 mt-0.5">vs market midpoint {fmt$(Number(midpoints[emp.role]))} for {emp.role}</div></div>
+                  <CompaChip ratio={compaRatio(emp, midpoints)} />
+                </div>
+              )}
+              {sixMonthDue(emp) && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm flex justify-between items-center">
+                  <span>6-month progress review due <b>{fmtDate(sixMonthDue(emp))}</b></span>
+                  <button className="text-xs bg-amber-600 text-white px-2 py-1 rounded" onClick={() => onUpdate({ ...emp, sixMonthDone: true })}>Mark complete</button>
+                </div>
+              )}
+              {!edit ? (
+                <button className="text-sm text-slate-600 flex items-center gap-1 hover:text-slate-900" onClick={() => setEdit(true)}><Icon d={ICONS.Pencil} className="w-3.5 h-3.5" /> Edit details</button>
+              ) : (
+                <div className="space-y-3 border border-slate-200 rounded-lg p-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Role"><input className={inp} value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value })} /></Field>
+                    <Field label="Department"><input className={inp} value={draft.department} onChange={(e) => setDraft({ ...draft, department: e.target.value })} /></Field>
+                    <Field label="Manager"><input className={inp} value={draft.manager} onChange={(e) => setDraft({ ...draft, manager: e.target.value })} /></Field>
+                    <Field label="Hire date"><input type="date" className={inp} value={draft.hireDate || ""} onChange={(e) => setDraft({ ...draft, hireDate: e.target.value })} /></Field>
+                    <Field label="Status"><select className={inp} value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })}><option value="active">Active</option><option value="inactive">Inactive / terminated</option></select></Field>
+                    <Field label="Review format"><select className={inp} value={draft.reviewFormat} onChange={(e) => setDraft({ ...draft, reviewFormat: e.target.value })}><option value="annual">Annual Performance Review</option><option value="leadership">Leadership Development Review</option></select></Field>
+                    <Field label="Review tier"><select className={inp} value={draft.isManager ? "mgr" : "team"} onChange={(e) => setDraft({ ...draft, isManager: e.target.value === "mgr" })}><option value="mgr">Manager — reviewed by ownership</option><option value="team">Team member — reviewed by their manager</option></select></Field>
+                    <Field label="Last annual review"><input type="date" className={inp} value={draft.lastAnnualReview || ""} onChange={(e) => setDraft({ ...draft, lastAnnualReview: e.target.value || null, sixMonthDone: false })} /></Field>
+                  </div>
+                  <Field label="Bonus structure"><textarea className={inp} rows={2} value={draft.bonusStructure} onChange={(e) => setDraft({ ...draft, bonusStructure: e.target.value })} placeholder="e.g. Quarterly bonus tied to dept KPIs" /></Field>
+                  <Field label="Notes"><textarea className={inp} rows={2} value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} /></Field>
+                  <div className="flex gap-2">
+                    <button className="bg-slate-800 text-white px-3 py-1.5 rounded text-sm" onClick={() => { onUpdate(draft); setEdit(false); }}>Save</button>
+                    <button className="text-sm text-slate-500" onClick={() => { setDraft(emp); setEdit(false); }}>Cancel</button>
+                  </div>
+                </div>
+              )}
+              {emp.bonusStructure && <div className="text-sm"><span className="text-xs font-medium text-slate-500 uppercase">Bonus structure</span><p className="mt-1 text-slate-700">{emp.bonusStructure}</p></div>}
+              {emp.notes && <div className="text-sm"><span className="text-xs font-medium text-slate-500 uppercase">Notes</span><p className="mt-1 text-slate-700 whitespace-pre-wrap">{emp.notes}</p></div>}
+              <div className="flex gap-2 pt-2">
+                <button className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded text-sm font-medium flex items-center gap-1" onClick={() => setRaiseOpen(true)}><Icon d={ICONS.DollarSign} className="w-4 h-4" /> Log raise / bonus</button>
+                <button className="bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded text-sm font-medium flex items-center gap-1" onClick={() => onOpenReview(emp)}><Icon d={ICONS.FileText} className="w-4 h-4" /> Generate pre-loaded review</button>
+                <button className="border border-slate-300 hover:bg-slate-50 text-slate-700 px-3 py-2 rounded text-sm font-medium flex items-center gap-1" onClick={() => openAppraisal(emp)}><Icon d={ICONS.Download} className="w-4 h-4" /> Download Appraisal</button>
+              </div>
+            </div>
+          )}
+          {tab === "comp" && (
+            <div className="space-y-4">
+              {chart.length > 1 && (
+                <div className="h-44 border border-slate-200 rounded-lg p-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chart}><CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" /><XAxis dataKey="date" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => "$" + (v / 1000) + "k"} domain={["auto", "auto"]} /><Tooltip formatter={(v) => fmt$(v)} /><Line type="stepAfter" dataKey="salary" stroke="#059669" strokeWidth={2} dot={{ r: 3 }} /></LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+              <table className="w-full text-sm">
+                <thead><tr className="text-left text-xs text-slate-500 uppercase border-b border-slate-200"><th className="py-2">Date</th><th>Type</th><th className="text-right">Salary / amount</th><th className="text-right">Change</th></tr></thead>
+                <tbody>
+                  {[...emp.wageHistory].reverse().map((w, i) => (
+                    <tr key={i} className="border-b border-slate-100">
+                      <td className="py-2">{fmtDate(w.date)}</td>
+                      <td>{w.type}{w.note && <div className="text-xs text-slate-400">{w.note}</div>}</td>
+                      <td className="text-right tabular-nums">{w.isBonus ? fmt$(w.bonusAmt) + " bonus" : fmt$(w.newSalary)}</td>
+                      <td className="text-right tabular-nums">{w.isBonus ? <span className="text-blue-600">one-time</span> : w.oldSalary != null ? <span className={w.newSalary - w.oldSalary >= 0 ? "text-emerald-600" : "text-red-600"}>{w.newSalary - w.oldSalary >= 0 ? "+" : ""}{fmt$(w.newSalary - w.oldSalary)}</span> : "—"}</td>
+                    </tr>
+                  ))}
+                  {emp.wageHistory.length === 0 && <tr><td colSpan={4} className="py-4 text-slate-400 text-center">No wage history yet. Log a raise or set a baseline salary.</td></tr>}
+                </tbody>
+              </table>
+              <button className="bg-emerald-600 text-white px-3 py-2 rounded text-sm font-medium" onClick={() => setRaiseOpen(true)}>Log raise / bonus</button>
+              {/* Saved commission-earnings history (from a prior calculator, now disconnected). Read-only
+                  display only — no math runs here, and there's no way to add new entries without the
+                  calculator, so this is a legacy/historical view. Moved out of the removed "calc" tab
+                  so this stored data stays visible per the strip-rules brief. */}
+              {earnings.length > 0 && (
+                <div>
+                  <div className="text-xs font-medium text-slate-500 uppercase mb-2">Commission earnings history ({earnings.length})</div>
+                  <table className="w-full text-sm">
+                    <thead><tr className="text-left text-xs text-slate-500 uppercase border-b border-slate-200"><th className="py-2">Date logged</th><th>Period</th><th className="text-right">Amount</th></tr></thead>
+                    <tbody>
+                      {[...earnings].reverse().map((e, i) => (
+                        <tr key={i} className="border-b border-slate-100">
+                          <td className="py-2">{fmtDate(e.date)}</td>
+                          <td>{e.label}</td>
+                          <td className="text-right tabular-nums">{fmt$(e.total)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+          {tab === "docs" && (
+            <div className="space-y-3">
+              {emp.docs.map((d, i) => (
+                <div key={i} className="border border-slate-200 rounded-lg p-3 flex justify-between items-start">
+                  <div><div className="font-medium text-sm">{d.title}</div><div className="text-xs text-slate-500">{fmtDate(d.date)}{d.source ? ` · ${d.source}` : ""}</div>{d.note && <div className="text-sm text-slate-600 mt-1">{d.note}</div>}</div>
+                  <button className="text-slate-400 hover:text-red-500" onClick={() => onUpdate({ ...emp, docs: emp.docs.filter((_, j) => j !== i) })}><Icon d={ICONS.X} className="w-4 h-4" /></button>
+                </div>
+              ))}
+              {emp.docs.length === 0 && <p className="text-sm text-slate-400">No documents logged yet. As reviews, write-ups, or certifications come in, log them here so the full record lives in one place.</p>}
+              <div className="border border-dashed border-slate-300 rounded-lg p-3 space-y-2">
+                <input className={inp} placeholder="Document title (e.g. Signed annual review 2026)" value={docTitle} onChange={(e) => setDocTitle(e.target.value)} />
+                <input className={inp} placeholder="Note / where the file is stored" value={docNote} onChange={(e) => setDocNote(e.target.value)} />
+                <button className="bg-slate-800 text-white px-3 py-1.5 rounded text-sm" disabled={!docTitle} onClick={() => { onUpdate({ ...emp, docs: [...emp.docs, { title: docTitle, note: docNote, date: todayISO(), source: "manual" }] }); setDocTitle(""); setDocNote(""); }}>Add document record</button>
+              </div>
+            </div>
+          )}
+          {tab === "jd" && (
+            <div className="space-y-4 text-sm">
+              {tmpl && tmpl.pay ? (
+                <div><div className="text-xs font-medium text-emerald-700 uppercase mb-1">Pay plan — {emp.role}</div><pre className="whitespace-pre-wrap bg-emerald-50 border border-emerald-100 rounded-lg p-3 text-xs leading-relaxed">{tmpl.pay}</pre></div>
+              ) : (
+                <div className="bg-slate-50 rounded-lg p-3 text-xs text-slate-500">No pay plan on file for <b>{emp.role || "(no role)"}</b> — add one in Templates.</div>
+              )}
+              {tmpl && tmpl.jd ? (
+                <div><div className="text-xs font-medium text-slate-500 uppercase mb-1">Job description — {emp.role}</div><pre className="whitespace-pre-wrap bg-slate-50 rounded-lg p-3 text-xs leading-relaxed">{tmpl.jd}</pre></div>
+              ) : (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs">No JD on file for <b>{emp.role || "(no role assigned)"}</b>. Create one in the <b>Templates</b> tab and it attaches to everyone in this role.</div>
+              )}
+              {tmpl && tmpl.plan ? (
+                <div><div className="text-xs font-medium text-slate-500 uppercase mb-1">30/60/90 (6-month) plan</div><pre className="whitespace-pre-wrap bg-slate-50 rounded-lg p-3 text-xs leading-relaxed">{tmpl.plan}</pre></div>
+              ) : (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs">No 30/60/90 plan on file for this role yet.</div>
+              )}
+            </div>
+          )}
+        </div>
+        {raiseOpen && <RaiseModal emp={emp} matrix={matrix} onClose={() => setRaiseOpen(false)} onSave={saveRaise} />}
+      </div>
+    </div>
+  );
+}
+
+/* ============ REVIEW GENERATOR ============ */
+function ReviewGenerator({ emp, matrix, onClose, onApproveRaise, onMarkComplete }) {
+  const [format, setFormat] = useState(emp.reviewFormat || "annual");
+  const [pct, setPct] = useState("");
+  const [text, setText] = useState("");
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    const opts = { pct: pct && parseFloat(pct) > 0 ? parseFloat(pct) : null };
+    setText(format === "leadership" ? genLeadershipReview(emp, opts) : genAnnualReview(emp, opts));
+  }, [format, pct, emp]);
+  const copy = async () => { try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch (e) {} };
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl flex flex-col" style={{ maxHeight: "92vh" }} onClick={(e) => e.stopPropagation()}>
+        <div className="px-5 py-4 border-b border-slate-200 flex justify-between items-center">
+          <div>
+            <h3 className="font-semibold text-slate-800">Pre-loaded review — {displayName(emp.name)}</h3>
+            <p className="text-xs text-slate-500">Built from your Sierra review formats. Bracketed [sections] are the parts to personalize.</p>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><Icon d={ICONS.X} className="w-[18px] h-[18px]" /></button>
+        </div>
+        <div className="px-5 py-3 flex flex-wrap gap-3 items-end border-b border-slate-100">
+          <Field label="Format">
+            <select className={inp} value={format} onChange={(e) => setFormat(e.target.value)}>
+              <option value="annual">Annual Performance Review</option>
+              <option value="leadership">Leadership Development Review</option>
+            </select>
+          </Field>
+          <Field label="Increase % (optional)"><input type="number" step="0.5" className={inp + " w-28"} value={pct} onChange={(e) => setPct(e.target.value)} placeholder="e.g. 4" /></Field>
+          {pct && parseFloat(pct) > 0 && (
+            <div className="text-sm bg-emerald-50 border border-emerald-200 rounded px-3 py-1.5 flex items-center gap-2">
+              <span>{fmt$(emp.salary)} → <b>{fmt$(emp.salary * (1 + parseFloat(pct) / 100))}</b> (+{fmt$(emp.salary * parseFloat(pct) / 100)}/yr)</span>
+              <TierChip t={tierForPct(matrix, parseFloat(pct))} />
+            </div>
+          )}
+        </div>
+        <textarea className="flex-1 m-5 mt-3 border border-slate-200 rounded-lg p-3 text-xs font-mono leading-relaxed" style={{ minHeight: 300 }} value={text} onChange={(e) => setText(e.target.value)} />
+        <div className="px-5 pb-5 flex flex-wrap gap-2">
+          <button className="bg-slate-800 text-white px-3 py-2 rounded text-sm flex items-center gap-1" onClick={copy}><Icon d={ICONS.Copy} className="w-4 h-4" /> {copied ? "Copied!" : "Copy text"}</button>
+          <button className="border border-slate-300 px-3 py-2 rounded text-sm" onClick={() => download(`${displayName(emp.name).replace(/ /g, "_")}_Review_${todayISO()}.txt`, text)}><Icon d={ICONS.Download} className="w-4 h-4 inline mr-1" />Download .txt</button>
+          {pct && parseFloat(pct) > 0 && (
+            <button className="bg-emerald-600 text-white px-3 py-2 rounded text-sm font-medium" onClick={() => onApproveRaise(emp, parseFloat(pct))}>Approve {pct}% & log to payroll tracker</button>
+          )}
+          <button className="ml-auto border border-slate-300 px-3 py-2 rounded text-sm flex items-center gap-1" onClick={() => onMarkComplete(emp)}><Icon d={ICONS.CheckCircle2} className="w-4 h-4" /> Mark review complete (schedules 6-month)</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============ MAIN APP ============ */
+function SierraHRDashboard() {
+  const [state, setState] = useState(null);
+  const [loadError, setLoadError] = useState(null);
+  const [tab, setTab] = useState("dashboard");
+  const [q, setQ] = useState("");
+  const [dept, setDept] = useState("All");
+  const [selId, setSelId] = useState(null);
+  const [reviewEmp, setReviewEmp] = useState(null);
+  const [saveStatus, setSaveStatus] = useState("");
+  const [showNew, setShowNew] = useState(false);
+  const [newEmp, setNewEmp] = useState({ name: "", role: "", department: "", manager: "", hireDate: todayISO(), salary: "" });
+  const [tmplRole, setTmplRole] = useState("");
+  const [tierF, setTierF] = useState("managers");
+  const [empTier, setEmpTier] = useState("all");
+  const saveTimer = useRef(null);
+
+  const loadData = async () => {
+    setLoadError(null);
+    try {
+      const r = await window.hrFetch("/hr/data");
+      if (!r.ok) {
+        setLoadError(`The server returned an error (status ${r.status}) while loading your HR data. Nothing has been reset or overwritten — click Retry, and contact IT if this keeps happening.`);
+        return;
+      }
+      const parsed = await r.json();
+
+      // SHAPE-CHECK BEFORE MIGRATING. migrate() calls deriveManagers(st.employees), which does
+      // employees.map(...) - so anything stored that is not a real HR state dies on "Cannot read
+      // properties of undefined (reading 'map')". That is a LATENT BUG INHERITED FROM THE
+      // PROTOTYPE: its load path swallowed every error with `catch (e) {}` and fell back to the
+      // empty seed, so a machine holding unreadable data displayed an empty roster and looked
+      // completely normal. Caught here on the first real load, against a leftover test blob.
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        setLoadError("The server returned something that is not an HR record. Nothing has been changed or overwritten - click Retry, and contact IT if this keeps happening.");
+        return;
+      }
+      if (Object.keys(parsed).length === 0) {
+        // Genuinely nothing stored yet - a brand-new setup legitimately starts from the empty seed.
+        setState(seedState());
+        return;
+      }
+      if (!Array.isArray(parsed.employees)) {
+        // Something IS stored, but it is not an HR state. Do NOT migrate it, and do NOT quietly
+        // fall back to seedState() - showing an empty roster on top of real stored data is exactly
+        // the confident-but-wrong display rule 1 exists to prevent. Name what was actually found.
+        setLoadError("Something is stored for HR, but it is not employee data - it has no employee list, so it has not been opened and nothing was overwritten. What was found: "
+          + Object.keys(parsed).slice(0, 8).join(", ") + ".");
+        return;
+      }
+      setState(migrate(parsed));
+    } catch (e) {
+      if (e && e.message === "session expired") return; // hrFetch already relocked the page — nothing more to do
+      setLoadError("Couldn't load your HR data: " + (e && e.message ? e.message : "network error") + ". Nothing has been reset — click Retry, and contact IT if this keeps happening.");
+    }
+  };
+
+  useEffect(() => { loadData(); }, []);
+
+  const persist = (next) => {
+    setState(next);
+    setSaveStatus("saving");
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      try {
+        const r = await window.hrFetch("/hr/data", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(next),
+        });
+        if (r.ok) {
+          setSaveStatus("saved");
+          setTimeout(() => setSaveStatus(""), 2000);
+        } else {
+          // Deliberate change from the source prototype: the source cleared "error" after 2s just
+          // like "saved", which meant a failed save left no visible trace. A failed save now stays
+          // on screen until a later save actually succeeds.
+          setSaveStatus("error");
+        }
+      } catch (e) {
+        setSaveStatus("error");
+      }
+    }, 600);
+  };
+
+  const updateEmp = (upd) => persist({ ...state, employees: state.employees.map((e) => (e.id === upd.id ? upd : e)) });
+
+  const approveRaiseFromReview = (emp, pct) => {
+    const newSalary = Math.round(emp.salary * (1 + pct / 100) * 100) / 100;
+    const upd = { ...emp, salary: newSalary, lastAnnualReview: todayISO(), sixMonthDone: false };
+    if (emp.rate && emp.rate < 200) upd.rate = Math.round((newSalary / 2080) * 100) / 100;
+    upd.wageHistory = [...emp.wageHistory, { date: todayISO(), type: "Annual review increase", note: pct + "% approved with annual review", oldSalary: emp.salary, newSalary, rate: upd.rate, loggedInApp: true, pct, byManager: emp.manager || "" }];
+    updateEmp(upd);
+    setReviewEmp(null);
+    setSelId(null);
+  };
+  const markReviewComplete = (emp) => { updateEmp({ ...emp, lastAnnualReview: todayISO(), sixMonthDone: false }); setReviewEmp(null); };
+
+  if (loadError) return (
+    <div className="min-h-screen flex items-center justify-center bg-red-50 p-6">
+      <div className="max-w-md text-center border-2 border-red-300 bg-white rounded-xl shadow-lg p-6">
+        <Icon d={ICONS.AlertTriangle} className="w-8 h-8 mx-auto mb-2 text-red-500" />
+        <div className="text-red-700 font-semibold text-lg mb-2">Couldn't load HR data</div>
+        <p className="text-sm text-red-700 mb-4">{loadError}</p>
+        <button className="bg-red-600 text-white px-4 py-2 rounded text-sm font-medium" onClick={loadData}>Retry</button>
+      </div>
+    </div>
+  );
+  if (!state) return <div className="min-h-screen flex items-center justify-center text-slate-500">Loading Sierra HR…</div>;
+
+  const active = state.employees.filter((e) => e.status === "active");
+  const depts = ["All", ...Array.from(new Set(active.map((e) => e.department).filter(Boolean))).sort()];
+  const filtered = state.employees.filter((e) =>
+    (empTier === "all" || (empTier === "managers" ? e.isManager : !e.isManager)) &&
+    (dept === "All" || e.department === dept) &&
+    (q === "" || e.name.toLowerCase().includes(q.toLowerCase()) || (e.role || "").toLowerCase().includes(q.toLowerCase()))
+  ).sort((a, b) => displayName(a.name).localeCompare(displayName(b.name)));
+
+  // Upcoming reviews
+  const upcoming = [];
+  active.forEach((e) => {
+    const a = nextAnnual(e); if (a) upcoming.push({ emp: e, date: a, kind: "Annual review" });
+    const s = sixMonthDue(e); if (s) upcoming.push({ emp: e, date: s, kind: "6-month progress" });
+  });
+  upcoming.sort((a, b) => (a.date < b.date ? -1 : 1));
+  const dueSoon = upcoming.filter((u) => daysUntil(u.date) <= 45);
+
+  // Payroll impact calculator
+  const approved = [];
+  state.employees.forEach((e) => e.wageHistory.forEach((w) => { if (w.loggedInApp) approved.push({ emp: e, ...w }); }));
+  approved.sort((a, b) => (a.date < b.date ? -1 : 1));
+  const yr = todayISO().slice(0, 4);
+  const totalAnnualized = approved.filter((w) => !w.isBonus).reduce((s, w) => s + (w.newSalary - (w.oldSalary || 0)), 0);
+  const ytdAnnualized = approved.filter((w) => !w.isBonus && w.date.slice(0, 4) === yr).reduce((s, w) => s + (w.newSalary - (w.oldSalary || 0)), 0);
+  const totalBonus = approved.filter((w) => w.isBonus).reduce((s, w) => s + (w.bonusAmt || 0), 0);
+  let cum = 0;
+  const cumData = approved.filter((w) => !w.isBonus).map((w) => { cum += w.newSalary - (w.oldSalary || 0); return { date: w.date, total: Math.round(cum) }; });
+
+  const mgrAgg = {};
+  approved.filter((w) => !w.isBonus).forEach((w) => {
+    const key = w.byManager || w.emp.manager || "Unassigned";
+    if (!mgrAgg[key]) mgrAgg[key] = { count: 0, total: 0, pcts: [], over: 0 };
+    const p = w.pct != null ? w.pct : w.oldSalary ? ((w.newSalary - w.oldSalary) / w.oldSalary) * 100 : null;
+    mgrAgg[key].count++; mgrAgg[key].total += w.newSalary - (w.oldSalary || 0);
+    if (p != null) { mgrAgg[key].pcts.push(p); const t = tierForPct(state.meritMatrix, p); if (t && t.over) mgrAgg[key].over++; }
+  });
+  const mgrRows = Object.entries(mgrAgg).map(([m, v]) => ({ m, ...v, avg: v.pcts.length ? v.pcts.reduce((a, b) => a + b, 0) / v.pcts.length : null })).sort((a, b) => b.total - a.total);
+  const overPolicyCount = mgrRows.reduce((sum, r) => sum + r.over, 0);
+  const dueMgr = dueSoon.filter((u) => u.emp.isManager);
+  const dueTeam = dueSoon.filter((u) => !u.emp.isManager);
+  const payrollRecorded = state.employees.reduce((sum, e) => sum + e.wageHistory.reduce((a, w) => a + (w.payrollDelta || 0), 0), 0);
+  const totalPayroll = active.reduce((s, e) => s + (e.salary || 0), 0);
+  const missingComp = active.filter((e) => !e.salary).length;
+  const missingRole = active.filter((e) => !e.role).length;
+  const sel = state.employees.find((e) => e.id === selId);
+
+  const deptAgg = {};
+  active.forEach((e) => {
+    const key = e.department || "Unassigned";
+    if (!deptAgg[key]) deptAgg[key] = { dept: key, headcount: 0, paidCount: 0, total: 0, mgrCount: 0 };
+    deptAgg[key].headcount++;
+    if (e.isManager) deptAgg[key].mgrCount++;
+    if (e.salary > 0) { deptAgg[key].paidCount++; deptAgg[key].total += e.salary; }
+  });
+  const deptRows = Object.values(deptAgg).map((d) => ({ ...d, avg: d.paidCount ? Math.round(d.total / d.paidCount) : 0 })).sort((a, b) => b.total - a.total);
+  const deptChartData = deptRows.map((d) => ({ name: d.dept.length > 14 ? d.dept.slice(0, 13) + "…" : d.dept, avg: d.avg, total: Math.round(d.total) }));
+
+  const NavBtn = ({ id, icon, label, count }) => (
+    <button onClick={() => setTab(id)} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm w-full text-left ${tab === id ? "bg-slate-800 text-white" : "text-slate-600 hover:bg-slate-100"}`}>
+      <Icon d={ICONS[icon]} className="w-4 h-4" /> <span className="flex-1">{label}</span>
+      {count > 0 && <span className={`text-xs px-1.5 rounded-full ${tab === id ? "bg-white/20" : "bg-red-100 text-red-700"}`}>{count}</span>}
+    </button>
+  );
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900" style={{ fontFeatureSettings: '"tnum"' }}>
+      <div className="flex min-h-screen">
+        {/* Sidebar */}
+        <div className="w-52 shrink-0 border-r border-slate-200 bg-white p-3 space-y-1">
+          <div className="px-3 py-3">
+            <div className="font-bold text-slate-900 leading-tight">SIERRA LLC</div>
+            <div className="text-xs text-slate-500">People & Payroll Console</div>
+          </div>
+          <NavBtn id="dashboard" icon="TrendingUp" label="Dashboard" count={dueSoon.filter((u) => daysUntil(u.date) < 0).length} />
+          <NavBtn id="employees" icon="Users" label="Employees" />
+          <NavBtn id="departments" icon="TrendingUp" label="Departments" />
+          <NavBtn id="reviews" icon="Calendar" label="Review schedule" count={dueSoon.length} />
+          <NavBtn id="raises" icon="DollarSign" label="Raise tracker" />
+          <NavBtn id="templates" icon="FileText" label="JD & plan templates" />
+          <NavBtn id="policy" icon="SlidersHorizontal" label="Comp policy" count={overPolicyCount} />
+          <NavBtn id="tools" icon="Settings" label="Tools & import" />
+          <div className="px-3 pt-4 text-xs text-slate-400">
+            {saveStatus === "saving" && "Saving…"}
+            {saveStatus === "saved" && "✓ Saved"}
+            {saveStatus === "error" && <span className="text-red-500">Save failed</span>}
+          </div>
+        </div>
+
+        {/* Main */}
+        <div className="flex-1 p-6 overflow-x-auto">
+          {tab === "dashboard" && (
+            <div className="space-y-6 max-w-5xl">
+              <h1 className="text-xl font-semibold">Dashboard</h1>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-slate-900 text-white rounded-xl p-4">
+                  <div className="text-xs uppercase tracking-wide text-slate-400">Increases approved (all time)</div>
+                  <div className="text-2xl font-bold tabular-nums mt-1 text-emerald-400">+{fmt$(totalAnnualized)}</div>
+                  <div className="text-xs text-slate-400">annualized payroll added</div>
+                </div>
+                <div className="bg-white border border-slate-200 rounded-xl p-4">
+                  <div className="text-xs uppercase tracking-wide text-slate-500">Increases {yr} YTD</div>
+                  <div className="text-2xl font-bold tabular-nums mt-1">+{fmt$(ytdAnnualized)}</div>
+                  <div className="text-xs text-slate-400">bonuses paid: {fmt$(totalBonus)}</div>
+                </div>
+                <div className="bg-white border border-slate-200 rounded-xl p-4">
+                  <div className="text-xs uppercase tracking-wide text-slate-500">Active employees</div>
+                  <div className="text-2xl font-bold tabular-nums mt-1">{active.length}</div>
+                  <div className="text-xs text-slate-400">known payroll ≈ {fmt$(totalPayroll)}/yr</div>
+                </div>
+                <div className="bg-white border border-slate-200 rounded-xl p-4">
+                  <div className="text-xs uppercase tracking-wide text-slate-500">Data gaps</div>
+                  <div className="text-2xl font-bold tabular-nums mt-1">{missingComp + missingRole}</div>
+                  <div className="text-xs text-slate-400">{missingComp} missing pay · {missingRole} missing role</div>
+                </div>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-xl p-4">
+                <div className="flex justify-between items-center mb-3">
+                  <h2 className="font-semibold text-sm">Your reviews — managers due in the next 45 days</h2>
+                  <button className="text-xs border border-slate-300 rounded px-2 py-1 flex items-center gap-1" onClick={() => download("sierra-reviews.ics", buildICS(state.employees), "text/calendar")}><Icon d={ICONS.Download} className="w-3 h-3" /> Export to calendar (.ics)</button>
+                </div>
+                {dueMgr.length === 0 && <p className="text-sm text-slate-400">No manager reviews due in the next 45 days.</p>}
+                <div className="divide-y divide-slate-100">
+                  {dueMgr.slice(0, 15).map((u, i) => (
+                    <div key={i} className="py-2 flex items-center gap-3 cursor-pointer hover:bg-slate-50 rounded px-1" onClick={() => setSelId(u.emp.id)}>
+                      {u.kind === "Annual review" ? <Icon d={ICONS.Calendar} className="w-4 h-4 text-slate-400" /> : <Icon d={ICONS.Clock} className="w-4 h-4 text-amber-500" />}
+                      <div className="flex-1">
+                        <span className="text-sm font-medium">{displayName(u.emp.name)}</span>
+                        <span className="text-xs text-slate-500 ml-2">{u.emp.role || u.emp.department || ""}</span>
+                      </div>
+                      <span className="text-xs text-slate-500">{u.kind}</span>
+                      <span className="text-xs text-slate-500 w-24">{fmtDate(u.date)}</span>
+                      {dueBadge(u.date)}
+                      <Icon d={ICONS.ChevronRight} className="w-3.5 h-3.5 text-slate-300" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-xl p-4">
+                <h2 className="font-semibold text-sm mb-1">Team reviews — owned by your managers (next 45 days)</h2>
+                <p className="text-xs text-slate-400 mb-2">Shown for transparency — these are your managers’ responsibility, but you can open any of them.</p>
+                {dueTeam.length === 0 && <p className="text-sm text-slate-400">No team reviews due in the next 45 days.</p>}
+                <div className="divide-y divide-slate-100">
+                  {dueTeam.slice(0, 12).map((u, i) => (
+                    <div key={i} className="py-2 flex items-center gap-3 cursor-pointer hover:bg-slate-50 rounded px-1" onClick={() => setSelId(u.emp.id)}>
+                      {u.kind === "Annual review" ? <Icon d={ICONS.Calendar} className="w-4 h-4 text-slate-400" /> : <Icon d={ICONS.Clock} className="w-4 h-4 text-amber-500" />}
+                      <div className="flex-1">
+                        <span className="text-sm font-medium">{displayName(u.emp.name)}</span>
+                        <span className="text-xs text-slate-500 ml-2">{u.emp.role || u.emp.department || ""} · mgr: {u.emp.manager || "—"}</span>
+                      </div>
+                      <span className="text-xs text-slate-500">{u.kind}</span>
+                      <span className="text-xs text-slate-500 w-24">{fmtDate(u.date)}</span>
+                      {dueBadge(u.date)}
+                      <Icon d={ICONS.ChevronRight} className="w-3.5 h-3.5 text-slate-300" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {(missingComp > 0 || missingRole > 0) && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm flex gap-2">
+                  <Icon d={ICONS.AlertTriangle} className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>Your 10-21-2024 salary sheet had {missingComp} employees with a blank/zero rate, and {missingRole} names I couldn't confidently match to an org-chart role. Open each profile in <b>Employees</b> to fill these in — everything is editable.</div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {tab === "employees" && (
+            <div className="space-y-4 max-w-5xl">
+              <div className="flex flex-wrap gap-3 items-center">
+                <h1 className="text-xl font-semibold flex-1">Employees</h1>
+                <div className="relative"><Icon d={ICONS.Search} className="w-3.5 h-3.5 absolute left-2 top-2.5 text-slate-400" /><input className={inp + " pl-7 w-56"} placeholder="Search name or role" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+                <TierTabs value={empTier} onChange={setEmpTier} />
+                <select className={inp + " w-44"} value={dept} onChange={(e) => setDept(e.target.value)}>{depts.map((d) => <option key={d}>{d}</option>)}</select>
+                <button className="bg-slate-800 text-white px-3 py-1.5 rounded text-sm flex items-center gap-1" onClick={() => setShowNew(true)}><Icon d={ICONS.Plus} className="w-3.5 h-3.5" /> Add employee</button>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 text-xs text-slate-500 uppercase text-left">
+                    <tr><th className="px-3 py-2">Name</th><th>Role</th><th>Dept</th><th className="text-right">Salary</th><th className="pl-3">Market</th><th>Next review</th><th></th></tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((e) => (
+                      <tr key={e.id} className={`border-t border-slate-100 hover:bg-slate-50 cursor-pointer ${e.status !== "active" ? "opacity-40" : ""}`} onClick={() => setSelId(e.id)}>
+                        <td className="px-3 py-2 font-medium">{displayName(e.name)}{e.isManager && <span className="ml-1.5 text-xs bg-slate-100 text-slate-500 px-1 py-0.5 rounded align-middle">MGR</span>}</td>
+                        <td className="text-slate-600">{e.role || <span className="text-amber-600 text-xs">assign role</span>}</td>
+                        <td className="text-slate-500">{e.department || "—"}</td>
+                        <td className="text-right tabular-nums">{e.salary ? fmt$(e.salary) : <span className="text-amber-600 text-xs">missing</span>}</td>
+                        <td className="pl-3">{compaRatio(e, state.marketMidpoints) != null ? <CompaChip ratio={compaRatio(e, state.marketMidpoints)} /> : <span className="text-slate-300 text-xs">—</span>}</td>
+                        <td>{e.status === "active" ? dueBadge(nextAnnual(e)) : <Badge tone="slate">inactive</Badge>}</td>
+                        <td className="pr-3 text-right"><Icon d={ICONS.ChevronRight} className="w-3.5 h-3.5 text-slate-300 inline" /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-xs text-slate-400">{filtered.length} shown · click any row to open the full profile, wage history, documents, and JD/plan.</p>
+            </div>
+          )}
+
+          {tab === "departments" && (
+            <div className="space-y-6 max-w-5xl">
+              <h1 className="text-xl font-semibold">Departments</h1>
+              <p className="text-sm text-slate-500">Pay comparison across every team, using only employees with a known salary (commission-only roles are excluded from averages since they don't carry a base).</p>
+              <div className="bg-white border border-slate-200 rounded-xl p-4">
+                <div className="text-xs uppercase text-slate-500 mb-2">Average pay by department</div>
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={deptChartData} layout="vertical" margin={{ left: 10, right: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
+                      <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => "$" + (v / 1000) + "k"} />
+                      <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={110} />
+                      <Tooltip formatter={(v) => fmt$(v)} />
+                      <Bar dataKey="avg" fill="#0f172a" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-xl p-4">
+                <div className="text-xs uppercase text-slate-500 mb-2">Total annual payroll by department</div>
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={deptChartData} layout="vertical" margin={{ left: 10, right: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
+                      <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => "$" + (v / 1000) + "k"} />
+                      <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={110} />
+                      <Tooltip formatter={(v) => fmt$(v)} />
+                      <Bar dataKey="total" fill="#059669" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 text-xs text-slate-500 uppercase text-left">
+                    <tr><th className="px-3 py-2">Department</th><th className="text-right">Headcount</th><th className="text-right">Managers</th><th className="text-right">Avg pay</th><th className="text-right pr-3">Total annual payroll</th></tr>
+                  </thead>
+                  <tbody>
+                    {deptRows.map((d) => (
+                      <tr key={d.dept} className="border-t border-slate-100 hover:bg-slate-50 cursor-pointer" onClick={() => { setDept(d.dept); setTab("employees"); }}>
+                        <td className="px-3 py-2 font-medium">{d.dept}</td>
+                        <td className="text-right tabular-nums">{d.headcount}</td>
+                        <td className="text-right tabular-nums text-slate-500">{d.mgrCount}</td>
+                        <td className="text-right tabular-nums">{d.avg ? fmt$(d.avg) : "—"}</td>
+                        <td className="text-right pr-3 tabular-nums">{fmt$(d.total)}</td>
+                      </tr>
+                    ))}
+                    {deptRows.length === 0 && <tr><td colSpan={5} className="p-6 text-center text-slate-400 text-sm">No department data yet.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-xs text-slate-400">Click any row to jump to that department's employee list.</p>
+            </div>
+          )}
+
+          {tab === "reviews" && (
+            <div className="space-y-4 max-w-4xl">
+              <div className="flex items-center gap-3">
+                <h1 className="text-xl font-semibold flex-1">Review schedule</h1>
+                <button className="text-xs border border-slate-300 rounded px-2 py-1.5 flex items-center gap-1" onClick={() => download("sierra-reviews.ics", buildICS(state.employees), "text/calendar")}><Icon d={ICONS.Download} className="w-3 h-3" /> Export .ics for Outlook</button>
+              </div>
+              <TierTabs value={tierF} onChange={setTierF} />
+              <p className="text-sm text-slate-500">Annual reviews default to the employee's hire-date anniversary until you complete one — then the clock resets from the completed review, and a 6-month progress review is automatically scheduled (matching the six-month review language in your templates).</p>
+              <div className="bg-white border border-slate-200 rounded-xl divide-y divide-slate-100">
+                {upcoming.filter((u) => tierF === "all" || (tierF === "managers" ? u.emp.isManager : !u.emp.isManager)).slice(0, 60).map((u, i) => (
+                  <div key={i} className="p-3 flex items-center gap-3">
+                    <div className="flex-1">
+                      <div className="text-sm font-medium">{displayName(u.emp.name)} <span className="text-xs text-slate-400 font-normal">· {u.emp.role || u.emp.department || ""}</span></div>
+                      <div className="text-xs text-slate-500">{u.kind} · {fmtDate(u.date)} · current {fmt$(u.emp.salary)}</div>
+                    </div>
+                    {dueBadge(u.date)}
+                    <button className="text-xs bg-slate-800 text-white rounded px-2.5 py-1.5" onClick={() => setReviewEmp(u.emp)}>Generate review</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {tab === "raises" && (
+            <div className="space-y-4 max-w-4xl">
+              <h1 className="text-xl font-semibold">Raise & bonus tracker</h1>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-slate-900 text-white rounded-xl p-4"><div className="text-xs uppercase text-slate-400">Approved by you in this app</div><div className="text-2xl font-bold text-emerald-400 tabular-nums">+{fmt$(totalAnnualized)}</div></div>
+                <div className="bg-white border border-slate-200 rounded-xl p-4"><div className="text-xs uppercase text-slate-500">Recorded in payroll (7-6-26 sheet)</div><div className="text-2xl font-bold tabular-nums">+{fmt$(payrollRecorded)}</div><div className="text-xs text-slate-400">increases since Oct 2024, all sources</div></div>
+                <div className="bg-white border border-slate-200 rounded-xl p-4"><div className="text-xs uppercase text-slate-500">{yr} YTD increases</div><div className="text-2xl font-bold tabular-nums">+{fmt$(ytdAnnualized)}</div></div>
+                <div className="bg-white border border-slate-200 rounded-xl p-4"><div className="text-xs uppercase text-slate-500">One-time bonuses paid</div><div className="text-2xl font-bold tabular-nums">{fmt$(totalBonus)}</div></div>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                  <div>
+                    <h2 className="font-semibold text-sm">Raises by manager</h2>
+                    <p className="text-xs text-slate-400">Every approved increase is attributed to the employee's manager — out-of-band raises are flagged against your merit matrix.</p>
+                  </div>
+                  {overPolicyCount > 0 && <Badge tone="red">{overPolicyCount} over policy</Badge>}
+                </div>
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 text-xs text-slate-500 uppercase text-left"><tr><th className="px-3 py-2">Manager</th><th className="text-right"># raises</th><th className="text-right">Avg %</th><th className="text-right">Total added /yr</th><th className="text-right pr-3">Over policy</th></tr></thead>
+                  <tbody>
+                    {mgrRows.map((r) => (
+                      <tr key={r.m} className={`border-t border-slate-100 ${r.over > 0 ? "bg-red-50" : ""}`}>
+                        <td className="px-3 py-2 font-medium">{r.m}</td>
+                        <td className="text-right tabular-nums">{r.count}</td>
+                        <td className="text-right tabular-nums">{r.avg != null ? r.avg.toFixed(1) + "%" : "—"}</td>
+                        <td className="text-right tabular-nums">+{fmt$(r.total)}</td>
+                        <td className="text-right pr-3">{r.over > 0 ? <Badge tone="red">{r.over} flagged</Badge> : <span className="text-emerald-600 text-xs">in band</span>}</td>
+                      </tr>
+                    ))}
+                    {mgrRows.length === 0 && <tr><td colSpan={5} className="p-5 text-center text-slate-400 text-sm">No raises logged yet — once increases are approved they roll up by manager here.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+              {cumData.length > 1 && (
+                <div className="bg-white border border-slate-200 rounded-xl p-4 h-56">
+                  <div className="text-xs uppercase text-slate-500 mb-2">Cumulative annualized payroll added</div>
+                  <ResponsiveContainer width="100%" height="85%">
+                    <LineChart data={cumData}><CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" /><XAxis dataKey="date" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => "$" + (v / 1000) + "k"} /><Tooltip formatter={(v) => fmt$(v)} /><Line type="stepAfter" dataKey="total" stroke="#0f172a" strokeWidth={2} dot={{ r: 3 }} /></LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+              <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 text-xs text-slate-500 uppercase text-left"><tr><th className="px-3 py-2">Date</th><th>Employee</th><th>Type</th><th className="text-right">Old → New</th><th className="text-right pr-3">Impact</th></tr></thead>
+                  <tbody>
+                    {[...approved].reverse().map((w, i) => (
+                      <tr key={i} className="border-t border-slate-100">
+                        <td className="px-3 py-2">{fmtDate(w.date)}</td>
+                        <td className="font-medium">{displayName(w.emp.name)}</td>
+                        <td className="text-slate-500">{w.type}{w.note && <div className="text-xs text-slate-400">{w.note}</div>}{!w.isBonus && (() => { const p = w.pct != null ? w.pct : w.oldSalary ? ((w.newSalary - w.oldSalary) / w.oldSalary) * 100 : null; const t = tierForPct(state.meritMatrix, p); return t && t.over ? <div className="mt-0.5"><Badge tone="red">over policy · {p.toFixed(1)}%</Badge></div> : null; })()}</td>
+                        <td className="text-right tabular-nums">{w.isBonus ? "—" : `${fmt$(w.oldSalary)} → ${fmt$(w.newSalary)}`}</td>
+                        <td className="text-right pr-3 tabular-nums">{w.isBonus ? <span className="text-blue-600">{fmt$(w.bonusAmt)} bonus</span> : <span className="text-emerald-600">+{fmt$(w.newSalary - w.oldSalary)}/yr</span>}</td>
+                      </tr>
+                    ))}
+                    {approved.length === 0 && <tr><td colSpan={5} className="p-6 text-center text-slate-400 text-sm">No increases logged yet. Approve a raise from any employee profile or review — every one lands here with a running total.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {tab === "templates" && (
+            <div className="space-y-4 max-w-4xl">
+              <h1 className="text-xl font-semibold">JD & 30/60/90 templates</h1>
+              <p className="text-sm text-slate-500">Templates attach automatically to every employee whose role matches the template name — update the template once and everyone in the role sees the new version. Your Operations Manager JD and extended 6-month plan are pre-loaded; role pay policies are Not loaded pending rate confirmation.</p>
+              <div className="flex gap-2">
+                <input className={inp + " max-w-xs"} placeholder="Role name (e.g. Comfort Advisor)" value={tmplRole} onChange={(e) => setTmplRole(e.target.value)} />
+                <button className="bg-slate-800 text-white px-3 py-1.5 rounded text-sm" disabled={!tmplRole} onClick={() => { persist({ ...state, templates: { ...state.templates, [tmplRole]: { jd: OPS_JD.replace(/\[ROLE\]/g, tmplRole), plan: OPS_PLAN.replace(/\[ROLE\]/g, tmplRole) } } }); setTmplRole(""); }}>Create from Sierra template</button>
+              </div>
+              {Object.entries(state.templates).map(([role, t]) => (
+                <details key={role} className="bg-white border border-slate-200 rounded-xl p-4">
+                  <summary className="font-medium text-sm cursor-pointer flex items-center justify-between">
+                    <span>{role} <span className="text-xs text-slate-400 font-normal ml-2">{state.employees.filter((e) => e.role === role && e.status === "active").length} employees in this role</span></span>
+                  </summary>
+                  <div className="mt-3">
+                    <Field label="Pay plan / compensation policy"><textarea className={inp + " font-mono text-xs"} rows={8} value={t.pay || ""} onChange={(e) => persist({ ...state, templates: { ...state.templates, [role]: { ...t, pay: e.target.value } } })} placeholder="Commission rates, flat rates, spiffs, OT method…" /></Field>
+                  </div>
+                  <div className="mt-3 grid md:grid-cols-2 gap-3">
+                    <Field label="Job description"><textarea className={inp + " font-mono text-xs"} rows={14} value={t.jd || ""} onChange={(e) => persist({ ...state, templates: { ...state.templates, [role]: { ...t, jd: e.target.value } } })} /></Field>
+                    <Field label="30/60/90 (6-month) plan"><textarea className={inp + " font-mono text-xs"} rows={14} value={t.plan || ""} onChange={(e) => persist({ ...state, templates: { ...state.templates, [role]: { ...t, plan: e.target.value } } })} /></Field>
+                  </div>
+                  <button className="mt-2 text-xs text-red-500" onClick={() => { const c = { ...state.templates }; delete c[role]; persist({ ...state, templates: c }); }}>Delete template</button>
+                </details>
+              ))}
+            </div>
+          )}
+
+          {tab === "policy" && (
+            <div className="space-y-6 max-w-4xl">
+              <h1 className="text-xl font-semibold">Comp policy</h1>
+              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
+                <h2 className="font-semibold text-sm">Merit matrix — raise bands by performance tier</h2>
+                <p className="text-sm text-slate-500">These bands appear inside every raise approval and review generator. Anything above the top band gets flagged in red — for you, and for any manager-approved raise in the tracker.</p>
+                <table className="w-full text-sm">
+                  <thead className="text-xs text-slate-500 uppercase text-left"><tr><th className="py-1">Performance tier</th><th className="w-24">Min %</th><th className="w-24">Max %</th><th className="w-10"></th></tr></thead>
+                  <tbody>
+                    {state.meritMatrix.map((t, i) => (
+                      <tr key={i} className="border-t border-slate-100">
+                        <td className="py-1.5 pr-2"><input className={inp} value={t.tier} onChange={(e) => { const m = [...state.meritMatrix]; m[i] = { ...t, tier: e.target.value }; persist({ ...state, meritMatrix: m }); }} /></td>
+                        <td className="pr-2"><input type="number" step="0.5" className={inp} value={t.min} onChange={(e) => { const m = [...state.meritMatrix]; m[i] = { ...t, min: e.target.value }; persist({ ...state, meritMatrix: m }); }} /></td>
+                        <td className="pr-2"><input type="number" step="0.5" className={inp} value={t.max} onChange={(e) => { const m = [...state.meritMatrix]; m[i] = { ...t, max: e.target.value }; persist({ ...state, meritMatrix: m }); }} /></td>
+                        <td><button className="text-slate-400 hover:text-red-500" onClick={() => persist({ ...state, meritMatrix: state.meritMatrix.filter((_, j) => j !== i) })}><Icon d={ICONS.X} className="w-3.5 h-3.5" /></button></td>
+                      </tr>
+                    ))}
+                    {state.meritMatrix.length === 0 && <tr><td colSpan={4} className="py-4 text-center text-slate-400 text-sm">Not loaded — add tiers below.</td></tr>}
+                  </tbody>
+                </table>
+                <button className="text-sm border border-slate-300 rounded px-2.5 py-1.5" onClick={() => persist({ ...state, meritMatrix: [...state.meritMatrix, { tier: "New tier", min: 0, max: 0 }] })}><Icon d={ICONS.Plus} className="w-3 h-3 inline mr-1" />Add tier</button>
+                <div className="text-xs text-slate-500 bg-slate-50 rounded p-2">Policy cap: raises above <b>{state.meritMatrix.length ? Math.max(...state.meritMatrix.map((t) => Number(t.max) || 0)) + "%" : "Not loaded"}</b> are flagged as over-policy everywhere in the app.</div>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
+                <h2 className="font-semibold text-sm">Market midpoints — compa-ratio by role</h2>
+                <p className="text-sm text-slate-500">Enter the annual market midpoint for each role (from salary surveys, local job postings, or your own judgment). Everyone in that role instantly gets a compa-ratio: below 0.85× shows red (retention risk), 0.85–1.10× green, above 1.10× amber. Team average is a reference point — it is not the market rate.</p>
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 text-xs text-slate-500 uppercase text-left"><tr><th className="px-2 py-2">Role</th><th className="text-right">Heads</th><th className="text-right">Team avg (known pay)</th><th className="w-40 pl-4">Market midpoint $</th></tr></thead>
+                  <tbody>
+                    {Array.from(new Set(active.map((e) => e.role).filter(Boolean))).map((role) => {
+                      const inRole = active.filter((e) => e.role === role);
+                      const paid = inRole.filter((e) => e.salary > 0);
+                      const avg = paid.length ? paid.reduce((a, e) => a + e.salary, 0) / paid.length : null;
+                      return { role, count: inRole.length, avg };
+                    }).sort((a, b) => b.count - a.count).map((r) => (
+                      <tr key={r.role} className="border-t border-slate-100">
+                        <td className="px-2 py-1.5 font-medium">{r.role}</td>
+                        <td className="text-right tabular-nums text-slate-500">{r.count}</td>
+                        <td className="text-right tabular-nums text-slate-500">{r.avg ? fmt$(r.avg) : "—"}</td>
+                        <td className="pl-4"><input type="number" className={inp} placeholder="e.g. 65000" value={state.marketMidpoints[r.role] || ""} onChange={(e) => { const mm = { ...state.marketMidpoints }; if (e.target.value) mm[r.role] = Number(e.target.value); else delete mm[r.role]; persist({ ...state, marketMidpoints: mm }); }} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {tab === "tools" && (
+            <div className="space-y-6 max-w-3xl">
+              <h1 className="text-xl font-semibold">Tools & import</h1>
+              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2">
+                <h2 className="font-semibold text-sm flex items-center gap-2"><Icon d={ICONS.Calendar} className="w-4 h-4" /> Calendar reminders</h2>
+                <p className="text-sm text-slate-500">Download an .ics file with every annual and 6-month review in the next 13 months (each event includes a 1-week-ahead reminder), then open it to add all events to Outlook or any calendar app. Re-export after major changes to keep it current.</p>
+                <button className="bg-slate-800 text-white px-3 py-2 rounded text-sm flex items-center gap-1" onClick={() => download("sierra-reviews.ics", buildICS(state.employees), "text/calendar")}><Icon d={ICONS.Download} className="w-4 h-4" /> Download review calendar (.ics)</button>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2">
+                <h2 className="font-semibold text-sm">Backup & restore</h2>
+                <p className="text-sm text-slate-500">Everything is saved automatically in this app's storage. Export a JSON backup any time (recommended after big updates) — you can also send that file to Claude to re-import or analyze.</p>
+                <div className="flex gap-2">
+                  <button className="border border-slate-300 px-3 py-2 rounded text-sm" onClick={() => download(`sierra-hr-backup-${todayISO()}.json`, JSON.stringify(state, null, 1), "application/json")}><Icon d={ICONS.Download} className="w-4 h-4 inline mr-1" />Export backup</button>
+                  <button className="border border-red-300 text-red-600 px-3 py-2 rounded text-sm" onClick={() => { if (window.confirm("Reset ALL data back to the original salary sheet? Your logged raises, reviews, and documents will be lost.")) persist(seedState()); }}>Reset to original data</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {sel && <EmployeeDrawer emp={sel} templates={state.templates} matrix={state.meritMatrix} midpoints={state.marketMidpoints} onClose={() => setSelId(null)} onUpdate={updateEmp} onOpenReview={(e) => setReviewEmp(e)} />}
+      {reviewEmp && <ReviewGenerator emp={state.employees.find((e) => e.id === reviewEmp.id) || reviewEmp} matrix={state.meritMatrix} onClose={() => setReviewEmp(null)} onApproveRaise={approveRaiseFromReview} onMarkComplete={markReviewComplete} />}
+      {showNew && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowNew(false)}>
+          <div className="bg-white rounded-xl p-5 w-full max-w-md space-y-3" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-semibold">Add employee</h3>
+            <Field label="Name (Last, First)"><input className={inp} value={newEmp.name} onChange={(e) => setNewEmp({ ...newEmp, name: e.target.value })} /></Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Role"><input className={inp} value={newEmp.role} onChange={(e) => setNewEmp({ ...newEmp, role: e.target.value })} /></Field>
+              <Field label="Department"><input className={inp} value={newEmp.department} onChange={(e) => setNewEmp({ ...newEmp, department: e.target.value })} /></Field>
+              <Field label="Manager"><input className={inp} value={newEmp.manager} onChange={(e) => setNewEmp({ ...newEmp, manager: e.target.value })} /></Field>
+              <Field label="Hire date"><input type="date" className={inp} value={newEmp.hireDate} onChange={(e) => setNewEmp({ ...newEmp, hireDate: e.target.value })} /></Field>
+            </div>
+            <Field label="Annual salary ($)"><input type="number" className={inp} value={newEmp.salary} onChange={(e) => setNewEmp({ ...newEmp, salary: e.target.value })} /></Field>
+            <div className="flex gap-2">
+              <button className="bg-slate-800 text-white px-3 py-2 rounded text-sm" disabled={!newEmp.name} onClick={() => {
+                const sal = parseFloat(newEmp.salary) || 0;
+                const ne = { id: "new-" + Date.now(), name: newEmp.name, hireDate: newEmp.hireDate, rate: sal ? Math.round((sal / 2080) * 100) / 100 : null, salary: sal, role: newEmp.role, department: newEmp.department, manager: newEmp.manager, status: "active", reviewFormat: "annual", lastAnnualReview: null, sixMonthDone: false, bonusStructure: "", notes: "", docs: [], wageHistory: sal ? [{ date: newEmp.hireDate, oldSalary: null, newSalary: sal, type: "New hire rate", note: "", loggedInApp: false }] : [] };
+                persist({ ...state, employees: [...state.employees, ne] });
+                setShowNew(false); setNewEmp({ name: "", role: "", department: "", manager: "", hireDate: todayISO(), salary: "" });
+              }}>Add</button>
+              <button className="text-sm text-slate-500" onClick={() => setShowNew(false)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+window.renderHrApp = function () {
+  ReactDOM.createRoot(document.getElementById('app')).render(<SierraHRDashboard />);
+};
 </script>
 </body>
 </html>
