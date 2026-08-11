@@ -37,6 +37,10 @@
        padding:8px 15px; border-radius:999px; cursor:pointer;}
   .tab:hover{color:var(--brand);}
   .tab.active{color:#fff; background:var(--brand);}
+  /* The HR link is styled apart from the real tabs on purpose: it leaves the dashboard, and on a
+     wall screen during a meeting it should not read as just another panel to flick through. */
+  .tab.tablink{text-decoration:none; border:1px solid var(--hair); opacity:.7;}
+  .tab.tablink:hover{opacity:1; color:var(--brand);}
   .status{margin-left:auto; display:flex; align-items:center; gap:14px; white-space:nowrap;}
   input[type=date],input[type=month]{background:#fff; color:var(--text); border:1px solid var(--hair);
        border-radius:9px; padding:7px 11px; font-size:1rem; color-scheme:light;}
@@ -519,6 +523,21 @@ const TABS = [
   {id:'revenue', label:'Revenue'},
   {id:'silo', label:'SILO'},
 ];
+/* HR & Payroll is a LINK OUT, not a panel (see renderNav). Two deliberate choices here.
+ *
+ * WHY ONLY IN STATIC_MODE: serve.ps1 serves dashboard.html and the two API routes and nothing
+ * else, so hr.html exists only in the published build - the tab would 404 on a locally served
+ * dashboard. It is deliberately NOT added to serve.ps1's routing either: that path reads files
+ * with PowerShell Get-Content, which mangles the non-ASCII characters hr.html carries.
+ *
+ * WHY ?lock=1: this dashboard runs on a wall screen read from across a room, on an always-on
+ * machine. A session left open in a browser there stays valid for 8 hours, so a plain link would
+ * make salaries one click away. hr.html sees this parameter and drops any existing session before
+ * anything else runs, so arriving via this tab ALWAYS demands the password.
+ * rel="noopener" is a second, independent layer: it puts the new tab in its own browsing context
+ * group, which stops the browser copying this tab's sessionStorage into it. Either mechanism alone
+ * would do the job; neither is relied on by itself. */
+if (STATIC_MODE) TABS.push({id:'hr', label:'HR & Payroll', href:'hr.html?lock=1'});
 let active = 'overview';
 let data = null;
 let pollTimer = null;
@@ -1642,8 +1661,13 @@ function updatePickers(){
   $('monthStatus').style.display = s ? 'flex' : 'none';
 }
 function renderNav(){
-  $('nav').innerHTML = TABS.map(t=>`<button class="tab ${t.id===active?'active':''}" data-tab="${t.id}">${esc(t.label)}</button>`).join('');
-  document.querySelectorAll('.tab').forEach(btn=> btn.onclick=()=>{
+  // An entry with a href renders as a real link that leaves the page, not a panel switch. The
+  // selector below is .tab[data-tab] rather than .tab on purpose: giving the anchor a click
+  // handler that calls renderActive() would swallow the navigation.
+  $('nav').innerHTML = TABS.map(t=> t.href
+    ? `<a class="tab tablink" href="${t.href}" target="_blank" rel="noopener noreferrer" title="Opens the password-protected HR page in a new tab. It always asks for the password.">${esc(t.label)} &#8599;</a>`
+    : `<button class="tab ${t.id===active?'active':''}" data-tab="${t.id}">${esc(t.label)}</button>`).join('');
+  document.querySelectorAll('.tab[data-tab]').forEach(btn=> btn.onclick=()=>{
     active=btn.dataset.tab; renderNav(); updatePickers(); renderActive();
     if(active==='silo'){ const m=$('monthInput').value||prevMonthStr(); if(siloErr||!siloData||siloData.month!==m) loadSilo(m); }
   });

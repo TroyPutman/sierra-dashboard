@@ -464,6 +464,33 @@ el('retryBtn').addEventListener('click', function () {
   if (getToken()) { boot(); } else { relock('Please unlock again.'); }
 });
 
+/* ?lock=1 - ARRIVED FROM THE DASHBOARD'S HR TAB.
+ * Drop any existing session BEFORE anything else runs, so the password is always required. The
+ * dashboard lives on an always-on machine driving a wall screen; a session left open in a browser
+ * there stays valid for 8 hours, which would make a plain link one click from putting salaries on
+ * the wall. This is what makes that link safe to have at all. The rel="noopener" on it is an
+ * independent second layer - either alone would do, neither is trusted by itself.
+ *
+ * Detection does NOT depend on URLSearchParams, and clearing the token does NOT depend on
+ * history.replaceState: this is a security mechanism, so no part of it is allowed to fail quietly
+ * because a browser API was missing.
+ *
+ * The parameter is then stripped from the address bar. Without that, every later reload would log
+ * you straight back out and the page would be unusable. The rule is "arriving via the link always
+ * asks", not "this tab may never hold a session". */
+var wantsLock = false;
+try { wantsLock = new URLSearchParams(window.location.search).has('lock'); }
+catch (e) { wantsLock = /[?&]lock(=|&|$)/.test(window.location.search || ''); }
+if (wantsLock) {
+  try { sessionStorage.removeItem(TOKEN_KEY); } catch (e) { }
+  try {
+    var _p = new URLSearchParams(window.location.search);
+    _p.delete('lock');
+    var _q = _p.toString();
+    history.replaceState(null, '', window.location.pathname + (_q ? '?' + _q : ''));
+  } catch (e) { }
+}
+
 /* On load: if a session is already open in this tab, skip straight to loading. */
 if (getToken()) { boot(); } else { showOnly(lockCard); }
 </script>
