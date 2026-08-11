@@ -3,6 +3,16 @@ secrets.json
 /secrets.json
 **/secrets.json
 
+# HR pay-policy write-ups — never commit these.
+# PAY-POLICY-FINDINGS.md is the confirmed compensation structure taken from Sierra's official
+# policy PDFs: per-role commission percentages, flat rates, spiffs and pay bands. Same sensitivity
+# as the .jsx below, and the same rule — this repo is PUBLIC with permanent history, so the rates
+# belong in Cloudflare KV behind the HR password, never in a file here.
+# The pattern is deliberately broader than the one filename so a "-v2"/"-final" copy cannot slip
+# through. If you add another pay-policy document, name it to match or add it explicitly.
+PAY-POLICY-FINDINGS.md
+*PAY-POLICY*
+
 # HR source prototypes — never commit these.
 # SierraHRDashboard*.jsx and anything like it carry the COMPENSATION MODEL: PAY_POLICIES
 # (14 roles of commission rates, spiffs, flat rates), the CALCULATORS math, ISR_PAY bands and

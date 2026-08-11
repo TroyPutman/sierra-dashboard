@@ -14,7 +14,9 @@ name: Deploy dashboard to GitHub Pages
 #   6. Builds the static site (build-static.ps1 -> site/) with -NoGate: NO client-side
 #      password gate. This is a fully PUBLIC dashboard by design -- there is no login of
 #      any kind, so there is no password hash to inject.
-#   7. Commits the heartbeat + any newly-FROZEN (final:true) data/ snapshots back to the
+#   7. Publishes site/ to GitHub Pages via the official Pages actions
+#      (configure-pages -> upload-pages-artifact -> deploy-pages).
+#   8. LAST: commits the heartbeat + any newly-FROZEN (final:true) data/ snapshots back to the
 #      repo on EVERY run. This guarantees repo activity so GitHub does NOT auto-disable the
 #      scheduled workflow after 60 days of inactivity. Today's live snapshot and the
 #      current/previous-month revenue caches (final:false, change every run) are
@@ -24,8 +26,10 @@ name: Deploy dashboard to GitHub Pages
 #      the fresh checkout (see that step's comment). The message
 #      carries [skip ci] so the push does not re-trigger this workflow. secrets.json and
 #      site/ are NEVER committed.
-#   8. Publishes site/ to GitHub Pages via the official Pages actions
-#      (configure-pages -> upload-pages-artifact -> deploy-pages).
+#
+#      PUBLISH (7) DELIBERATELY PRECEDES BOOKKEEPING (8) -- they were the other way round until
+#      2026-08-11, and a failed heartbeat push killed the job before the upload, silently
+#      costing the deploy. See the ordering comment on the Pages steps before changing this.
 #
 # FAIL LOUD: if refresh, build, or deploy throws, the job fails and nothing ships.
 # There is NO DASH_PASSWORD_HASH and NO login gate -- the dashboard and its underlying
@@ -202,6 +206,33 @@ jobs:
           # client-side password gate and no password hash to inject.
           pwsh ./build-static.ps1 -OutDir site -NoGate
 
+      # ---- PUBLISH FIRST, THEN DO BOOKKEEPING ---------------------------------------------
+      # THESE THREE STEPS MUST STAY ABOVE THE HEARTBEAT COMMIT BELOW. Do not reorder them back.
+      #
+      # They used to sit AFTER it. The heartbeat step ends in `exit 1` when its push cannot be
+      # rebased, and these steps carry no `if: always()` -- so a transient git collision ended
+      # the job before site/ was ever uploaded, and the deploy was silently lost. The run page
+      # still showed a "Deploying to github-pages" progress line, which reads exactly like a
+      # successful deploy, so the failure presented as "the site deployed but my new file 404s".
+      # Observed on run #52 (2026-08-11): the build succeeded and hr.html WAS in site/, but the
+      # live site stayed on the previous successful deploy and 404'd on /hr.html.
+      #
+      # site/ is fully built by the step above and does not depend on the commit below in any
+      # way, so publishing first costs nothing. A heartbeat failure still turns the job RED and
+      # is still investigated -- it just no longer withholds the product. Bookkeeping that keeps
+      # the cron alive must never gate the thing the cron exists to ship.
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload site/ as the Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
       - name: Commit heartbeat + frozen snapshots (every run, keeps schedule alive)
         shell: bash
         run: |
@@ -284,15 +315,6 @@ jobs:
               exit 1
             fi
           fi
-
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload site/ as the Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          # NOTE: the site is ALREADY PUBLISHED by the time this step runs (see the ordering
+          # comment above). A failure here loses this cycle's heartbeat/frozen-snapshot commit
+          # and fails the job loudly -- it does NOT cost the deploy.
