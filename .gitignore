@@ -12,6 +12,14 @@ secrets.json
 # through. If you add another pay-policy document, name it to match or add it explicitly.
 PAY-POLICY-FINDINGS.md
 *PAY-POLICY*
+*pay-policy*
+*pay-policies*
+# The generated KV import file. It carries the same 11 roles of commission rates, flat rates and
+# spiffs as the findings doc. It is produced into scratchpad, but scratchpad is temporary, so the
+# obvious place to keep it is this folder - which is exactly the folder it must never be committed
+# from. Both casings are listed because the patterns above are uppercase and git's case handling
+# differs between this Windows machine and the Linux CI runner; do not rely on that difference.
+hr-pay-policies-import.json
 
 # HR source prototypes — never commit these.
 # SierraHRDashboard*.jsx and anything like it carry the COMPENSATION MODEL: PAY_POLICIES
