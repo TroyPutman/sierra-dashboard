@@ -1,0 +1,115 @@
+{
+  "block": {
+    "notes": [
+      "Calibrated to be correct against LIVE ServiceTitan - NOT calibrated to match the example dashboard's numbers.",
+      "Call = ROPP-tagged, HVAC Service/Maintenance, completed that month, new-opportunity, run by a roster tech. TGL = an Estimate-TGL job created that month, credited to the roster tech who generated the lead. Conversion = TGLs / calls."
+    ],
+    "title": "SILO / ROPP - 2026-08",
+    "pulledAt": "2026-09-01T07:29:50.8272185Z",
+    "error": null,
+    "status": "ok",
+    "id": "silo-ropp",
+    "month": "2026-08",
+    "tables": [
+      {
+        "subtitle": "",
+        "footer": "SILO TOTAL   Calls 550   TGLs 309   Conversion 56.2%",
+        "columns": [
+          "Technician",
+          "Calls",
+          "TGLs",
+          "Conversion"
+        ],
+        "rows": [
+          [
+            "Noah Weng",
+            38,
+            27,
+            "71.1%"
+          ],
+          [
+            "Joe Mendoza",
+            73,
+            41,
+            "56.2%"
+          ],
+          [
+            "Benjamin Wyllie",
+            64,
+            37,
+            "57.8%"
+          ],
+          [
+            "Nikko April",
+            32,
+            16,
+            "50.0%"
+          ],
+          [
+            "Andrew Trujillo",
+            51,
+            29,
+            "56.9%"
+          ],
+          [
+            "Dustin Romine",
+            0,
+            0,
+            "-"
+          ],
+          [
+            "Juan Tlatenchi",
+            63,
+            26,
+            "41.3%"
+          ],
+          [
+            "Brandon Moreno",
+            56,
+            32,
+            "57.1%"
+          ],
+          [
+            "Francisco Valencia",
+            15,
+            14,
+            "93.3%"
+          ],
+          [
+            "Mario Castro",
+            39,
+            16,
+            "41.0%"
+          ],
+          [
+            "Cole Pantol",
+            64,
+            35,
+            "54.7%"
+          ],
+          [
+            "Nathan Colquitt",
+            13,
+            7,
+            "53.8%"
+          ],
+          [
+            "Robert Silinzy",
+            42,
+            29,
+            "69.0%"
+          ],
+          [
+            "Alex Yakovchuk",
+            0,
+            0,
+            "-"
+          ]
+        ]
+      }
+    ]
+  },
+  "generatedAt": "2026-09-01T07:31:50.9149681Z",
+  "month": "2026-08",
+  "final": true
+}
