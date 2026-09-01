@@ -1,40 +1,21 @@
 {
   "final": false,
-  "asOf": "2026-08-31",
   "generatedAt": "2026-08-31T19:47:45.4684521Z",
-  "todayGeneratedAt": "2026-09-01T00:56:29.0250051Z",
   "block": {
     "error": null,
-    "periods": {
-      "today": {
-        "den": 12,
-        "rate": 66.66666666666667,
-        "num": 8
-      },
-      "mtd": {
-        "den": 628,
-        "rate": 65.60509554140127,
-        "num": 412
-      },
-      "ytd": {
-        "den": 5258,
-        "rate": 49.52453404336249,
-        "num": 2604
-      }
-    },
     "status": "ok",
     "diagnostics": {
-      "today": {
-        "unparsedDateRows": 20,
-        "outOfWindowRows": 0,
-        "distinctJobNumbers": 12,
-        "rawNumeratorRows": 8,
-        "droppedNotCompletedNotTglSource": 0,
-        "rawDenominatorRows": 12,
+      "ytd": {
         "failedOpen": 0,
-        "droppedManagementRemoved": 0,
+        "rawNumeratorRows": 2604,
+        "droppedNotCompletedNotTglSource": 0,
+        "distinctJobNumbers": 5226,
+        "jobsPulled": 45397,
+        "rawDenominatorRows": 5258,
         "droppedNotRopp": 0,
-        "jobsPulled": 315
+        "droppedManagementRemoved": 0,
+        "unparsedDateRows": 7862,
+        "outOfWindowRows": 0
       },
       "mtd": {
         "failedOpen": 0,
@@ -48,20 +29,19 @@
         "unparsedDateRows": 1040,
         "outOfWindowRows": 0
       },
-      "ytd": {
+      "today": {
         "failedOpen": 0,
-        "rawNumeratorRows": 2604,
         "droppedNotCompletedNotTglSource": 0,
-        "distinctJobNumbers": 5226,
-        "jobsPulled": 45397,
-        "rawDenominatorRows": 5258,
-        "droppedNotRopp": 0,
         "droppedManagementRemoved": 0,
-        "unparsedDateRows": 7862,
+        "jobsPulled": 324,
+        "droppedNotRopp": 0,
+        "unparsedDateRows": 23,
+        "rawDenominatorRows": 14,
+        "rawNumeratorRows": 9,
+        "distinctJobNumbers": 14,
         "outOfWindowRows": 0
       }
     },
-    "title": "SILO flip rate (TGLs created / ROPP calls ran)",
     "notes": [
       "Flip rate = TGLs created / ROPP calls ran, per period - the SILO manager's own definition. The counts behind each % are shown as \"TGLs / calls ran\". This REPLACED the older flip figure (turnovers that sold an estimate / total turnovers), which was a different measurement roughly 10 points lower.",
       "Rollups are COUNT-WEIGHTED: the period rate is total TGLs / total calls ran. Percentages are never averaged together (not per tech, not per day) - averaging percentages would weight a 3-call day the same as a 300-call day.",
@@ -72,13 +52,32 @@
       "NOT FINAL / RETROACTIVE BY DESIGN: TGLs keep getting scheduled onto days already counted, so every figure here keeps settling upward after the fact. Nothing is ever frozen; each recompute replaces the whole figure."
     ],
     "id": "silo-flip",
+    "title": "SILO flip rate (TGLs created / ROPP calls ran)",
+    "periods": {
+      "ytd": {
+        "den": 5258,
+        "rate": 49.52453404336249,
+        "num": 2604
+      },
+      "mtd": {
+        "den": 628,
+        "rate": 65.60509554140127,
+        "num": 412
+      },
+      "today": {
+        "den": 14,
+        "rate": 64.28571428571429,
+        "num": 9
+      }
+    },
+    "target": 60.0,
     "tables": [
       {
         "rows": [
           [
             "Today (Aug 31)",
-            "66.7%",
-            "8 / 12"
+            "64.3%",
+            "9 / 14"
           ],
           [
             "Month to date (Aug 1 - Aug 31)",
@@ -91,15 +90,16 @@
             "2604 / 5258"
           ]
         ],
+        "footer": "As of Aug 31, 2026 - partial and still settling (TGLs are scheduled retroactively).",
+        "subtitle": "Flip rate",
         "columns": [
           "Period",
           "Flip Rate",
           "TGLs / calls ran"
-        ],
-        "footer": "As of Aug 31, 2026 - partial and still settling (TGLs are scheduled retroactively).",
-        "subtitle": "Flip rate"
+        ]
       }
-    ],
-    "target": 60.0
-  }
+    ]
+  },
+  "todayGeneratedAt": "2026-09-01T01:37:46.7627253Z",
+  "asOf": "2026-08-31"
 }
