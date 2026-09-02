@@ -1,47 +1,6 @@
 {
-  "generatedAt": "2026-09-02T20:02:36.0033115Z",
-  "todayGeneratedAt": "2026-09-02T22:07:59.1598653Z",
-  "asOf": "2026-09-02",
   "block": {
-    "diagnostics": {
-      "ytd": {
-        "outOfWindowRows": 0,
-        "unparsedDateRows": 7903,
-        "rawNumeratorRows": 2619,
-        "droppedNotRopp": 0,
-        "rawDenominatorRows": 5284,
-        "droppedManagementRemoved": 0,
-        "failedOpen": 0,
-        "distinctJobNumbers": 5252,
-        "droppedNotCompletedNotTglSource": 0,
-        "jobsPulled": 45820
-      },
-      "today": {
-        "distinctJobNumbers": 3,
-        "failedOpen": 0,
-        "droppedNotCompletedNotTglSource": 0,
-        "outOfWindowRows": 0,
-        "unparsedDateRows": 5,
-        "rawDenominatorRows": 3,
-        "jobsPulled": 246,
-        "droppedManagementRemoved": 0,
-        "droppedNotRopp": 0,
-        "rawNumeratorRows": 2
-      },
-      "mtd": {
-        "outOfWindowRows": 0,
-        "unparsedDateRows": 16,
-        "rawNumeratorRows": 6,
-        "droppedNotRopp": 0,
-        "rawDenominatorRows": 10,
-        "droppedManagementRemoved": 0,
-        "failedOpen": 0,
-        "distinctJobNumbers": 10,
-        "droppedNotCompletedNotTglSource": 0,
-        "jobsPulled": 45820
-      }
-    },
-    "status": "ok",
+    "id": "silo-flip",
     "notes": [
       "Flip rate = TGLs created / ROPP calls ran, per period - the SILO manager's own definition. The counts behind each % are shown as \"TGLs / calls ran\". This REPLACED the older flip figure (turnovers that sold an estimate / total turnovers), which was a different measurement roughly 10 points lower.",
       "Rollups are COUNT-WEIGHTED: the period rate is total TGLs / total calls ran. Percentages are never averaged together (not per tech, not per day) - averaging percentages would weight a 3-call day the same as a 300-call day.",
@@ -51,29 +10,15 @@
       "The target each period is measured against is 60% and is read from config.json (siloFlip.targetRate) when the figure is built - it is deliberately NOT written into this code or into the dashboard page, so moving the goal is a one-number edit in config.json with no code change.",
       "NOT FINAL / RETROACTIVE BY DESIGN: TGLs keep getting scheduled onto days already counted, so every figure here keeps settling upward after the fact. Nothing is ever frozen; each recompute replaces the whole figure."
     ],
-    "error": null,
     "target": 60.0,
-    "periods": {
-      "ytd": {
-        "num": 2619,
-        "den": 5284,
-        "rate": 49.564723694171086
-      },
-      "today": {
-        "num": 2,
-        "den": 3,
-        "rate": 66.66666666666667
-      },
-      "mtd": {
-        "num": 6,
-        "den": 10,
-        "rate": 60.0
-      }
-    },
-    "id": "silo-flip",
+    "status": "ok",
     "tables": [
       {
-        "footer": "As of Sep 2, 2026 - partial and still settling (TGLs are scheduled retroactively).",
+        "columns": [
+          "Period",
+          "Flip Rate",
+          "TGLs / calls ran"
+        ],
         "rows": [
           [
             "Today (Sep 2)",
@@ -92,14 +37,69 @@
           ]
         ],
         "subtitle": "Flip rate",
-        "columns": [
-          "Period",
-          "Flip Rate",
-          "TGLs / calls ran"
-        ]
+        "footer": "As of Sep 2, 2026 - partial and still settling (TGLs are scheduled retroactively)."
       }
     ],
-    "title": "SILO flip rate (TGLs created / ROPP calls ran)"
+    "diagnostics": {
+      "today": {
+        "outOfWindowRows": 0,
+        "unparsedDateRows": 5,
+        "droppedNotCompletedNotTglSource": 0,
+        "droppedNotRopp": 0,
+        "rawNumeratorRows": 2,
+        "rawDenominatorRows": 3,
+        "jobsPulled": 271,
+        "distinctJobNumbers": 3,
+        "failedOpen": 0,
+        "droppedManagementRemoved": 0
+      },
+      "mtd": {
+        "outOfWindowRows": 0,
+        "unparsedDateRows": 16,
+        "rawNumeratorRows": 6,
+        "droppedNotRopp": 0,
+        "rawDenominatorRows": 10,
+        "droppedManagementRemoved": 0,
+        "failedOpen": 0,
+        "distinctJobNumbers": 10,
+        "droppedNotCompletedNotTglSource": 0,
+        "jobsPulled": 45820
+      },
+      "ytd": {
+        "outOfWindowRows": 0,
+        "unparsedDateRows": 7903,
+        "rawNumeratorRows": 2619,
+        "droppedNotRopp": 0,
+        "rawDenominatorRows": 5284,
+        "droppedManagementRemoved": 0,
+        "failedOpen": 0,
+        "distinctJobNumbers": 5252,
+        "droppedNotCompletedNotTglSource": 0,
+        "jobsPulled": 45820
+      }
+    },
+    "periods": {
+      "today": {
+        "num": 2,
+        "den": 3,
+        "rate": 66.66666666666667
+      },
+      "mtd": {
+        "num": 6,
+        "den": 10,
+        "rate": 60.0
+      },
+      "ytd": {
+        "num": 2619,
+        "den": 5284,
+        "rate": 49.564723694171086
+      }
+    },
+    "title": "SILO flip rate (TGLs created / ROPP calls ran)",
+    "error": null
   },
+  "generatedAt": "2026-09-02T20:02:36.0033115Z",
+  "asOf": "2026-09-02",
+  "todayGeneratedAt": "2026-09-02T22:50:44.1834560Z",
   "final": false
 }
