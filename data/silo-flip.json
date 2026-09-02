@@ -1,8 +1,36 @@
 {
-  "generatedAt": "2026-09-02T13:41:22.9939602Z",
+  "final": false,
+  "asOf": "2026-09-02",
   "block": {
-    "status": "ok",
     "id": "silo-flip",
+    "tables": [
+      {
+        "rows": [
+          [
+            "Today (Sep 2)",
+            "-",
+            "0 / 0"
+          ],
+          [
+            "Month to date (Sep 1 - Sep 2)",
+            "44.4%",
+            "4 / 9"
+          ],
+          [
+            "Year to date (Jan 1 - Sep 2)",
+            "49.6%",
+            "2618 / 5283"
+          ]
+        ],
+        "subtitle": "Flip rate",
+        "footer": "As of Sep 2, 2026 - partial and still settling (TGLs are scheduled retroactively).",
+        "columns": [
+          "Period",
+          "Flip Rate",
+          "TGLs / calls ran"
+        ]
+      }
+    ],
     "periods": {
       "today": {
         "rate": null,
@@ -20,18 +48,20 @@
         "den": 5283
       }
     },
+    "status": "ok",
+    "error": null,
     "diagnostics": {
       "today": {
-        "droppedNotCompletedNotTglSource": 0,
-        "distinctJobNumbers": 0,
+        "rawNumeratorRows": 0,
+        "failedOpen": 0,
+        "droppedNotRopp": 0,
+        "rawDenominatorRows": 0,
         "unparsedDateRows": 0,
         "outOfWindowRows": 0,
-        "jobsPulled": 45690,
-        "rawNumeratorRows": 0,
+        "droppedNotCompletedNotTglSource": 0,
         "droppedManagementRemoved": 0,
-        "rawDenominatorRows": 0,
-        "failedOpen": 0,
-        "droppedNotRopp": 0
+        "distinctJobNumbers": 0,
+        "jobsPulled": 4
       },
       "mtd": {
         "droppedNotCompletedNotTglSource": 0,
@@ -58,6 +88,8 @@
         "droppedNotRopp": 0
       }
     },
+    "title": "SILO flip rate (TGLs created / ROPP calls ran)",
+    "target": 60.0,
     "notes": [
       "Flip rate = TGLs created / ROPP calls ran, per period - the SILO manager's own definition. The counts behind each % are shown as \"TGLs / calls ran\". This REPLACED the older flip figure (turnovers that sold an estimate / total turnovers), which was a different measurement roughly 10 points lower.",
       "Rollups are COUNT-WEIGHTED: the period rate is total TGLs / total calls ran. Percentages are never averaged together (not per tech, not per day) - averaging percentages would weight a 3-call day the same as a 300-call day.",
@@ -66,40 +98,8 @@
       "The two sides are dated on different fields - TGLs by the job's scheduled date, calls ran by the invoice's completion date - so a short period can show MORE TGLs than calls ran and read above 100%. That is faithful to the source reports, not a bug, and is shown as-is rather than capped at 100%.",
       "The target each period is measured against is 60% and is read from config.json (siloFlip.targetRate) when the figure is built - it is deliberately NOT written into this code or into the dashboard page, so moving the goal is a one-number edit in config.json with no code change.",
       "NOT FINAL / RETROACTIVE BY DESIGN: TGLs keep getting scheduled onto days already counted, so every figure here keeps settling upward after the fact. Nothing is ever frozen; each recompute replaces the whole figure."
-    ],
-    "tables": [
-      {
-        "footer": "As of Sep 2, 2026 - partial and still settling (TGLs are scheduled retroactively).",
-        "subtitle": "Flip rate",
-        "columns": [
-          "Period",
-          "Flip Rate",
-          "TGLs / calls ran"
-        ],
-        "rows": [
-          [
-            "Today (Sep 2)",
-            "-",
-            "0 / 0"
-          ],
-          [
-            "Month to date (Sep 1 - Sep 2)",
-            "44.4%",
-            "4 / 9"
-          ],
-          [
-            "Year to date (Jan 1 - Sep 2)",
-            "49.6%",
-            "2618 / 5283"
-          ]
-        ]
-      }
-    ],
-    "error": null,
-    "title": "SILO flip rate (TGLs created / ROPP calls ran)",
-    "target": 60.0
+    ]
   },
-  "todayGeneratedAt": "2026-09-02T13:41:22.9939602Z",
-  "asOf": "2026-09-02",
-  "final": false
+  "generatedAt": "2026-09-02T13:41:22.9939602Z",
+  "todayGeneratedAt": "2026-09-02T14:26:29.2552637Z"
 }
