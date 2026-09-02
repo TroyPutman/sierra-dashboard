@@ -1,5 +1,10 @@
 {
+  "final": false,
+  "generatedAt": "2026-09-02T20:02:36.0033115Z",
   "block": {
+    "target": 60.0,
+    "title": "SILO flip rate (TGLs created / ROPP calls ran)",
+    "error": null,
     "id": "silo-flip",
     "notes": [
       "Flip rate = TGLs created / ROPP calls ran, per period - the SILO manager's own definition. The counts behind each % are shown as \"TGLs / calls ran\". This REPLACED the older flip figure (turnovers that sold an estimate / total turnovers), which was a different measurement roughly 10 points lower.",
@@ -10,15 +15,26 @@
       "The target each period is measured against is 60% and is read from config.json (siloFlip.targetRate) when the figure is built - it is deliberately NOT written into this code or into the dashboard page, so moving the goal is a one-number edit in config.json with no code change.",
       "NOT FINAL / RETROACTIVE BY DESIGN: TGLs keep getting scheduled onto days already counted, so every figure here keeps settling upward after the fact. Nothing is ever frozen; each recompute replaces the whole figure."
     ],
-    "target": 60.0,
+    "periods": {
+      "today": {
+        "rate": 66.66666666666667,
+        "den": 3,
+        "num": 2
+      },
+      "ytd": {
+        "rate": 49.564723694171086,
+        "den": 5284,
+        "num": 2619
+      },
+      "mtd": {
+        "rate": 60.0,
+        "den": 10,
+        "num": 6
+      }
+    },
     "status": "ok",
     "tables": [
       {
-        "columns": [
-          "Period",
-          "Flip Rate",
-          "TGLs / calls ran"
-        ],
         "rows": [
           [
             "Today (Sep 2)",
@@ -36,34 +52,27 @@
             "2619 / 5284"
           ]
         ],
-        "subtitle": "Flip rate",
-        "footer": "As of Sep 2, 2026 - partial and still settling (TGLs are scheduled retroactively)."
+        "footer": "As of Sep 2, 2026 - partial and still settling (TGLs are scheduled retroactively).",
+        "columns": [
+          "Period",
+          "Flip Rate",
+          "TGLs / calls ran"
+        ],
+        "subtitle": "Flip rate"
       }
     ],
     "diagnostics": {
       "today": {
-        "outOfWindowRows": 0,
-        "unparsedDateRows": 5,
-        "droppedNotCompletedNotTglSource": 0,
-        "droppedNotRopp": 0,
-        "rawNumeratorRows": 2,
-        "rawDenominatorRows": 3,
-        "jobsPulled": 271,
-        "distinctJobNumbers": 3,
         "failedOpen": 0,
-        "droppedManagementRemoved": 0
-      },
-      "mtd": {
-        "outOfWindowRows": 0,
-        "unparsedDateRows": 16,
-        "rawNumeratorRows": 6,
-        "droppedNotRopp": 0,
-        "rawDenominatorRows": 10,
         "droppedManagementRemoved": 0,
-        "failedOpen": 0,
-        "distinctJobNumbers": 10,
+        "rawNumeratorRows": 2,
+        "unparsedDateRows": 5,
+        "rawDenominatorRows": 3,
+        "droppedNotRopp": 0,
+        "distinctJobNumbers": 3,
+        "jobsPulled": 284,
         "droppedNotCompletedNotTglSource": 0,
-        "jobsPulled": 45820
+        "outOfWindowRows": 0
       },
       "ytd": {
         "outOfWindowRows": 0,
@@ -76,30 +85,21 @@
         "distinctJobNumbers": 5252,
         "droppedNotCompletedNotTglSource": 0,
         "jobsPulled": 45820
-      }
-    },
-    "periods": {
-      "today": {
-        "num": 2,
-        "den": 3,
-        "rate": 66.66666666666667
       },
       "mtd": {
-        "num": 6,
-        "den": 10,
-        "rate": 60.0
-      },
-      "ytd": {
-        "num": 2619,
-        "den": 5284,
-        "rate": 49.564723694171086
+        "outOfWindowRows": 0,
+        "unparsedDateRows": 16,
+        "rawNumeratorRows": 6,
+        "droppedNotRopp": 0,
+        "rawDenominatorRows": 10,
+        "droppedManagementRemoved": 0,
+        "failedOpen": 0,
+        "distinctJobNumbers": 10,
+        "droppedNotCompletedNotTglSource": 0,
+        "jobsPulled": 45820
       }
-    },
-    "title": "SILO flip rate (TGLs created / ROPP calls ran)",
-    "error": null
+    }
   },
-  "generatedAt": "2026-09-02T20:02:36.0033115Z",
-  "asOf": "2026-09-02",
-  "todayGeneratedAt": "2026-09-02T22:50:44.1834560Z",
-  "final": false
+  "todayGeneratedAt": "2026-09-02T23:22:55.3274000Z",
+  "asOf": "2026-09-02"
 }
