@@ -1,94 +1,10 @@
 {
-  "generatedAt": "2026-09-16T19:08:56.7041811Z",
+  "asOf": "2026-09-16",
+  "todayGeneratedAt": "2026-09-17T05:02:42.7227714Z",
+  "generatedAt": "2026-09-17T05:02:42.7227714Z",
+  "final": false,
   "block": {
-    "periods": {
-      "mtd": {
-        "den": 171,
-        "num": 106,
-        "rate": 61.98830409356725
-      },
-      "today": {
-        "den": 8,
-        "num": 9,
-        "rate": 112.5
-      },
-      "ytd": {
-        "den": 5450,
-        "num": 2721,
-        "rate": 49.92660550458716
-      }
-    },
-    "error": null,
-    "status": "ok",
     "target": 60.0,
-    "diagnostics": {
-      "mtd": {
-        "droppedNotRopp": 70,
-        "rawNumeratorRows": 106,
-        "jobsPulled": 48424,
-        "rawDenominatorRows": 241,
-        "failedOpen": 0,
-        "outOfWindowRows": 0,
-        "droppedManagementRemoved": 0,
-        "distinctJobNumbers": 240,
-        "unparsedDateRows": 347,
-        "droppedNotCompletedNotTglSource": 0
-      },
-      "today": {
-        "failedOpen": 0,
-        "jobsPulled": 305,
-        "droppedNotRopp": 0,
-        "droppedManagementRemoved": 0,
-        "unparsedDateRows": 17,
-        "droppedNotCompletedNotTglSource": 0,
-        "rawNumeratorRows": 9,
-        "distinctJobNumbers": 8,
-        "outOfWindowRows": 0,
-        "rawDenominatorRows": 8
-      },
-      "ytd": {
-        "droppedNotRopp": 443,
-        "rawNumeratorRows": 2721,
-        "jobsPulled": 48424,
-        "rawDenominatorRows": 5894,
-        "failedOpen": 0,
-        "outOfWindowRows": 0,
-        "droppedManagementRemoved": 0,
-        "distinctJobNumbers": 5854,
-        "unparsedDateRows": 8615,
-        "droppedNotCompletedNotTglSource": 0
-      }
-    },
-    "tables": [
-      {
-        "rows": [
-          [
-            "Today (Sep 16)",
-            "112.5%",
-            "9 / 8"
-          ],
-          [
-            "Month to date (Sep 1 - Sep 16)",
-            "62.0%",
-            "106 / 171"
-          ],
-          [
-            "Year to date (Jan 1 - Sep 16)",
-            "49.9%",
-            "2721 / 5450"
-          ]
-        ],
-        "columns": [
-          "Period",
-          "Flip Rate",
-          "TGLs / calls ran"
-        ],
-        "subtitle": "Flip rate",
-        "footer": "As of Sep 16, 2026 - partial and still settling (TGLs are scheduled retroactively)."
-      }
-    ],
-    "id": "silo-flip",
-    "title": "SILO flip rate (TGLs created / ROPP calls ran)",
     "notes": [
       "Flip rate = TGLs created / ROPP calls ran, per period - the SILO manager's own definition. The counts behind each % are shown as \"TGLs / calls ran\". This REPLACED the older flip figure (turnovers that sold an estimate / total turnovers), which was a different measurement roughly 10 points lower.",
       "Rollups are COUNT-WEIGHTED: the period rate is total TGLs / total calls ran. Percentages are never averaged together (not per tech, not per day) - averaging percentages would weight a 3-call day the same as a 300-call day.",
@@ -97,9 +13,93 @@
       "The two sides are dated on different fields - TGLs by the job's scheduled date, calls ran by the invoice's completion date - so a short period can show MORE TGLs than calls ran and read above 100%. That is faithful to the source reports, not a bug, and is shown as-is rather than capped at 100%.",
       "The target each period is measured against is 60% and is read from config.json (siloFlip.targetRate) when the figure is built - it is deliberately NOT written into this code or into the dashboard page, so moving the goal is a one-number edit in config.json with no code change.",
       "NOT FINAL / RETROACTIVE BY DESIGN: TGLs keep getting scheduled onto days already counted, so every figure here keeps settling upward after the fact. Nothing is ever frozen; each recompute replaces the whole figure."
-    ]
-  },
-  "asOf": "2026-09-16",
-  "final": false,
-  "todayGeneratedAt": "2026-09-17T00:02:06.1718016Z"
+    ],
+    "error": null,
+    "diagnostics": {
+      "mtd": {
+        "droppedNotRopp": 0,
+        "jobsPulled": 48576,
+        "unparsedDateRows": 300,
+        "droppedNotCompletedNotTglSource": 0,
+        "rawDenominatorRows": 182,
+        "rawNumeratorRows": 118,
+        "distinctJobNumbers": 181,
+        "droppedManagementRemoved": 0,
+        "failedOpen": 0,
+        "outOfWindowRows": 0
+      },
+      "ytd": {
+        "droppedNotRopp": 0,
+        "jobsPulled": 48576,
+        "unparsedDateRows": 8193,
+        "droppedNotCompletedNotTglSource": 0,
+        "rawDenominatorRows": 5460,
+        "rawNumeratorRows": 2733,
+        "distinctJobNumbers": 5421,
+        "droppedManagementRemoved": 0,
+        "failedOpen": 0,
+        "outOfWindowRows": 0
+      },
+      "today": {
+        "droppedNotRopp": 0,
+        "jobsPulled": 48576,
+        "unparsedDateRows": 31,
+        "droppedNotCompletedNotTglSource": 0,
+        "rawDenominatorRows": 16,
+        "rawNumeratorRows": 15,
+        "distinctJobNumbers": 16,
+        "droppedManagementRemoved": 0,
+        "failedOpen": 0,
+        "outOfWindowRows": 0
+      }
+    },
+    "title": "SILO flip rate (TGLs created / ROPP calls ran)",
+    "status": "ok",
+    "id": "silo-flip",
+    "tables": [
+      {
+        "columns": [
+          "Period",
+          "Flip Rate",
+          "TGLs / calls ran"
+        ],
+        "rows": [
+          [
+            "Today (Sep 16)",
+            "93.8%",
+            "15 / 16"
+          ],
+          [
+            "Month to date (Sep 1 - Sep 16)",
+            "64.8%",
+            "118 / 182"
+          ],
+          [
+            "Year to date (Jan 1 - Sep 16)",
+            "50.1%",
+            "2733 / 5460"
+          ]
+        ],
+        "subtitle": "Flip rate",
+        "footer": "As of Sep 16, 2026 - partial and still settling (TGLs are scheduled retroactively)."
+      }
+    ],
+    "periods": {
+      "mtd": {
+        "den": 182,
+        "num": 118,
+        "rate": 64.83516483516483
+      },
+      "ytd": {
+        "den": 5460,
+        "num": 2733,
+        "rate": 50.05494505494506
+      },
+      "today": {
+        "den": 16,
+        "num": 15,
+        "rate": 93.75
+      }
+    }
+  }
 }
