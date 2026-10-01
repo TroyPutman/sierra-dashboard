@@ -1,0 +1,115 @@
+{
+  "month": "2026-09",
+  "block": {
+    "status": "ok",
+    "notes": [
+      "Calibrated to be correct against LIVE ServiceTitan - NOT calibrated to match the example dashboard's numbers.",
+      "Call = ROPP-tagged, HVAC Service/Maintenance, completed that month, new-opportunity, run by a roster tech. TGL = an Estimate-TGL job created that month, credited to the roster tech who generated the lead. Conversion = TGLs / calls."
+    ],
+    "id": "silo-ropp",
+    "month": "2026-09",
+    "error": null,
+    "tables": [
+      {
+        "rows": [
+          [
+            "Noah Weng",
+            20,
+            0,
+            "0.0%"
+          ],
+          [
+            "Joe Mendoza",
+            42,
+            0,
+            "0.0%"
+          ],
+          [
+            "Benjamin Wyllie",
+            52,
+            0,
+            "0.0%"
+          ],
+          [
+            "Nikko April",
+            40,
+            0,
+            "0.0%"
+          ],
+          [
+            "Andrew Trujillo",
+            36,
+            0,
+            "0.0%"
+          ],
+          [
+            "Dustin Romine",
+            0,
+            0,
+            "-"
+          ],
+          [
+            "Juan Tlatenchi",
+            24,
+            0,
+            "0.0%"
+          ],
+          [
+            "Brandon Moreno",
+            32,
+            0,
+            "0.0%"
+          ],
+          [
+            "Francisco Valencia",
+            0,
+            0,
+            "-"
+          ],
+          [
+            "Mario Castro",
+            18,
+            0,
+            "0.0%"
+          ],
+          [
+            "Cole Pantol",
+            46,
+            0,
+            "0.0%"
+          ],
+          [
+            "Nathan Colquitt",
+            7,
+            0,
+            "0.0%"
+          ],
+          [
+            "Robert Silinzy",
+            24,
+            0,
+            "0.0%"
+          ],
+          [
+            "Alex Yakovchuk",
+            0,
+            0,
+            "-"
+          ]
+        ],
+        "subtitle": "",
+        "footer": "SILO TOTAL   Calls 341   TGLs 0   Conversion 0.0%",
+        "columns": [
+          "Technician",
+          "Calls",
+          "TGLs",
+          "Conversion"
+        ]
+      }
+    ],
+    "title": "SILO / ROPP - 2026-09",
+    "pulledAt": "2026-10-01T08:10:42.4891881Z"
+  },
+  "final": true,
+  "generatedAt": "2026-10-01T08:11:55.6780624Z"
+}
