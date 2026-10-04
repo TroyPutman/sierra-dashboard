@@ -1,0 +1,1874 @@
+{
+  "final": true,
+  "date": "2026-10-03",
+  "generatedAt": "2026-10-04T12:00:09.7461500Z",
+  "isToday": false,
+  "metrics": [
+    {
+      "notes": [
+        "Booked = calls SCHEDULED FOR the day. Completed = calls finished that day. Different jobs; not expected to match."
+      ],
+      "error": null,
+      "id": "call-counts",
+      "tables": [
+        {
+          "columns": [
+            "Business Unit",
+            "Booked",
+            "Completed"
+          ],
+          "footer": "TOTAL   Booked 46    Completed 41",
+          "rows": [
+            [
+              "HVAC - Service",
+              13,
+              12
+            ],
+            [
+              "HVAC - Install - AOR",
+              3,
+              1
+            ],
+            [
+              "HVAC - Maintenance",
+              12,
+              11
+            ],
+            [
+              "HVAC - Sales (NR)",
+              4,
+              4
+            ],
+            [
+              "HVAC - Sales Costco (NR)",
+              0,
+              0
+            ],
+            [
+              "Plumbing - Service",
+              8,
+              8
+            ],
+            [
+              "Plumbing - Maintenance",
+              1,
+              1
+            ],
+            [
+              "Plumbing - Install",
+              5,
+              4
+            ],
+            [
+              "Plumbing - Drains",
+              0,
+              0
+            ]
+          ],
+          "subtitle": ""
+        }
+      ],
+      "title": "Call Count - new opportunities",
+      "pulledAt": "2026-10-04T11:55:50.3948176Z",
+      "status": "ok"
+    },
+    {
+      "notes": [
+        "Dated to the day the call was scheduled for service (the dispatch-board cancel tray), not the day someone pressed cancel. Detail: job type, when cancelled, reason, who.",
+        "One job = one cancellation, counted ONCE on the FIRST Pacific day it ever had a visit booked (a multi-day job cancelled mid-way shows on day 1 only, not later days). Counted whether that day's visit reads Canceled or Done - a job cancelled after its visit was marked Done still counts. A cancelled visit that was only RESCHEDULED does not count; only jobs that are genuinely cancelled do.",
+        "NOT FINAL - CAVEAT: this is the count AS OF THIS PULL. Cancellations recorded later still date back onto the day the work was scheduled for, so this number CAN STILL RISE. Do not read yesterday's count as final.",
+        "EXCLUDED as administrative cleanup, not lost work: 0 on this day. Excluded reasons: Duplicate entry, Avoca Duplicate, History call clean up (legacy), Reschedule (legacy)."
+      ],
+      "error": null,
+      "id": "cancellations",
+      "tables": [
+        {
+          "columns": [
+            "Business Unit",
+            "Canceled"
+          ],
+          "footer": "TOTAL   4",
+          "rows": [
+            [
+              "HVAC - Service",
+              1
+            ],
+            [
+              "HVAC - Install - AOR",
+              0
+            ],
+            [
+              "HVAC - Maintenance",
+              2
+            ],
+            [
+              "HVAC - Sales (NR)",
+              0
+            ],
+            [
+              "HVAC - Sales Costco (NR)",
+              0
+            ],
+            [
+              "Plumbing - Service",
+              1
+            ],
+            [
+              "Plumbing - Maintenance",
+              0
+            ],
+            [
+              "Plumbing - Install",
+              0
+            ],
+            [
+              "Plumbing - Drains",
+              0
+            ]
+          ],
+          "subtitle": "By business unit"
+        },
+        {
+          "columns": [
+            "Business Unit",
+            "Job Type",
+            "Scheduled",
+            "Cancelled",
+            "Reason",
+            "By"
+          ],
+          "footer": "",
+          "rows": [
+            [
+              "HVAC - Maintenance",
+              "SAM Cooling Service (2 System) 4-7 Yrs",
+              "2026-10-03 08:00",
+              "2026-10-02 19:03",
+              "Problem fixed itself (CSR tried to save)",
+              "Ashley Morales"
+            ],
+            [
+              "HVAC - Service",
+              "AC Issue 8+ yrs",
+              "2026-10-03 08:00",
+              "2026-10-02 22:36",
+              "Problem fixed itself (CSR tried to save)",
+              "Kendall Page"
+            ],
+            [
+              "Plumbing - Service",
+              "Plumbing Toilet Clog",
+              "2026-10-03 16:56",
+              "2026-10-03 14:12",
+              "Competitor arrived",
+              "Aileen Chavez"
+            ],
+            [
+              "HVAC - Maintenance",
+              "SAM Cooling Service (1 System) 8+ Yrs",
+              "2026-10-03 18:41",
+              "2026-10-03 18:52",
+              "H/O can't today - Lead Follow up",
+              "LaToya Dennis"
+            ]
+          ],
+          "subtitle": "Detail"
+        }
+      ],
+      "title": "Cancellations - cancel tray",
+      "pulledAt": "2026-10-04T11:55:52.1276877Z",
+      "status": "ok"
+    },
+    {
+      "notes": [
+        "Service units only. Techs = distinct PRIMARY technician per job (earliest-assigned active tech runs the call); helpers/ride-alongs on the same job do not add to the count. Single day only."
+      ],
+      "error": null,
+      "id": "calls-per-tech",
+      "tables": [
+        {
+          "columns": [
+            "Business Unit",
+            "Completed Calls",
+            "Techs",
+            "Calls/Tech"
+          ],
+          "footer": "",
+          "rows": [
+            [
+              "HVAC - Service",
+              12,
+              5,
+              "2.4"
+            ],
+            [
+              "Plumbing - Service",
+              8,
+              4,
+              "2.0"
+            ]
+          ],
+          "subtitle": ""
+        }
+      ],
+      "title": "Calls per Tech - Service",
+      "pulledAt": "2026-10-04T11:55:56.1252319Z",
+      "status": "ok"
+    },
+    {
+      "pulledAt": "2026-10-04T11:55:59.0326089Z",
+      "id": "overtime",
+      "notes": [
+        "TOTAL overtime CLOCK HOURS - INCLUDES non-job time (Idle, Driving, Training), not just job time.",
+        "Grouped by tech payout unit. Payroll figure for the selected day."
+      ],
+      "title": "Overtime hours - Service, by activity",
+      "status": "ok",
+      "tables": [
+        {
+          "columns": [
+            "Activity",
+            "HVAC-Service",
+            "Plumbing-Service",
+            "Total"
+          ],
+          "footer": "TOTAL   HVAC-Service 0    Plumbing-Service 0",
+          "rows": [
+            [
+              "(no overtime)",
+              0,
+              0,
+              0
+            ]
+          ],
+          "subtitle": "By activity"
+        },
+        {
+          "columns": [
+            "",
+            "HVAC-Service",
+            "Plumbing-Service",
+            "Total"
+          ],
+          "footer": "",
+          "rows": [
+            [
+              "Overtime (all hours)",
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              "Overtime (on jobs only)",
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              "Overtime (non-job: idle/driving/training)",
+              0.0,
+              0.0,
+              0.0
+            ]
+          ],
+          "subtitle": "All hours vs. job-only"
+        }
+      ],
+      "warnings": [
+        {
+          "day": "2026-10-03",
+          "type": "workweek-in-progress",
+          "message": "Overtime workweek still in progress (started Fri 10/02) - totals will keep rising until the week closes."
+        },
+        {
+          "type": "partial-day-payroll",
+          "itemCount": 206,
+          "pct": 38.0,
+          "day": "2026-10-03",
+          "medianCount": 548.5,
+          "ratio": 0.37556973564266183,
+          "message": "Payroll for Saturday 10/03 looks incomplete - only 38% of a typical Saturday. Overtime is likely understated."
+        }
+      ],
+      "error": null
+    },
+    {
+      "pulledAt": "2026-10-04T11:56:00.7193912Z",
+      "id": "dispatch-arrival",
+      "notes": [
+        "Service units only (HVAC-Service, Plumbing-Service). Pairing: chronological Dispatched/Arrived events per job, LIFO-matched; Dispatch Canceled events are dropped. Times come from the dispatch/arrival events; TECH IDENTITY comes from the job's PRIMARY TECHNICIAN (same rule as Calls per Tech: earliest-assigned active appointment-assignment) - never the dispatch event's employeeId, which is the office dispatcher, not the technician.",
+        "On-time %: for each technician, look only at their FIRST call of the day (earliest dispatch). Denominator = techs whose first-call dispatch was before 8:30 AM Pacific. Numerator = of those, how many arrived before 8:30 AM Pacific.",
+        "Anomalies = a dispatch with no arrival, an arrival with no open dispatch to match, or a matched pair whose job has no resolvable primary technician - never silently dropped; counted above.",
+        "Anomaly detail: job 704909335: 1 dispatch(es) with no matching arrival; job 704931191: 1 dispatch(es) with no matching arrival"
+      ],
+      "title": "Dispatch & Arrival - Service",
+      "status": "ok",
+      "tables": [
+        {
+          "columns": [
+            "Metric",
+            "Value"
+          ],
+          "footer": "",
+          "rows": [
+            [
+              "Average dispatch to arrival (minutes)",
+              "41.2"
+            ],
+            [
+              "Matched dispatch/arrival pairs",
+              28
+            ],
+            [
+              "Anomalies (unmatched dispatch/arrival, or unattributed to a primary tech)",
+              2
+            ],
+            [
+              "Techs dispatched before 8:30 (of all techs with a matched call)",
+              "6 of 11"
+            ],
+            [
+              "On-time % (first call, arrival also before 8:30)",
+              "16.7%"
+            ],
+            [
+              "On-time count",
+              "1 of 6"
+            ]
+          ],
+          "subtitle": "Summary"
+        },
+        {
+          "columns": [
+            "Technician",
+            "First Dispatch (Pac)",
+            "First Arrival (Pac)",
+            "Qualified (<8:30)",
+            "On-time"
+          ],
+          "footer": "",
+          "rows": [
+            [
+              "Luis Garcia",
+              "08:45",
+              "09:48",
+              "no",
+              "-"
+            ],
+            [
+              "Carlos Camacho",
+              "07:17",
+              "08:34",
+              "yes",
+              "no"
+            ],
+            [
+              "Soren Maxwell",
+              "07:22",
+              "08:51",
+              "yes",
+              "no"
+            ],
+            [
+              "Dominic Lyken",
+              "07:24",
+              "08:27",
+              "yes",
+              "yes"
+            ],
+            [
+              "Bradley Espinoza",
+              "07:35",
+              "11:50",
+              "yes",
+              "no"
+            ],
+            [
+              "Noah Weng",
+              "07:53",
+              "08:35",
+              "yes",
+              "no"
+            ],
+            [
+              "Andrew Alonso",
+              "08:06",
+              "08:34",
+              "yes",
+              "no"
+            ],
+            [
+              "David Canales",
+              "10:45",
+              "11:11",
+              "no",
+              "-"
+            ],
+            [
+              "Jack Jonathon Vanos",
+              "13:52",
+              "14:36",
+              "no",
+              "-"
+            ],
+            [
+              "Joseph Byrd",
+              "17:57",
+              "18:32",
+              "no",
+              "-"
+            ],
+            [
+              "Josue Arciga",
+              "19:02",
+              "19:28",
+              "no",
+              "-"
+            ]
+          ],
+          "subtitle": "By technician (first call of the day)"
+        }
+      ],
+      "warnings": [],
+      "error": null
+    },
+    {
+      "notes": [
+        "Window starts TOMORROW (Pacific), not today, and runs 14 days from there. Today is excluded. As of the pull time (forward-looking; not tied to the selected day). Booked appointments. Sections are provisional."
+      ],
+      "error": null,
+      "id": "maint-14d",
+      "tables": [
+        {
+          "columns": [
+            "Section",
+            "Visits"
+          ],
+          "footer": "GRAND TOTAL   724",
+          "rows": [
+            [
+              "SAM Cooling (HVAC)",
+              27
+            ],
+            [
+              "SAM Heating (HVAC)",
+              540
+            ],
+            [
+              "HVAC Semi-Annual Tune-ups",
+              18
+            ],
+            [
+              "Filter Changes",
+              0
+            ],
+            [
+              "Plumbing WH Maintenance (SAM)",
+              127
+            ],
+            [
+              "Plumbing WH Tune-ups",
+              11
+            ],
+            [
+              "Commercial Maintenance",
+              1
+            ]
+          ],
+          "subtitle": "By section (14-day totals)"
+        },
+        {
+          "columns": [
+            "Date",
+            "HVAC",
+            "Plumbing",
+            "Total"
+          ],
+          "footer": "",
+          "rows": [
+            [
+              "2026-10-05",
+              107,
+              25,
+              138
+            ],
+            [
+              "2026-10-06",
+              82,
+              18,
+              102
+            ],
+            [
+              "2026-10-07",
+              61,
+              11,
+              74
+            ],
+            [
+              "2026-10-08",
+              50,
+              13,
+              64
+            ],
+            [
+              "2026-10-09",
+              51,
+              21,
+              74
+            ],
+            [
+              "2026-10-10",
+              5,
+              1,
+              6
+            ],
+            [
+              "2026-10-11",
+              4,
+              1,
+              5
+            ],
+            [
+              "2026-10-12",
+              51,
+              10,
+              64
+            ],
+            [
+              "2026-10-13",
+              43,
+              11,
+              55
+            ],
+            [
+              "2026-10-14",
+              40,
+              5,
+              46
+            ],
+            [
+              "2026-10-15",
+              39,
+              2,
+              43
+            ],
+            [
+              "2026-10-16",
+              37,
+              11,
+              48
+            ],
+            [
+              "2026-10-17",
+              2,
+              1,
+              4
+            ],
+            [
+              "2026-10-18",
+              0,
+              0,
+              1
+            ]
+          ],
+          "subtitle": "By day (dead space)"
+        }
+      ],
+      "title": "Maintenances booked - next 14 days (starting tomorrow)",
+      "pulledAt": "2026-10-04T11:56:15.0467032Z",
+      "status": "ok"
+    },
+    {
+      "notes": [
+        "As of pull time. Active residential SAM members with no completed Cooling maintenance in last 16 months. Customer-level."
+      ],
+      "error": null,
+      "id": "club-members",
+      "tables": [
+        {
+          "columns": [
+            "Metric",
+            "Value"
+          ],
+          "footer": "",
+          "rows": [
+            [
+              "Active HVAC club members",
+              9771
+            ],
+            [
+              "Ran Cooling in last 16 mo",
+              7762
+            ],
+            [
+              "LEFT TO RUN",
+              "2009  (20.6%)"
+            ]
+          ],
+          "subtitle": ""
+        }
+      ],
+      "title": "Club Members Left to Run - Cooling (HVAC)",
+      "pulledAt": "2026-10-04T11:56:21.8290528Z",
+      "status": "ok"
+    },
+    {
+      "notes": [
+        "Count = calls SCHEDULED on the board that day (distinct jobs with a visit that day), minus cancellations. Completing a call does NOT change the count - only a cancellation removes one. HVAC / SILO-ROPPS / Plumbing are mutually exclusive: ROPPS = the ROPP-tagged book (any trade); HVAC / Plumbing = their business-unit calls that are NOT ROPP-tagged.",
+        "Opportunities vs non-opportunities: a call is a NON-opportunity when its job type is one of the configured non-opportunity job types (edit the list in config.json -> callBoard.nonOpportunityJobTypeIds). Non-opportunities are shown but are NOT included in the headline opportunity count.",
+        "HVAC is broken out by business unit: HVAC - Service (333), HVAC - Install - AOR (337), HVAC - Maintenance (342817560), HVAC - Sales NR (370), HVAC - Sales Costco NR (340802904).",
+        "Techs = HVAC + Plumbing technicians scheduled that day (secondary context). As of the pull time, forward-looking; light/weekend days are expected to be thin."
+      ],
+      "error": null,
+      "id": "call-board",
+      "tables": [
+        {
+          "columns": [
+            "Date",
+            "HVAC_opp",
+            "HVAC_non",
+            "ROPPS_opp",
+            "ROPPS_non",
+            "PLMB_opp",
+            "PLMB_non",
+            "Techs"
+          ],
+          "footer": "",
+          "rows": [
+            [
+              "2026-10-04",
+              3,
+              0,
+              2,
+              0,
+              7,
+              0,
+              21
+            ],
+            [
+              "2026-10-05",
+              109,
+              2,
+              32,
+              0,
+              41,
+              1,
+              89
+            ],
+            [
+              "2026-10-06",
+              65,
+              2,
+              32,
+              0,
+              24,
+              0,
+              89
+            ],
+            [
+              "2026-10-07",
+              51,
+              1,
+              23,
+              0,
+              15,
+              1,
+              89
+            ],
+            [
+              "2026-10-08",
+              43,
+              0,
+              21,
+              0,
+              15,
+              0,
+              89
+            ],
+            [
+              "2026-10-09",
+              42,
+              0,
+              24,
+              0,
+              21,
+              1,
+              89
+            ],
+            [
+              "2026-10-10",
+              5,
+              0,
+              2,
+              0,
+              1,
+              0,
+              7
+            ],
+            [
+              "2026-10-11",
+              4,
+              0,
+              0,
+              0,
+              1,
+              0,
+              7
+            ],
+            [
+              "2026-10-12",
+              36,
+              0,
+              19,
+              0,
+              12,
+              0,
+              89
+            ],
+            [
+              "2026-10-13",
+              42,
+              0,
+              16,
+              0,
+              14,
+              0,
+              89
+            ],
+            [
+              "2026-10-14",
+              37,
+              0,
+              16,
+              0,
+              8,
+              0,
+              89
+            ],
+            [
+              "2026-10-15",
+              34,
+              0,
+              14,
+              0,
+              3,
+              0,
+              89
+            ],
+            [
+              "2026-10-16",
+              35,
+              0,
+              11,
+              0,
+              11,
+              0,
+              89
+            ],
+            [
+              "2026-10-17",
+              3,
+              0,
+              0,
+              0,
+              1,
+              0,
+              3
+            ]
+          ],
+          "subtitle": "14-day total: 895 opportunities + 8 non-opportunities"
+        },
+        {
+          "columns": [
+            "Date",
+            "Line",
+            "Label",
+            "Opp",
+            "Non",
+            "Total"
+          ],
+          "footer": "",
+          "rows": [
+            [
+              "2026-10-04",
+              "HVAC:333",
+              "HVAC - Service",
+              1,
+              0,
+              1
+            ],
+            [
+              "2026-10-04",
+              "HVAC:337",
+              "HVAC - Install - AOR",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-04",
+              "HVAC:342817560",
+              "HVAC - Maintenance",
+              2,
+              0,
+              2
+            ],
+            [
+              "2026-10-04",
+              "HVAC:370",
+              "HVAC - Sales (NR)",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-04",
+              "HVAC:340802904",
+              "HVAC - Sales Costco (NR)",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-04",
+              "ROPPS",
+              "SILO / ROPPS",
+              2,
+              0,
+              2
+            ],
+            [
+              "2026-10-04",
+              "PLMB",
+              "Plumbing",
+              7,
+              0,
+              7
+            ],
+            [
+              "2026-10-05",
+              "HVAC:333",
+              "HVAC - Service",
+              4,
+              2,
+              6
+            ],
+            [
+              "2026-10-05",
+              "HVAC:337",
+              "HVAC - Install - AOR",
+              10,
+              0,
+              10
+            ],
+            [
+              "2026-10-05",
+              "HVAC:342817560",
+              "HVAC - Maintenance",
+              84,
+              0,
+              84
+            ],
+            [
+              "2026-10-05",
+              "HVAC:370",
+              "HVAC - Sales (NR)",
+              10,
+              0,
+              10
+            ],
+            [
+              "2026-10-05",
+              "HVAC:340802904",
+              "HVAC - Sales Costco (NR)",
+              1,
+              0,
+              1
+            ],
+            [
+              "2026-10-05",
+              "ROPPS",
+              "SILO / ROPPS",
+              32,
+              0,
+              32
+            ],
+            [
+              "2026-10-05",
+              "PLMB",
+              "Plumbing",
+              41,
+              1,
+              42
+            ],
+            [
+              "2026-10-06",
+              "HVAC:333",
+              "HVAC - Service",
+              0,
+              1,
+              1
+            ],
+            [
+              "2026-10-06",
+              "HVAC:337",
+              "HVAC - Install - AOR",
+              8,
+              0,
+              8
+            ],
+            [
+              "2026-10-06",
+              "HVAC:342817560",
+              "HVAC - Maintenance",
+              54,
+              1,
+              55
+            ],
+            [
+              "2026-10-06",
+              "HVAC:370",
+              "HVAC - Sales (NR)",
+              2,
+              0,
+              2
+            ],
+            [
+              "2026-10-06",
+              "HVAC:340802904",
+              "HVAC - Sales Costco (NR)",
+              1,
+              0,
+              1
+            ],
+            [
+              "2026-10-06",
+              "ROPPS",
+              "SILO / ROPPS",
+              32,
+              0,
+              32
+            ],
+            [
+              "2026-10-06",
+              "PLMB",
+              "Plumbing",
+              24,
+              0,
+              24
+            ],
+            [
+              "2026-10-07",
+              "HVAC:333",
+              "HVAC - Service",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-07",
+              "HVAC:337",
+              "HVAC - Install - AOR",
+              9,
+              0,
+              9
+            ],
+            [
+              "2026-10-07",
+              "HVAC:342817560",
+              "HVAC - Maintenance",
+              39,
+              1,
+              40
+            ],
+            [
+              "2026-10-07",
+              "HVAC:370",
+              "HVAC - Sales (NR)",
+              3,
+              0,
+              3
+            ],
+            [
+              "2026-10-07",
+              "HVAC:340802904",
+              "HVAC - Sales Costco (NR)",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-07",
+              "ROPPS",
+              "SILO / ROPPS",
+              23,
+              0,
+              23
+            ],
+            [
+              "2026-10-07",
+              "PLMB",
+              "Plumbing",
+              15,
+              1,
+              16
+            ],
+            [
+              "2026-10-08",
+              "HVAC:333",
+              "HVAC - Service",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-08",
+              "HVAC:337",
+              "HVAC - Install - AOR",
+              8,
+              0,
+              8
+            ],
+            [
+              "2026-10-08",
+              "HVAC:342817560",
+              "HVAC - Maintenance",
+              34,
+              0,
+              34
+            ],
+            [
+              "2026-10-08",
+              "HVAC:370",
+              "HVAC - Sales (NR)",
+              1,
+              0,
+              1
+            ],
+            [
+              "2026-10-08",
+              "HVAC:340802904",
+              "HVAC - Sales Costco (NR)",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-08",
+              "ROPPS",
+              "SILO / ROPPS",
+              21,
+              0,
+              21
+            ],
+            [
+              "2026-10-08",
+              "PLMB",
+              "Plumbing",
+              15,
+              0,
+              15
+            ],
+            [
+              "2026-10-09",
+              "HVAC:333",
+              "HVAC - Service",
+              1,
+              0,
+              1
+            ],
+            [
+              "2026-10-09",
+              "HVAC:337",
+              "HVAC - Install - AOR",
+              10,
+              0,
+              10
+            ],
+            [
+              "2026-10-09",
+              "HVAC:342817560",
+              "HVAC - Maintenance",
+              31,
+              0,
+              31
+            ],
+            [
+              "2026-10-09",
+              "HVAC:370",
+              "HVAC - Sales (NR)",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-09",
+              "HVAC:340802904",
+              "HVAC - Sales Costco (NR)",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-09",
+              "ROPPS",
+              "SILO / ROPPS",
+              24,
+              0,
+              24
+            ],
+            [
+              "2026-10-09",
+              "PLMB",
+              "Plumbing",
+              21,
+              1,
+              22
+            ],
+            [
+              "2026-10-10",
+              "HVAC:333",
+              "HVAC - Service",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-10",
+              "HVAC:337",
+              "HVAC - Install - AOR",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-10",
+              "HVAC:342817560",
+              "HVAC - Maintenance",
+              4,
+              0,
+              4
+            ],
+            [
+              "2026-10-10",
+              "HVAC:370",
+              "HVAC - Sales (NR)",
+              1,
+              0,
+              1
+            ],
+            [
+              "2026-10-10",
+              "HVAC:340802904",
+              "HVAC - Sales Costco (NR)",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-10",
+              "ROPPS",
+              "SILO / ROPPS",
+              2,
+              0,
+              2
+            ],
+            [
+              "2026-10-10",
+              "PLMB",
+              "Plumbing",
+              1,
+              0,
+              1
+            ],
+            [
+              "2026-10-11",
+              "HVAC:333",
+              "HVAC - Service",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-11",
+              "HVAC:337",
+              "HVAC - Install - AOR",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-11",
+              "HVAC:342817560",
+              "HVAC - Maintenance",
+              4,
+              0,
+              4
+            ],
+            [
+              "2026-10-11",
+              "HVAC:370",
+              "HVAC - Sales (NR)",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-11",
+              "HVAC:340802904",
+              "HVAC - Sales Costco (NR)",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-11",
+              "ROPPS",
+              "SILO / ROPPS",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-11",
+              "PLMB",
+              "Plumbing",
+              1,
+              0,
+              1
+            ],
+            [
+              "2026-10-12",
+              "HVAC:333",
+              "HVAC - Service",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-12",
+              "HVAC:337",
+              "HVAC - Install - AOR",
+              3,
+              0,
+              3
+            ],
+            [
+              "2026-10-12",
+              "HVAC:342817560",
+              "HVAC - Maintenance",
+              33,
+              0,
+              33
+            ],
+            [
+              "2026-10-12",
+              "HVAC:370",
+              "HVAC - Sales (NR)",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-12",
+              "HVAC:340802904",
+              "HVAC - Sales Costco (NR)",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-12",
+              "ROPPS",
+              "SILO / ROPPS",
+              19,
+              0,
+              19
+            ],
+            [
+              "2026-10-12",
+              "PLMB",
+              "Plumbing",
+              12,
+              0,
+              12
+            ],
+            [
+              "2026-10-13",
+              "HVAC:333",
+              "HVAC - Service",
+              1,
+              0,
+              1
+            ],
+            [
+              "2026-10-13",
+              "HVAC:337",
+              "HVAC - Install - AOR",
+              10,
+              0,
+              10
+            ],
+            [
+              "2026-10-13",
+              "HVAC:342817560",
+              "HVAC - Maintenance",
+              31,
+              0,
+              31
+            ],
+            [
+              "2026-10-13",
+              "HVAC:370",
+              "HVAC - Sales (NR)",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-13",
+              "HVAC:340802904",
+              "HVAC - Sales Costco (NR)",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-13",
+              "ROPPS",
+              "SILO / ROPPS",
+              16,
+              0,
+              16
+            ],
+            [
+              "2026-10-13",
+              "PLMB",
+              "Plumbing",
+              14,
+              0,
+              14
+            ],
+            [
+              "2026-10-14",
+              "HVAC:333",
+              "HVAC - Service",
+              2,
+              0,
+              2
+            ],
+            [
+              "2026-10-14",
+              "HVAC:337",
+              "HVAC - Install - AOR",
+              10,
+              0,
+              10
+            ],
+            [
+              "2026-10-14",
+              "HVAC:342817560",
+              "HVAC - Maintenance",
+              25,
+              0,
+              25
+            ],
+            [
+              "2026-10-14",
+              "HVAC:370",
+              "HVAC - Sales (NR)",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-14",
+              "HVAC:340802904",
+              "HVAC - Sales Costco (NR)",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-14",
+              "ROPPS",
+              "SILO / ROPPS",
+              16,
+              0,
+              16
+            ],
+            [
+              "2026-10-14",
+              "PLMB",
+              "Plumbing",
+              8,
+              0,
+              8
+            ],
+            [
+              "2026-10-15",
+              "HVAC:333",
+              "HVAC - Service",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-15",
+              "HVAC:337",
+              "HVAC - Install - AOR",
+              9,
+              0,
+              9
+            ],
+            [
+              "2026-10-15",
+              "HVAC:342817560",
+              "HVAC - Maintenance",
+              25,
+              0,
+              25
+            ],
+            [
+              "2026-10-15",
+              "HVAC:370",
+              "HVAC - Sales (NR)",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-15",
+              "HVAC:340802904",
+              "HVAC - Sales Costco (NR)",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-15",
+              "ROPPS",
+              "SILO / ROPPS",
+              14,
+              0,
+              14
+            ],
+            [
+              "2026-10-15",
+              "PLMB",
+              "Plumbing",
+              3,
+              0,
+              3
+            ],
+            [
+              "2026-10-16",
+              "HVAC:333",
+              "HVAC - Service",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-16",
+              "HVAC:337",
+              "HVAC - Install - AOR",
+              7,
+              0,
+              7
+            ],
+            [
+              "2026-10-16",
+              "HVAC:342817560",
+              "HVAC - Maintenance",
+              28,
+              0,
+              28
+            ],
+            [
+              "2026-10-16",
+              "HVAC:370",
+              "HVAC - Sales (NR)",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-16",
+              "HVAC:340802904",
+              "HVAC - Sales Costco (NR)",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-16",
+              "ROPPS",
+              "SILO / ROPPS",
+              11,
+              0,
+              11
+            ],
+            [
+              "2026-10-16",
+              "PLMB",
+              "Plumbing",
+              11,
+              0,
+              11
+            ],
+            [
+              "2026-10-17",
+              "HVAC:333",
+              "HVAC - Service",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-17",
+              "HVAC:337",
+              "HVAC - Install - AOR",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-17",
+              "HVAC:342817560",
+              "HVAC - Maintenance",
+              2,
+              0,
+              2
+            ],
+            [
+              "2026-10-17",
+              "HVAC:370",
+              "HVAC - Sales (NR)",
+              1,
+              0,
+              1
+            ],
+            [
+              "2026-10-17",
+              "HVAC:340802904",
+              "HVAC - Sales Costco (NR)",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-17",
+              "ROPPS",
+              "SILO / ROPPS",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-10-17",
+              "PLMB",
+              "Plumbing",
+              1,
+              0,
+              1
+            ]
+          ],
+          "subtitle": "Per-business-unit breakdown (opportunities vs non-opportunities)"
+        }
+      ],
+      "title": "Call Board - calls scheduled, next 14 days",
+      "pulledAt": "2026-10-04T11:57:09.2372332Z",
+      "status": "ok"
+    },
+    {
+      "notes": [
+        "Booked = lead has a booking (bookingId). Converted (last column) = lead became a job. Period: last 30 days.",
+        "AVOCA CAVEAT: this row is leads ATTRIBUTED TO AVOCA CAMPAIGNS in ServiceTitan and their booked rate. It is NOT Avoca's call-handling booking rate (answered vs booked) - that lives in Avoca and is not reachable here. Different metric; do not confuse.",
+        "Source = marketing campaign category/name. Schedule Pro is largely self-serve online booking, so its rate reads high by nature. Other = leads not mapped to a named source."
+      ],
+      "error": null,
+      "id": "booking-source",
+      "tables": [
+        {
+          "columns": [
+            "Source",
+            "Leads",
+            "Booked",
+            "Rate",
+            "Converted"
+          ],
+          "footer": "",
+          "rows": [
+            [
+              "Angi",
+              92,
+              88,
+              "96%",
+              4
+            ],
+            [
+              "Avoca",
+              6,
+              2,
+              "33%",
+              1
+            ],
+            [
+              "Yelp",
+              0,
+              0,
+              "-",
+              0
+            ],
+            [
+              "LSA",
+              7,
+              0,
+              "0%",
+              0
+            ],
+            [
+              "Schedule Pro",
+              1,
+              1,
+              "100%",
+              0
+            ],
+            [
+              "Costco",
+              91,
+              89,
+              "98%",
+              39
+            ],
+            [
+              "SEO",
+              61,
+              35,
+              "57%",
+              8
+            ],
+            [
+              "Main Line Number",
+              22,
+              6,
+              "27%",
+              4
+            ],
+            [
+              "Google PPC",
+              20,
+              4,
+              "20%",
+              3
+            ],
+            [
+              "Texting",
+              57,
+              53,
+              "93%",
+              10
+            ],
+            [
+              "Outbound",
+              16,
+              6,
+              "38%",
+              4
+            ],
+            [
+              "Google Business Profile",
+              6,
+              4,
+              "67%",
+              2
+            ],
+            [
+              "Other",
+              84,
+              63,
+              "75%",
+              12
+            ]
+          ],
+          "subtitle": ""
+        }
+      ],
+      "title": "Booking Rate by Source - last 30 days",
+      "pulledAt": "2026-10-04T11:57:24.8099336Z",
+      "status": "ok"
+    },
+    {
+      "notes": [
+        "Revenue = each invoice's pre-tax subTotal, summed by the invoice date. BILLED / invoiced, NOT collected. Tax excluded.",
+        "Discounts, refunds and credits are included as-is - they appear naturally as negative-dollar invoices; nothing is stripped out.",
+        "Plumbing = Service + Maintenance + Drains + Install. Day boundaries are plain UTC calendar dates (the invoice date), not Pacific.",
+        "This month and last month are fully recomputed on every refresh (so backdated corrections update them); any older month is frozen after its first computation.",
+        "CAVEAT - NOT FINAL: Today, this month's MTD, and YTD are PARTIAL. Invoices keep posting, so these figures will keep rising through the day and month."
+      ],
+      "error": null,
+      "id": "revenue",
+      "tables": [
+        {
+          "columns": [
+            "Period",
+            "Revenue"
+          ],
+          "footer": "",
+          "rows": [
+            [
+              "Today (Oct 3)",
+              "$49,580.80"
+            ],
+            [
+              "Month to date (Oct 1 - Oct 3)",
+              "$140,253.00"
+            ],
+            [
+              "Year to date (Jan 1 - Oct 3)",
+              "$9,454,473.02"
+            ]
+          ],
+          "subtitle": "Plumbing revenue"
+        },
+        {
+          "columns": [
+            "Business Unit",
+            "Today",
+            "MTD",
+            "YTD"
+          ],
+          "footer": "PLUMBING TOTAL   Today $49,580.80    MTD $140,253.00    YTD $9,454,473.02",
+          "rows": [
+            [
+              "Service",
+              "$127.00",
+              "$5,755.40",
+              "$541,335.70"
+            ],
+            [
+              "Maintenance",
+              "$0.00",
+              "$881.00",
+              "$176,792.80"
+            ],
+            [
+              "Drains",
+              "$0.00",
+              "$1,112.00",
+              "$246,812.21"
+            ],
+            [
+              "Install",
+              "$49,453.80",
+              "$132,504.60",
+              "$8,489,532.31"
+            ]
+          ],
+          "subtitle": "By business unit"
+        }
+      ],
+      "title": "Revenue - Plumbing (billed, pre-tax)",
+      "pulledAt": "2026-10-04T11:57:25.9237478Z",
+      "status": "ok"
+    },
+    {
+      "notes": [
+        "SILO revenue = the SOLD / signed estimate subtotal (PRE-TAX) on turnover (TGL) jobs, credited to the TURNOVER-CALL DAY (the day the TGL job was created). Sold-only: a turnover with nothing sold contributes $0.",
+        "Turnover (TGL) jobs only. Day boundaries are Pacific - the ServiceTitan report filters each period by the tenant's (Pacific) calendar day server-side.",
+        "NOT FINAL / RETROACTIVE BY DESIGN: an estimate sold later adds to its earlier turnover day, so Today, MTD and YTD can still rise. The full year is recomputed every refresh; this block is never frozen."
+      ],
+      "error": null,
+      "id": "silo-revenue",
+      "tables": [
+        {
+          "columns": [
+            "Period",
+            "Revenue"
+          ],
+          "footer": "",
+          "rows": [
+            [
+              "Today (Oct 3)",
+              "$21,551.00"
+            ],
+            [
+              "Month to date (Oct 1 - Oct 3)",
+              "$73,312.47"
+            ],
+            [
+              "Year to date (Jan 1 - Oct 3)",
+              "$25,285,429.44"
+            ]
+          ],
+          "subtitle": "SILO revenue"
+        }
+      ],
+      "title": "Revenue - SILO (sold/signed, pre-tax)",
+      "pulledAt": "2026-10-04T11:57:37.8777162Z",
+      "status": "ok"
+    },
+    {
+      "notes": [
+        "HVAC Sales SOLD = the pre-tax subtotal of SOLD estimates on the two HVAC Sales units (Sales NR + Sales Costco NR), credited to the day the deal closed (the estimate's sold date). What the sales team SOLD - open / unsold estimates are excluded.",
+        "This is SOLD value, NOT billed: HVAC sales dollars are invoiced later under Install, so a billed \"Sales\" figure reads near-zero and is misleading. This figure is the sales team's signed business.",
+        "Distinct from Plumbing (billed invoices) and SILO (turnover sold value). Day boundaries are Pacific; the sold-date window is applied server-side so the figure is identical on any host timezone.",
+        "NOT FINAL - Today, MTD and YTD are partial and keep rising as more estimates are sold; an estimate sold later lands on its own sold day. Recomputed every refresh; never frozen."
+      ],
+      "error": null,
+      "id": "hvac-sales-sold",
+      "tables": [
+        {
+          "columns": [
+            "Period",
+            "Sold"
+          ],
+          "footer": "",
+          "rows": [
+            [
+              "Today (Oct 3)",
+              "$21,551.00"
+            ],
+            [
+              "Month to date (Oct 1 - Oct 3)",
+              "$176,541.18"
+            ],
+            [
+              "Year to date (Jan 1 - Oct 3)",
+              "$33,231,844.72"
+            ]
+          ],
+          "subtitle": "HVAC Sales sold revenue"
+        },
+        {
+          "columns": [
+            "Business Unit",
+            "Today",
+            "MTD",
+            "YTD"
+          ],
+          "footer": "HVAC SALES TOTAL   Today $21,551.00    MTD $176,541.18    YTD $33,231,844.72",
+          "rows": [
+            [
+              "Sales NR",
+              "$21,551.00",
+              "$146,396.43",
+              "$28,784,217.89"
+            ],
+            [
+              "Sales Costco NR",
+              "$0.00",
+              "$30,144.75",
+              "$4,447,626.83"
+            ]
+          ],
+          "subtitle": "By business unit"
+        }
+      ],
+      "title": "Revenue - HVAC Sales (sold/signed, pre-tax)",
+      "pulledAt": "2026-10-04T11:59:50.3342023Z",
+      "status": "ok"
+    }
+  ]
+}
