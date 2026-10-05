@@ -1,92 +1,27 @@
 {
-  "generatedAt": "2026-10-04T19:33:24.6749040Z",
-  "todayGeneratedAt": "2026-10-04T22:26:23.4331174Z",
   "final": false,
   "block": {
     "status": "ok",
-    "error": null,
-    "title": "SILO flip rate (TGLs created / ROPP calls ran)",
-    "notes": [
-      "Flip rate = TGLs created / ROPP calls ran, per period - the SILO manager's own definition. The counts behind each % are shown as \"TGLs / calls ran\". This REPLACED the older flip figure (turnovers that sold an estimate / total turnovers), which was a different measurement roughly 10 points lower.",
-      "Rollups are COUNT-WEIGHTED: the period rate is total TGLs / total calls ran. Percentages are never averaged together (not per tech, not per day) - averaging percentages would weight a 3-call day the same as a 300-call day.",
-      "TODAY IS A LIVE INDICATOR, NOT A SETTLED NUMBER. It is one day's worth of calls - often only a few dozen - so a handful of calls swings it many points: 2 TGLs on 3 calls reads 66.7% and the next call can move it 15 points either way. Watch it to see how today is going; judge performance on month-to-date and year-to-date, which have the volume to be stable.",
-      "The calls-ran count counts invoice ROWS, not distinct jobs, so the ~25 jobs a year carrying more than one invoice are counted more than once. That inflates calls ran by about 0.5% and is deliberate: it is what makes this figure match the SILO manager's number instead of drifting ~24 calls below it.",
-      "The two sides are dated on different fields - TGLs by the job's scheduled date, calls ran by the invoice's completion date - so a short period can show MORE TGLs than calls ran and read above 100%. That is faithful to the source reports, not a bug, and is shown as-is rather than capped at 100%.",
-      "The target each period is measured against is 60% and is read from config.json (siloFlip.targetRate) when the figure is built - it is deliberately NOT written into this code or into the dashboard page, so moving the goal is a one-number edit in config.json with no code change.",
-      "NOT FINAL / RETROACTIVE BY DESIGN: TGLs keep getting scheduled onto days already counted, so every figure here keeps settling upward after the fact. Nothing is ever frozen; each recompute replaces the whole figure."
-    ],
-    "id": "silo-flip",
     "periods": {
-      "ytd": {
-        "rate": 49.74769444927789,
-        "num": 2859,
-        "den": 5747
-      },
-      "today": {
-        "rate": 60.0,
-        "num": 3,
-        "den": 5
-      },
       "mtd": {
         "rate": 39.6551724137931,
-        "num": 23,
-        "den": 58
+        "den": 58,
+        "num": 23
+      },
+      "today": {
+        "rate": 50.0,
+        "den": 8,
+        "num": 4
+      },
+      "ytd": {
+        "rate": 49.74769444927789,
+        "den": 5747,
+        "num": 2859
       }
     },
     "target": 60.0,
-    "tables": [
-      {
-        "footer": "As of Oct 4, 2026 - partial and still settling (TGLs are scheduled retroactively).",
-        "columns": [
-          "Period",
-          "Flip Rate",
-          "TGLs / calls ran"
-        ],
-        "subtitle": "Flip rate",
-        "rows": [
-          [
-            "Today (Oct 4)",
-            "60.0%",
-            "3 / 5"
-          ],
-          [
-            "Month to date (Oct 1 - Oct 4)",
-            "39.7%",
-            "23 / 58"
-          ],
-          [
-            "Year to date (Jan 1 - Oct 4)",
-            "49.7%",
-            "2859 / 5747"
-          ]
-        ]
-      }
-    ],
+    "id": "silo-flip",
     "diagnostics": {
-      "ytd": {
-        "droppedNotCompletedNotTglSource": 0,
-        "rawNumeratorRows": 2859,
-        "droppedManagementRemoved": 0,
-        "unparsedDateRows": 8606,
-        "rawDenominatorRows": 5747,
-        "distinctJobNumbers": 5702,
-        "jobsPulled": 51469,
-        "outOfWindowRows": 0,
-        "failedOpen": 0,
-        "droppedNotRopp": 0
-      },
-      "today": {
-        "failedOpen": 0,
-        "jobsPulled": 41,
-        "rawNumeratorRows": 3,
-        "droppedNotRopp": 0,
-        "droppedManagementRemoved": 0,
-        "droppedNotCompletedNotTglSource": 0,
-        "distinctJobNumbers": 5,
-        "outOfWindowRows": 0,
-        "rawDenominatorRows": 5,
-        "unparsedDateRows": 8
-      },
       "mtd": {
         "droppedNotCompletedNotTglSource": 0,
         "rawNumeratorRows": 23,
@@ -98,8 +33,73 @@
         "outOfWindowRows": 0,
         "failedOpen": 0,
         "droppedNotRopp": 0
+      },
+      "today": {
+        "rawDenominatorRows": 8,
+        "droppedNotCompletedNotTglSource": 0,
+        "outOfWindowRows": 0,
+        "unparsedDateRows": 12,
+        "droppedNotRopp": 0,
+        "droppedManagementRemoved": 0,
+        "distinctJobNumbers": 8,
+        "jobsPulled": 64,
+        "rawNumeratorRows": 4,
+        "failedOpen": 0
+      },
+      "ytd": {
+        "droppedNotCompletedNotTglSource": 0,
+        "rawNumeratorRows": 2859,
+        "droppedManagementRemoved": 0,
+        "unparsedDateRows": 8606,
+        "rawDenominatorRows": 5747,
+        "distinctJobNumbers": 5702,
+        "jobsPulled": 51469,
+        "outOfWindowRows": 0,
+        "failedOpen": 0,
+        "droppedNotRopp": 0
       }
-    }
+    },
+    "error": null,
+    "title": "SILO flip rate (TGLs created / ROPP calls ran)",
+    "notes": [
+      "Flip rate = TGLs created / ROPP calls ran, per period - the SILO manager's own definition. The counts behind each % are shown as \"TGLs / calls ran\". This REPLACED the older flip figure (turnovers that sold an estimate / total turnovers), which was a different measurement roughly 10 points lower.",
+      "Rollups are COUNT-WEIGHTED: the period rate is total TGLs / total calls ran. Percentages are never averaged together (not per tech, not per day) - averaging percentages would weight a 3-call day the same as a 300-call day.",
+      "TODAY IS A LIVE INDICATOR, NOT A SETTLED NUMBER. It is one day's worth of calls - often only a few dozen - so a handful of calls swings it many points: 2 TGLs on 3 calls reads 66.7% and the next call can move it 15 points either way. Watch it to see how today is going; judge performance on month-to-date and year-to-date, which have the volume to be stable.",
+      "The calls-ran count counts invoice ROWS, not distinct jobs, so the ~25 jobs a year carrying more than one invoice are counted more than once. That inflates calls ran by about 0.5% and is deliberate: it is what makes this figure match the SILO manager's number instead of drifting ~24 calls below it.",
+      "The two sides are dated on different fields - TGLs by the job's scheduled date, calls ran by the invoice's completion date - so a short period can show MORE TGLs than calls ran and read above 100%. That is faithful to the source reports, not a bug, and is shown as-is rather than capped at 100%.",
+      "The target each period is measured against is 60% and is read from config.json (siloFlip.targetRate) when the figure is built - it is deliberately NOT written into this code or into the dashboard page, so moving the goal is a one-number edit in config.json with no code change.",
+      "NOT FINAL / RETROACTIVE BY DESIGN: TGLs keep getting scheduled onto days already counted, so every figure here keeps settling upward after the fact. Nothing is ever frozen; each recompute replaces the whole figure."
+    ],
+    "tables": [
+      {
+        "columns": [
+          "Period",
+          "Flip Rate",
+          "TGLs / calls ran"
+        ],
+        "subtitle": "Flip rate",
+        "rows": [
+          [
+            "Today (Oct 4)",
+            "50.0%",
+            "4 / 8"
+          ],
+          [
+            "Month to date (Oct 1 - Oct 4)",
+            "39.7%",
+            "23 / 58"
+          ],
+          [
+            "Year to date (Jan 1 - Oct 4)",
+            "49.7%",
+            "2859 / 5747"
+          ]
+        ],
+        "footer": "As of Oct 4, 2026 - partial and still settling (TGLs are scheduled retroactively)."
+      }
+    ]
   },
-  "asOf": "2026-10-04"
+  "todayGeneratedAt": "2026-10-05T01:06:42.7467438Z",
+  "asOf": "2026-10-04",
+  "generatedAt": "2026-10-04T19:33:24.6749040Z"
 }
