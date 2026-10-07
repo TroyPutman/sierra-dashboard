@@ -1,8 +1,30 @@
 {
-  "asOf": "2026-10-06",
+  "final": false,
   "generatedAt": "2026-10-07T00:30:27.2325242Z",
+  "todayGeneratedAt": "2026-10-07T06:17:04.2983460Z",
+  "asOf": "2026-10-06",
   "block": {
-    "id": "silo-flip",
+    "title": "SILO flip rate (TGLs created / ROPP calls ran)",
+    "status": "ok",
+    "error": null,
+    "periods": {
+      "ytd": {
+        "den": 5784,
+        "num": 2876,
+        "rate": 49.72337482710927
+      },
+      "today": {
+        "den": 23,
+        "num": 9,
+        "rate": 39.130434782608695
+      },
+      "mtd": {
+        "den": 94,
+        "num": 40,
+        "rate": 42.5531914893617
+      }
+    },
+    "target": 60.0,
     "notes": [
       "Flip rate = TGLs created / ROPP calls ran, per period - the SILO manager's own definition. The counts behind each % are shown as \"TGLs / calls ran\". This REPLACED the older flip figure (turnovers that sold an estimate / total turnovers), which was a different measurement roughly 10 points lower.",
       "Rollups are COUNT-WEIGHTED: the period rate is total TGLs / total calls ran. Percentages are never averaged together (not per tech, not per day) - averaging percentages would weight a 3-call day the same as a 300-call day.",
@@ -12,15 +34,19 @@
       "The target each period is measured against is 60% and is read from config.json (siloFlip.targetRate) when the figure is built - it is deliberately NOT written into this code or into the dashboard page, so moving the goal is a one-number edit in config.json with no code change.",
       "NOT FINAL / RETROACTIVE BY DESIGN: TGLs keep getting scheduled onto days already counted, so every figure here keeps settling upward after the fact. Nothing is ever frozen; each recompute replaces the whole figure."
     ],
-    "title": "SILO flip rate (TGLs created / ROPP calls ran)",
-    "status": "ok",
+    "id": "silo-flip",
     "tables": [
       {
+        "columns": [
+          "Period",
+          "Flip Rate",
+          "TGLs / calls ran"
+        ],
         "rows": [
           [
             "Today (Oct 6)",
-            "44.4%",
-            "8 / 18"
+            "39.1%",
+            "9 / 23"
           ],
           [
             "Month to date (Oct 1 - Oct 6)",
@@ -34,31 +60,9 @@
           ]
         ],
         "subtitle": "Flip rate",
-        "columns": [
-          "Period",
-          "Flip Rate",
-          "TGLs / calls ran"
-        ],
         "footer": "As of Oct 6, 2026 - partial and still settling (TGLs are scheduled retroactively)."
       }
     ],
-    "periods": {
-      "ytd": {
-        "rate": 49.72337482710927,
-        "den": 5784,
-        "num": 2876
-      },
-      "mtd": {
-        "rate": 42.5531914893617,
-        "den": 94,
-        "num": 40
-      },
-      "today": {
-        "rate": 44.44444444444444,
-        "den": 18,
-        "num": 8
-      }
-    },
     "diagnostics": {
       "ytd": {
         "failedOpen": 0,
@@ -72,6 +76,18 @@
         "droppedNotCompletedNotTglSource": 0,
         "distinctJobNumbers": 5735
       },
+      "today": {
+        "rawNumeratorRows": 9,
+        "rawDenominatorRows": 23,
+        "failedOpen": 0,
+        "jobsPulled": 404,
+        "droppedNotCompletedNotTglSource": 0,
+        "droppedManagementRemoved": 0,
+        "distinctJobNumbers": 23,
+        "droppedNotRopp": 0,
+        "outOfWindowRows": 0,
+        "unparsedDateRows": 32
+      },
       "mtd": {
         "failedOpen": 0,
         "outOfWindowRows": 0,
@@ -83,23 +99,7 @@
         "droppedManagementRemoved": 0,
         "droppedNotCompletedNotTglSource": 0,
         "distinctJobNumbers": 94
-      },
-      "today": {
-        "failedOpen": 0,
-        "outOfWindowRows": 0,
-        "droppedNotRopp": 0,
-        "rawDenominatorRows": 18,
-        "jobsPulled": 51924,
-        "unparsedDateRows": 26,
-        "rawNumeratorRows": 8,
-        "droppedManagementRemoved": 0,
-        "droppedNotCompletedNotTglSource": 0,
-        "distinctJobNumbers": 18
       }
-    },
-    "error": null,
-    "target": 60.0
-  },
-  "final": false,
-  "todayGeneratedAt": "2026-10-07T00:30:27.2325242Z"
+    }
+  }
 }
