@@ -1,9 +1,24 @@
 {
-  "final": false,
+  "generatedAt": "2026-10-11T06:28:57.6845666Z",
   "block": {
-    "title": "SILO flip rate (TGLs created / ROPP calls ran)",
     "target": 60.0,
-    "id": "silo-flip",
+    "periods": {
+      "today": {
+        "num": 3,
+        "den": 5,
+        "rate": 60.0
+      },
+      "ytd": {
+        "num": 2907,
+        "den": 5874,
+        "rate": 49.489274770173644
+      },
+      "mtd": {
+        "num": 71,
+        "den": 183,
+        "rate": 38.797814207650276
+      }
+    },
     "notes": [
       "Flip rate = TGLs created / ROPP calls ran, per period - the SILO manager's own definition. The counts behind each % are shown as \"TGLs / calls ran\". This REPLACED the older flip figure (turnovers that sold an estimate / total turnovers), which was a different measurement roughly 10 points lower.",
       "Rollups are COUNT-WEIGHTED: the period rate is total TGLs / total calls ran. Percentages are never averaged together (not per tech, not per day) - averaging percentages would weight a 3-call day the same as a 300-call day.",
@@ -16,6 +31,12 @@
     "error": null,
     "tables": [
       {
+        "subtitle": "Flip rate",
+        "columns": [
+          "Period",
+          "Flip Rate",
+          "TGLs / calls ran"
+        ],
         "footer": "As of Oct 10, 2026 - partial and still settling (TGLs are scheduled retroactively).",
         "rows": [
           [
@@ -33,73 +54,52 @@
             "49.5%",
             "2907 / 5874"
           ]
-        ],
-        "columns": [
-          "Period",
-          "Flip Rate",
-          "TGLs / calls ran"
-        ],
-        "subtitle": "Flip rate"
+        ]
       }
     ],
+    "title": "SILO flip rate (TGLs created / ROPP calls ran)",
+    "id": "silo-flip",
+    "status": "ok",
     "diagnostics": {
-      "mtd": {
-        "rawDenominatorRows": 183,
-        "failedOpen": 0,
-        "droppedNotCompletedNotTglSource": 0,
-        "jobsPulled": 52688,
-        "droppedNotRopp": 0,
-        "distinctJobNumbers": 183,
-        "droppedManagementRemoved": 0,
-        "unparsedDateRows": 254,
-        "outOfWindowRows": 0,
-        "rawNumeratorRows": 71
-      },
       "today": {
-        "rawDenominatorRows": 5,
-        "droppedNotRopp": 0,
-        "droppedManagementRemoved": 0,
-        "droppedNotCompletedNotTglSource": 0,
-        "rawNumeratorRows": 3,
-        "outOfWindowRows": 0,
         "unparsedDateRows": 8,
-        "failedOpen": 0,
-        "distinctJobNumbers": 5,
-        "jobsPulled": 81
-      },
-      "ytd": {
-        "rawDenominatorRows": 5874,
-        "failedOpen": 0,
+        "rawNumeratorRows": 3,
         "droppedNotCompletedNotTglSource": 0,
-        "jobsPulled": 52688,
         "droppedNotRopp": 0,
-        "distinctJobNumbers": 5825,
-        "droppedManagementRemoved": 0,
-        "unparsedDateRows": 8781,
+        "failedOpen": 0,
+        "jobsPulled": 52701,
         "outOfWindowRows": 0,
-        "rawNumeratorRows": 2907
-      }
-    },
-    "periods": {
-      "mtd": {
-        "den": 183,
-        "rate": 38.797814207650276,
-        "num": 71
-      },
-      "today": {
-        "den": 5,
-        "rate": 60.0,
-        "num": 3
+        "droppedManagementRemoved": 0,
+        "rawDenominatorRows": 5,
+        "distinctJobNumbers": 5
       },
       "ytd": {
-        "den": 5874,
-        "rate": 49.489274770173644,
-        "num": 2907
+        "unparsedDateRows": 8781,
+        "rawNumeratorRows": 2907,
+        "droppedNotCompletedNotTglSource": 0,
+        "droppedNotRopp": 0,
+        "failedOpen": 0,
+        "jobsPulled": 52701,
+        "outOfWindowRows": 0,
+        "droppedManagementRemoved": 0,
+        "rawDenominatorRows": 5874,
+        "distinctJobNumbers": 5826
+      },
+      "mtd": {
+        "unparsedDateRows": 254,
+        "rawNumeratorRows": 71,
+        "droppedNotCompletedNotTglSource": 0,
+        "droppedNotRopp": 0,
+        "failedOpen": 0,
+        "jobsPulled": 52701,
+        "outOfWindowRows": 0,
+        "droppedManagementRemoved": 0,
+        "rawDenominatorRows": 183,
+        "distinctJobNumbers": 183
       }
-    },
-    "status": "ok"
+    }
   },
-  "todayGeneratedAt": "2026-10-11T00:30:46.1841849Z",
-  "generatedAt": "2026-10-10T21:52:37.1966787Z",
-  "asOf": "2026-10-10"
+  "final": false,
+  "asOf": "2026-10-10",
+  "todayGeneratedAt": "2026-10-11T06:28:57.6845666Z"
 }
