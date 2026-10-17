@@ -1,18 +1,18 @@
 {
-  "generatedAt": "2026-10-17T16:03:39.2437786Z",
   "block": {
-    "title": "SILO flip rate (TGLs created / ROPP calls ran)",
-    "id": "silo-flip",
-    "diagnostics": {},
+    "error": "GET /jpm/v2/tenant/1066404518/jobs page 222 failed (HTTP 401)",
     "periods": {},
+    "diagnostics": {},
     "status": "error",
-    "notes": [],
-    "pulledAt": "2026-10-17T16:03:39.2394608Z",
+    "tables": [],
+    "id": "silo-flip",
+    "title": "SILO flip rate (TGLs created / ROPP calls ran)",
     "target": 60.0,
-    "error": "GET /jpm/v2/tenant/1066404518/jobs page 225 failed (HTTP 401)",
-    "tables": []
+    "notes": [],
+    "pulledAt": "2026-10-17T18:21:34.9154600Z"
   },
-  "asOf": "2026-10-17",
-  "todayGeneratedAt": "2026-10-17T16:03:39.2437786Z",
-  "final": false
+  "final": false,
+  "generatedAt": "2026-10-17T18:21:34.9196938Z",
+  "todayGeneratedAt": "2026-10-17T18:21:34.9196938Z",
+  "asOf": "2026-10-17"
 }
