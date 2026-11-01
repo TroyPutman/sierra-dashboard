@@ -1,0 +1,115 @@
+{
+  "generatedAt": "2026-11-01T10:03:09.7581837Z",
+  "month": "2026-10",
+  "block": {
+    "month": "2026-10",
+    "pulledAt": "2026-11-01T10:01:37.5040460Z",
+    "status": "ok",
+    "notes": [
+      "Calibrated to be correct against LIVE ServiceTitan - NOT calibrated to match the example dashboard's numbers.",
+      "Call = ROPP-tagged, HVAC Service/Maintenance, completed that month, new-opportunity, run by a roster tech. TGL = an Estimate-TGL job created that month, credited to the roster tech who generated the lead. Conversion = TGLs / calls."
+    ],
+    "tables": [
+      {
+        "columns": [
+          "Technician",
+          "Calls",
+          "TGLs",
+          "Conversion"
+        ],
+        "footer": "SILO TOTAL   Calls 430   TGLs 0   Conversion 0.0%",
+        "subtitle": "",
+        "rows": [
+          [
+            "Noah Weng",
+            47,
+            0,
+            "0.0%"
+          ],
+          [
+            "Joe Mendoza",
+            62,
+            0,
+            "0.0%"
+          ],
+          [
+            "Benjamin Wyllie",
+            41,
+            0,
+            "0.0%"
+          ],
+          [
+            "Nikko April",
+            26,
+            0,
+            "0.0%"
+          ],
+          [
+            "Andrew Trujillo",
+            44,
+            0,
+            "0.0%"
+          ],
+          [
+            "Dustin Romine",
+            0,
+            0,
+            "-"
+          ],
+          [
+            "Juan Tlatenchi",
+            41,
+            0,
+            "0.0%"
+          ],
+          [
+            "Brandon Moreno",
+            36,
+            0,
+            "0.0%"
+          ],
+          [
+            "Francisco Valencia",
+            0,
+            0,
+            "-"
+          ],
+          [
+            "Mario Castro",
+            32,
+            0,
+            "0.0%"
+          ],
+          [
+            "Cole Pantol",
+            58,
+            0,
+            "0.0%"
+          ],
+          [
+            "Nathan Colquitt",
+            0,
+            0,
+            "-"
+          ],
+          [
+            "Robert Silinzy",
+            43,
+            0,
+            "0.0%"
+          ],
+          [
+            "Alex Yakovchuk",
+            0,
+            0,
+            "-"
+          ]
+        ]
+      }
+    ],
+    "error": null,
+    "id": "silo-ropp",
+    "title": "SILO / ROPP - 2026-10"
+  },
+  "final": true
+}
