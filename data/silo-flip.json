@@ -1,54 +1,60 @@
 {
-  "todayGeneratedAt": "2026-11-09T20:53:29.6391451Z",
-  "final": false,
-  "generatedAt": "2026-11-09T20:53:29.6391451Z",
-  "asOf": "2026-11-09",
   "block": {
-    "status": "ok",
     "target": 60.0,
-    "tables": [
-      {
-        "subtitle": "Flip rate",
-        "rows": [
-          [
-            "Today (Nov 9)",
-            "42.9%",
-            "3 / 7"
-          ],
-          [
-            "Month to date (Nov 1 - Nov 9)",
-            "37.7%",
-            "52 / 138"
-          ],
-          [
-            "Year to date (Jan 1 - Nov 9)",
-            "48.7%",
-            "3101 / 6369"
-          ]
-        ],
-        "columns": [
-          "Period",
-          "Flip Rate",
-          "TGLs / calls ran"
-        ],
-        "footer": "As of Nov 9, 2026 - partial and still settling (TGLs are scheduled retroactively)."
-      }
-    ],
-    "periods": {
+    "status": "ok",
+    "diagnostics": {
       "today": {
-        "num": 3,
-        "den": 7,
-        "rate": 42.857142857142854
-      },
-      "mtd": {
-        "num": 52,
-        "den": 138,
-        "rate": 37.68115942028985
+        "rawDenominatorRows": 22,
+        "unparsedDateRows": 30,
+        "droppedNotCompletedNotTglSource": 0,
+        "outOfWindowRows": 0,
+        "distinctJobNumbers": 22,
+        "droppedNotRopp": 0,
+        "rawNumeratorRows": 8,
+        "droppedManagementRemoved": 0,
+        "failedOpen": 0,
+        "jobsPulled": 57418
       },
       "ytd": {
-        "num": 3101,
-        "den": 6369,
-        "rate": 48.688962160464754
+        "rawDenominatorRows": 6384,
+        "unparsedDateRows": 9490,
+        "droppedNotCompletedNotTglSource": 0,
+        "outOfWindowRows": 0,
+        "distinctJobNumbers": 6330,
+        "droppedNotRopp": 0,
+        "rawNumeratorRows": 3106,
+        "droppedManagementRemoved": 0,
+        "failedOpen": 0,
+        "jobsPulled": 57418
+      },
+      "mtd": {
+        "rawDenominatorRows": 153,
+        "unparsedDateRows": 210,
+        "droppedNotCompletedNotTglSource": 0,
+        "outOfWindowRows": 0,
+        "distinctJobNumbers": 153,
+        "droppedNotRopp": 0,
+        "rawNumeratorRows": 57,
+        "droppedManagementRemoved": 0,
+        "failedOpen": 0,
+        "jobsPulled": 57418
+      }
+    },
+    "periods": {
+      "today": {
+        "rate": 36.36363636363637,
+        "den": 22,
+        "num": 8
+      },
+      "ytd": {
+        "rate": 48.652882205513784,
+        "den": 6384,
+        "num": 3106
+      },
+      "mtd": {
+        "rate": 37.254901960784316,
+        "den": 153,
+        "num": 57
       }
     },
     "notes": [
@@ -60,46 +66,40 @@
       "The target each period is measured against is 60% and is read from config.json (siloFlip.targetRate) when the figure is built - it is deliberately NOT written into this code or into the dashboard page, so moving the goal is a one-number edit in config.json with no code change.",
       "NOT FINAL / RETROACTIVE BY DESIGN: TGLs keep getting scheduled onto days already counted, so every figure here keeps settling upward after the fact. Nothing is ever frozen; each recompute replaces the whole figure."
     ],
-    "error": null,
     "id": "silo-flip",
-    "diagnostics": {
-      "today": {
-        "rawDenominatorRows": 7,
-        "jobsPulled": 57320,
-        "droppedNotRopp": 0,
-        "droppedManagementRemoved": 0,
-        "outOfWindowRows": 0,
-        "unparsedDateRows": 10,
-        "rawNumeratorRows": 3,
-        "droppedNotCompletedNotTglSource": 0,
-        "distinctJobNumbers": 7,
-        "failedOpen": 0
-      },
-      "mtd": {
-        "rawDenominatorRows": 138,
-        "jobsPulled": 57320,
-        "droppedNotRopp": 0,
-        "droppedManagementRemoved": 0,
-        "outOfWindowRows": 0,
-        "unparsedDateRows": 190,
-        "rawNumeratorRows": 52,
-        "droppedNotCompletedNotTglSource": 0,
-        "distinctJobNumbers": 138,
-        "failedOpen": 0
-      },
-      "ytd": {
-        "rawDenominatorRows": 6369,
-        "jobsPulled": 57320,
-        "droppedNotRopp": 0,
-        "droppedManagementRemoved": 0,
-        "outOfWindowRows": 0,
-        "unparsedDateRows": 9470,
-        "rawNumeratorRows": 3101,
-        "droppedNotCompletedNotTglSource": 0,
-        "distinctJobNumbers": 6315,
-        "failedOpen": 0
+    "title": "SILO flip rate (TGLs created / ROPP calls ran)",
+    "error": null,
+    "tables": [
+      {
+        "rows": [
+          [
+            "Today (Nov 9)",
+            "36.4%",
+            "8 / 22"
+          ],
+          [
+            "Month to date (Nov 1 - Nov 9)",
+            "37.3%",
+            "57 / 153"
+          ],
+          [
+            "Year to date (Jan 1 - Nov 9)",
+            "48.7%",
+            "3106 / 6384"
+          ]
+        ],
+        "subtitle": "Flip rate",
+        "footer": "As of Nov 9, 2026 - partial and still settling (TGLs are scheduled retroactively).",
+        "columns": [
+          "Period",
+          "Flip Rate",
+          "TGLs / calls ran"
+        ]
       }
-    },
-    "title": "SILO flip rate (TGLs created / ROPP calls ran)"
-  }
+    ]
+  },
+  "todayGeneratedAt": "2026-11-10T03:07:48.8694623Z",
+  "asOf": "2026-11-09",
+  "generatedAt": "2026-11-10T03:07:48.8694623Z",
+  "final": false
 }
