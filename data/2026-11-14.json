@@ -1,0 +1,417 @@
+{
+  "isToday": false,
+  "generatedAt": "2026-11-15T14:44:39.2860259Z",
+  "metrics": [
+    {
+      "tables": [],
+      "notes": [],
+      "error": "GET /jpm/v2/tenant/1066404518/jobs page 1 failed (HTTP 429)",
+      "pulledAt": "2026-11-15T14:40:56.8767788Z",
+      "id": "call-counts",
+      "status": "error",
+      "title": "Call Count"
+    },
+    {
+      "tables": [],
+      "notes": [],
+      "error": "GET /jpm/v2/tenant/1066404518/job-cancel-reasons page 1 failed (HTTP 429)",
+      "pulledAt": "2026-11-15T14:40:56.9916587Z",
+      "id": "cancellations",
+      "status": "error",
+      "title": "Cancellations"
+    },
+    {
+      "tables": [
+        {
+          "footer": "",
+          "columns": [
+            "Business Unit",
+            "Completed Calls",
+            "Techs",
+            "Calls/Tech"
+          ],
+          "rows": [
+            [
+              "HVAC - Service",
+              2,
+              2,
+              "1.0"
+            ],
+            [
+              "Plumbing - Service",
+              8,
+              4,
+              "2.0"
+            ]
+          ],
+          "subtitle": ""
+        }
+      ],
+      "notes": [
+        "Service units only. Techs = distinct PRIMARY technician per job (earliest-assigned active tech runs the call); helpers/ride-alongs on the same job do not add to the count. Single day only."
+      ],
+      "error": null,
+      "pulledAt": "2026-11-15T14:40:56.9917611Z",
+      "id": "calls-per-tech",
+      "status": "ok",
+      "title": "Calls per Tech - Service"
+    },
+    {
+      "tables": [],
+      "notes": [],
+      "error": "GET /payroll/v2/tenant/1066404518/gross-pay-items page 1 failed (HTTP 429)",
+      "pulledAt": "2026-11-15T14:41:00.1744273Z",
+      "id": "overtime",
+      "status": "error",
+      "title": "Overtime"
+    },
+    {
+      "title": "Dispatch & Arrival - Service",
+      "status": "ok",
+      "pulledAt": "2026-11-15T14:41:00.1744916Z",
+      "notes": [
+        "Service units only (HVAC-Service, Plumbing-Service). Pairing: chronological Dispatched/Arrived events per job, LIFO-matched; Dispatch Canceled events are dropped. Times come from the dispatch/arrival events; TECH IDENTITY comes from the job's PRIMARY TECHNICIAN (same rule as Calls per Tech: earliest-assigned active appointment-assignment) - never the dispatch event's employeeId, which is the office dispatcher, not the technician.",
+        "On-time %: for each technician, look only at their FIRST call of the day (earliest dispatch). Denominator = techs whose first-call dispatch was before 8:30 AM Pacific. Numerator = of those, how many arrived before 8:30 AM Pacific.",
+        "Anomalies = a dispatch with no arrival, an arrival with no open dispatch to match, or a matched pair whose job has no resolvable primary technician - never silently dropped; counted above.",
+        "Anomaly detail: job 1051141211: 1 dispatch(es) with no matching arrival; job 1047233723: matched pair has no resolvable primary technician - unattributed",
+        "3 of 13 jobs' history could not be fetched and were left out - dispatch/arrival figures are based on the other 10. Examples: 1052395983 (HTTP 429), 1052399197 (HTTP 429), 1052425119 (HTTP 429)"
+      ],
+      "id": "dispatch-arrival",
+      "error": null,
+      "warnings": [
+        {
+          "day": "2026-11-14",
+          "type": "partial-data",
+          "message": "3 of 13 jobs' history could not be fetched and were left out - dispatch/arrival figures are based on the other 10. Examples: 1052395983 (HTTP 429), 1052399197 (HTTP 429), 1052425119 (HTTP 429)"
+        }
+      ],
+      "tables": [
+        {
+          "footer": "",
+          "columns": [
+            "Metric",
+            "Value"
+          ],
+          "rows": [
+            [
+              "Average dispatch to arrival (minutes)",
+              "48.7"
+            ],
+            [
+              "Matched dispatch/arrival pairs",
+              10
+            ],
+            [
+              "Anomalies (unmatched dispatch/arrival, or unattributed to a primary tech)",
+              2
+            ],
+            [
+              "Techs dispatched before 8:30 (of all techs with a matched call)",
+              "4 of 7"
+            ],
+            [
+              "On-time % (first call, arrival also before 8:30)",
+              "50.0%"
+            ],
+            [
+              "On-time count",
+              "2 of 4"
+            ]
+          ],
+          "subtitle": "Summary"
+        },
+        {
+          "footer": "",
+          "columns": [
+            "Technician",
+            "First Dispatch (Pac)",
+            "First Arrival (Pac)",
+            "Qualified (<8:30)",
+            "On-time"
+          ],
+          "rows": [
+            [
+              "Corey Reding",
+              "07:14",
+              "08:08",
+              "yes",
+              "yes"
+            ],
+            [
+              "Talik Williams",
+              "07:16",
+              "08:21",
+              "yes",
+              "yes"
+            ],
+            [
+              "Chris Moreno",
+              "08:13",
+              "08:50",
+              "yes",
+              "no"
+            ],
+            [
+              "Carlos Camacho",
+              "08:13",
+              "09:07",
+              "yes",
+              "no"
+            ],
+            [
+              "Steven Chavarria",
+              "10:47",
+              "11:20",
+              "no",
+              "-"
+            ],
+            [
+              "Josue Arciga",
+              "13:59",
+              "14:52",
+              "no",
+              "-"
+            ],
+            [
+              "Nicolas Sauro",
+              "15:54",
+              "16:35",
+              "no",
+              "-"
+            ]
+          ],
+          "subtitle": "By technician (first call of the day)"
+        }
+      ]
+    },
+    {
+      "tables": [
+        {
+          "footer": "GRAND TOTAL   541",
+          "columns": [
+            "Section",
+            "Visits"
+          ],
+          "rows": [
+            [
+              "SAM Cooling (HVAC)",
+              6
+            ],
+            [
+              "SAM Heating (HVAC)",
+              388
+            ],
+            [
+              "HVAC Semi-Annual Tune-ups",
+              13
+            ],
+            [
+              "Filter Changes",
+              2
+            ],
+            [
+              "Plumbing WH Maintenance (SAM)",
+              122
+            ],
+            [
+              "Plumbing WH Tune-ups",
+              9
+            ],
+            [
+              "Commercial Maintenance",
+              1
+            ]
+          ],
+          "subtitle": "By section (14-day totals)"
+        },
+        {
+          "footer": "",
+          "columns": [
+            "Date",
+            "HVAC",
+            "Plumbing",
+            "Total"
+          ],
+          "rows": [
+            [
+              "2026-11-16",
+              87,
+              25,
+              116
+            ],
+            [
+              "2026-11-17",
+              77,
+              22,
+              105
+            ],
+            [
+              "2026-11-18",
+              66,
+              25,
+              92
+            ],
+            [
+              "2026-11-19",
+              35,
+              11,
+              51
+            ],
+            [
+              "2026-11-20",
+              57,
+              15,
+              74
+            ],
+            [
+              "2026-11-21",
+              3,
+              0,
+              3
+            ],
+            [
+              "2026-11-22",
+              0,
+              0,
+              0
+            ],
+            [
+              "2026-11-23",
+              32,
+              11,
+              45
+            ],
+            [
+              "2026-11-24",
+              20,
+              8,
+              28
+            ],
+            [
+              "2026-11-25",
+              8,
+              0,
+              10
+            ],
+            [
+              "2026-11-26",
+              2,
+              0,
+              2
+            ],
+            [
+              "2026-11-27",
+              8,
+              5,
+              14
+            ],
+            [
+              "2026-11-28",
+              1,
+              0,
+              1
+            ],
+            [
+              "2026-11-29",
+              0,
+              0,
+              0
+            ]
+          ],
+          "subtitle": "By day (dead space)"
+        }
+      ],
+      "notes": [
+        "Window starts TOMORROW (Pacific), not today, and runs 14 days from there. Today is excluded. As of the pull time (forward-looking; not tied to the selected day). Booked appointments. Sections are provisional."
+      ],
+      "error": null,
+      "pulledAt": "2026-11-15T14:41:12.3253046Z",
+      "id": "maint-14d",
+      "status": "ok",
+      "title": "Maintenances booked - next 14 days (starting tomorrow)"
+    },
+    {
+      "tables": [],
+      "notes": [],
+      "error": "GET /memberships/v2/tenant/1066404518/memberships page 7 failed (HTTP 429)",
+      "pulledAt": "2026-11-15T14:41:17.7873373Z",
+      "id": "club-members",
+      "status": "error",
+      "title": "Club Members Left to Run"
+    },
+    {
+      "tables": [],
+      "notes": [],
+      "error": "GET /settings/v2/tenant/1066404518/technicians page 1 failed (HTTP 429)",
+      "pulledAt": "2026-11-15T14:41:17.8925997Z",
+      "id": "call-board",
+      "status": "error",
+      "title": "3-Day Call Board"
+    },
+    {
+      "tables": [],
+      "notes": [],
+      "error": "GET /marketing/v2/tenant/1066404518/campaigns page 1 failed (HTTP 429)",
+      "pulledAt": "2026-11-15T14:41:17.9817095Z",
+      "id": "booking-source",
+      "status": "error",
+      "title": "Booking Rate by Source"
+    },
+    {
+      "tables": [],
+      "notes": [],
+      "error": "GET /accounting/v2/tenant/1066404518/invoices page 1 failed (HTTP 429)",
+      "pulledAt": "2026-11-15T14:41:18.1040934Z",
+      "id": "revenue",
+      "status": "error",
+      "title": "Revenue - Plumbing"
+    },
+    {
+      "tables": [
+        {
+          "footer": "",
+          "columns": [
+            "Period",
+            "Revenue"
+          ],
+          "rows": [
+            [
+              "Today (Nov 14)",
+              "$0.00"
+            ],
+            [
+              "Month to date (Nov 1 - Nov 14)",
+              "$843,642.57"
+            ],
+            [
+              "Year to date (Jan 1 - Nov 14)",
+              "$27,871,096.05"
+            ]
+          ],
+          "subtitle": "SILO revenue"
+        }
+      ],
+      "notes": [
+        "SILO revenue = the SOLD / signed estimate subtotal (PRE-TAX) on turnover (TGL) jobs, credited to the TURNOVER-CALL DAY (the day the TGL job was created). Sold-only: a turnover with nothing sold contributes $0.",
+        "Turnover (TGL) jobs only. Day boundaries are Pacific - the ServiceTitan report filters each period by the tenant's (Pacific) calendar day server-side.",
+        "NOT FINAL / RETROACTIVE BY DESIGN: an estimate sold later adds to its earlier turnover day, so Today, MTD and YTD can still rise. The full year is recomputed every refresh; this block is never frozen."
+      ],
+      "error": null,
+      "pulledAt": "2026-11-15T14:41:18.1041462Z",
+      "id": "silo-revenue",
+      "status": "ok",
+      "title": "Revenue - SILO (sold/signed, pre-tax)"
+    },
+    {
+      "tables": [],
+      "notes": [],
+      "error": "GET /sales/v2/tenant/1066404518/estimates page 10 failed (HTTP 429)",
+      "pulledAt": "2026-11-15T14:44:39.2859593Z",
+      "id": "hvac-sales-sold",
+      "status": "error",
+      "title": "Revenue - HVAC Sales"
+    }
+  ],
+  "date": "2026-11-14",
+  "final": true
+}
